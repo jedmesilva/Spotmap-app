@@ -80,9 +80,9 @@ function userIcon(user,selected){
     var hColor=healthPct>0.6?C.accent:healthPct>0.3?C.warning:C.danger;
     var bc=user.collectingSpotId?C.warning:C.accent;
     var collectLine=user.collectingSpotId
-      ?'<div style="margin-bottom:5px;display:flex;align-items:center;gap:4px;">'
-       +'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="'+C.warning+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="3" x2="12" y2="21"/></svg>'
-       +'<span style="color:'+C.warning+';font-size:10px;">Coletando...</span>'
+      ?'<div style="margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:4px;">'
+       +'<span style="font-size:12px;">⛏️</span>'
+       +'<span style="color:'+C.warning+';font-size:12px;font-weight:700;">'+user.collectProgress+'%</span>'
        +'</div>'
       :'';
     var cardH=user.collectingSpotId?108:92;
