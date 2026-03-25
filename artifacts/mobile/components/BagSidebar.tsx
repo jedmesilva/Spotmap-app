@@ -164,16 +164,6 @@ export function BagSidebar({ insets, onLocate }: BagSidebarProps) {
         </TouchableOpacity>
 
         <View style={styles.bagSection}>
-          {expanded && quickItems.length > 0 && (
-            <>
-              <View style={styles.itemsDivider} />
-              {quickItems.map((item) => (
-                <QuickItem key={item.id} item={item} onUse={handleUseItem} />
-              ))}
-              <View style={styles.itemsDivider} />
-            </>
-          )}
-
           <TouchableOpacity
             style={styles.expandBtn}
             onPress={toggleExpand}
@@ -185,6 +175,16 @@ export function BagSidebar({ insets, onLocate }: BagSidebarProps) {
               color={COLORS.dark.textSecondary}
             />
           </TouchableOpacity>
+
+          {expanded && quickItems.length > 0 && (
+            <>
+              <View style={styles.itemsDivider} />
+              {quickItems.map((item) => (
+                <QuickItem key={item.id} item={item} onUse={handleUseItem} />
+              ))}
+              <View style={styles.itemsDivider} />
+            </>
+          )}
 
           <Pressable
             onPress={() => setModalOpen(true)}
