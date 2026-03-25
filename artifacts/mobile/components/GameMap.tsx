@@ -62,12 +62,14 @@ function heartSvg(color){
 
 function collectBadge(progress){
   return '<div style="'
-    +'display:inline-flex;align-items:center;gap:3px;'
-    +'background:'+C.warning+'18;border:1px solid '+C.warning+'77;'
-    +'border-radius:8px;padding:2px 7px;white-space:nowrap;'
+    +'position:relative;display:inline-flex;align-items:center;gap:3px;'
+    +'border:1px solid '+C.warning+'88;border-radius:8px;'
+    +'padding:2px 7px;white-space:nowrap;overflow:hidden;'
+    +'background:'+C.bgSec+';'
     +'animation:badgePop 0.25s ease-out forwards;">'
-    +'<span style="font-size:10px;">⛏️</span>'
-    +'<span style="color:'+C.warning+';font-size:10px;font-weight:700;">'+progress+'%</span>'
+    +'<div style="position:absolute;left:0;top:0;bottom:0;width:'+progress+'%;background:'+C.warning+'2A;transition:width 0.4s ease;"></div>'
+    +'<span style="position:relative;font-size:10px;">⛏️</span>'
+    +'<span style="position:relative;color:'+C.warning+';font-size:10px;font-weight:700;">'+progress+'%</span>'
     +'</div>';
 }
 
