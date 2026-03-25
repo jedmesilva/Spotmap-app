@@ -71,20 +71,16 @@ function spotIcon(spot,selected){
 }
 
 function userIcon(user,selected){
-  var hp=user.health/user.maxHealth;
-  var hc=hp>0.6?C.accent:hp>0.3?C.warning:C.danger;
   var bc=selected?C.accent:user.collectingSpotId?C.warning:C.border;
   var prog=user.collectingSpotId
-    ?'<div style="width:52px;height:5px;background:'+C.surface+';border-radius:3px;margin-bottom:3px;overflow:hidden;">'
-     +'<div style="width:'+user.collectProgress+'%;height:100%;border-radius:3px;background:'+(user.collectProgress>60?C.danger:C.warning)+';"></div></div>'
+    ?'<div style="width:40px;height:4px;background:'+C.surface+';border-radius:2px;margin-top:3px;overflow:hidden;">'
+     +'<div style="width:'+user.collectProgress+'%;height:100%;border-radius:2px;background:'+(user.collectProgress>60?C.danger:C.warning)+';"></div></div>'
     :'';
-  var extraH=user.collectingSpotId?8:0;
-  var totalH=40+7+extraH;
+  var extraH=user.collectingSpotId?7:0;
+  var totalH=40+extraH;
   var html='<div style="display:flex;flex-direction:column;align-items:center;width:56px;">'
-    +prog
     +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;">'+user.avatar+'</div>'
-    +'<div style="width:40px;height:4px;background:'+C.surface+';border-radius:2px;margin-top:3px;overflow:hidden;">'
-    +'<div style="width:'+(hp*100)+'%;height:100%;border-radius:2px;background:'+hc+';"></div></div>'
+    +prog
     +'</div>';
   return L.divIcon({html:html,className:'',iconSize:[56,totalH],iconAnchor:[28,totalH/2]});
 }

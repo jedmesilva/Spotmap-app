@@ -22,6 +22,7 @@ export function UserMarker({ user, isSelected, onPress }: UserMarkerProps) {
 
   return (
     <Marker
+      key={`${user.id}-${isCollecting}-${Math.round(user.collectProgress / 10)}`}
       coordinate={{ latitude: user.latitude, longitude: user.longitude }}
       onPress={onPress}
       anchor={{ x: 0.5, y: 0.5 }}
