@@ -110,10 +110,9 @@ export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
       onClose={onClose}
       backgroundStyle={styles.sheetBackground}
       handleIndicatorStyle={styles.handle}
-      bottomInset={insets.bottom}
     >
       <BottomSheetScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: 32 }]}
+        contentContainerStyle={[styles.content, { paddingBottom: 32 + insets.bottom }]}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
