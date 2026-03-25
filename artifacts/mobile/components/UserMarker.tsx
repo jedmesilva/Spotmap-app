@@ -39,35 +39,26 @@ export function UserMarker({ user, isSelected, onPress }: UserMarkerProps) {
         No shadow/elevation inside — those cause clipping on Android.
       */}
       <View style={styles.padding}>
-        {isCollecting && (
-          <View style={styles.progressBar}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${user.collectProgress}%` as any,
-                  backgroundColor:
-                    user.collectProgress > 60
-                      ? COLORS.dark.danger
-                      : COLORS.dark.warning,
-                },
-              ]}
-            />
-          </View>
-        )}
-
         <View style={[styles.avatar, { borderColor }]}>
           <Text style={styles.avatarText}>{user.avatar}</Text>
         </View>
 
-        <View style={styles.healthBar}>
+        <View style={styles.bar}>
           <View
             style={[
-              styles.healthFill,
-              {
-                width: `${healthPercent * 100}%` as any,
-                backgroundColor: healthColor,
-              },
+              styles.barFill,
+              isCollecting
+                ? {
+                    width: `${user.collectProgress}%` as any,
+                    backgroundColor:
+                      user.collectProgress > 60
+                        ? COLORS.dark.danger
+                        : COLORS.dark.warning,
+                  }
+                : {
+                    width: `${healthPercent * 100}%` as any,
+                    backgroundColor: healthColor,
+                  },
             ]}
           />
         </View>
@@ -86,18 +77,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     /* NO shadow/elevation */
   },
-  progressBar: {
-    width: 52,
-    height: 5,
-    backgroundColor: COLORS.dark.surface,
-    borderRadius: 3,
-    marginBottom: 3,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 3,
-  },
   avatar: {
     width: 40,
     height: 40,
@@ -113,7 +92,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_700Bold",
   },
-  healthBar: {
+  bar: {
     width: 40,
     height: 4,
     backgroundColor: COLORS.dark.surface,
@@ -121,7 +100,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
     overflow: "hidden",
   },
-  healthFill: {
+  barFill: {
     height: "100%",
     borderRadius: 2,
   },
