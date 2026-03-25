@@ -80,40 +80,41 @@ function userIcon(user,selected){
     var hColor=healthPct>0.6?C.accent:healthPct>0.3?C.warning:C.danger;
     var bc=user.collectingSpotId?C.warning:C.accent;
     var collectLine=user.collectingSpotId
-      ?'<div style="margin-top:5px;display:flex;align-items:center;gap:4px;">'
+      ?'<div style="margin-bottom:5px;display:flex;align-items:center;gap:4px;">'
        +'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="'+C.warning+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="3" x2="12" y2="21"/></svg>'
        +'<span style="color:'+C.warning+';font-size:10px;">Coletando...</span>'
        +'</div>'
       :'';
+    var cardH=user.collectingSpotId?108:92;
     var html=''
       +'<div style="display:flex;flex-direction:column;align-items:center;">'
-        +'<div style="width:54px;height:54px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 14px '+bc+'55;">'+user.avatar+'</div>'
-        +'<div style="background:'+C.bgSec+';border:1.5px solid '+bc+'55;border-radius:12px;padding:8px 14px;margin-top:7px;text-align:center;min-width:130px;">'
+        +'<div style="background:'+C.bgSec+';border:1.5px solid '+bc+'55;border-radius:12px;padding:8px 14px;margin-bottom:7px;text-align:center;min-width:130px;">'
+          +collectLine
           +'<div style="color:'+C.text+';font-size:13px;font-weight:700;letter-spacing:0.3px;margin-bottom:5px;">'+user.name+'</div>'
           +'<div style="display:flex;align-items:center;justify-content:center;gap:5px;">'
             +heartSvg(hColor)
             +'<span style="color:'+hColor+';font-size:13px;font-weight:700;">'+user.health+'</span>'
             +'<span style="color:'+C.textMuted+';font-size:11px;">/'+user.maxHealth+'</span>'
           +'</div>'
-          +collectLine
         +'</div>'
+        +'<div style="width:54px;height:54px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 14px '+bc+'55;">'+user.avatar+'</div>'
       +'</div>';
-    var cardH=user.collectingSpotId?108:92;
-    return L.divIcon({html:html,className:'',iconSize:[158,cardH],iconAnchor:[79,27]});
+    return L.divIcon({html:html,className:'',iconSize:[158,cardH+7+54],iconAnchor:[79,cardH+7+27]});
   }
 
   var bc=user.collectingSpotId?C.warning:C.border;
   var prog=user.collectingSpotId
-    ?'<div style="width:40px;height:4px;background:'+C.surface+';border-radius:2px;margin-top:3px;overflow:hidden;">'
+    ?'<div style="width:40px;height:4px;background:'+C.surface+';border-radius:2px;margin-bottom:3px;overflow:hidden;">'
      +'<div style="width:'+user.collectProgress+'%;height:100%;border-radius:2px;background:'+(user.collectProgress>60?C.danger:C.warning)+';"></div></div>'
     :'';
   var extraH=user.collectingSpotId?7:0;
   var totalH=40+extraH;
+  var anchorY=extraH+20;
   var html='<div style="display:flex;flex-direction:column;align-items:center;width:56px;">'
-    +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;">'+user.avatar+'</div>'
     +prog
+    +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;">'+user.avatar+'</div>'
     +'</div>';
-  return L.divIcon({html:html,className:'',iconSize:[56,totalH],iconAnchor:[28,totalH/2]});
+  return L.divIcon({html:html,className:'',iconSize:[56,totalH],iconAnchor:[28,anchorY]});
 }
 
 function applySpotVisibility(){
