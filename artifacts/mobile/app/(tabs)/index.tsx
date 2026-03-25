@@ -48,8 +48,8 @@ export default function MapScreen() {
       sub = await Location.watchPositionAsync(
         {
           accuracy: Location.Accuracy.High,
-          timeInterval: 2000,
-          distanceInterval: 2,
+          timeInterval: 500,
+          distanceInterval: 1,
         },
         (loc) => {
           setUserLocation({

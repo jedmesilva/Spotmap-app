@@ -256,8 +256,16 @@ function updatePlayer(loc,radius,profile){
     html:'<div style="width:16px;height:16px;border-radius:50%;background:'+C.accent+';border:2.5px solid white;box-shadow:0 0 10px '+C.accent+'99;"></div>',
     className:'',iconSize:[16,16],iconAnchor:[8,8]
   });
-  if(playerDot){playerDot.setLatLng(ll);playerDot.setIcon(icon);}
-  else{playerDot=L.marker(ll,{icon:icon,zIndexOffset:200,interactive:false}).addTo(map);}
+  if(playerDot){
+    playerDot.setIcon(icon);
+    var el=playerDot.getElement();
+    if(el){el.style.transition='transform 0.6s linear';}
+    playerDot.setLatLng(ll);
+  } else {
+    playerDot=L.marker(ll,{icon:icon,zIndexOffset:200,interactive:false}).addTo(map);
+    var el=playerDot.getElement();
+    if(el){el.style.transition='transform 0.6s linear';}
+  }
 }
 
 window.receiveFromRN=function(jsonStr){
