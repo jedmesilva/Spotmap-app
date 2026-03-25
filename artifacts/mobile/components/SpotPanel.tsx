@@ -1,13 +1,15 @@
 import { Feather } from "@expo/vector-icons";
+import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef, useState } from "react";
 import {
+  Animated as RNAnimated,
   Pressable,
   StyleSheet,
   Text,
   View,
-  Animated as RNAnimated,
 } from "react-native";
-import * as Haptics from "expo-haptics";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
 import { Spot, useGame } from "@/context/GameContext";
@@ -46,27 +48,20 @@ interface SpotPanelProps {
   spot: Spot;
   onClose: () => void;
   isInRange: boolean;
-  bottomInset?: number;
 }
 
-export function SpotPanel({ spot, onClose, isInRange, bottomInset = 0 }: SpotPanelProps) {
+export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
+  const insets = useSafeAreaInsets();
   const { activeCollection, startCollecting, stopCollecting, updateCollectProgress, completeCollection, nearbyUsers } = useGame();
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
   const isCollecting = activeCollection?.spotId === spot.id;
   const progress = isCollecting ? activeCollection?.progress ?? 0 : 0;
 
   const progressAnim = useRef(new RNAnimated.Value(0)).current;
-  const slideAnim = useRef(new RNAnimated.Value(200)).current;
   const [countdown, setCountdown] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    RNAnimated.spring(slideAnim, {
-      toValue: 0,
-      tension: 70,
-      friction: 10,
-      useNativeDriver: true,
-    }).start();
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -105,160 +100,163 @@ export function SpotPanel({ spot, onClose, isInRange, bottomInset = 0 }: SpotPan
     }, 100);
   };
 
-  const usersCollecting = nearbyUsers.filter((u) => u.collectingSpotId === spot.id)
+  const usersCollecting = nearbyUsers
+    .filter((u) => u.collectingSpotId === spot.id)
     .sort((a, b) => b.collectProgress - a.collectProgress);
 
   return (
-    <RNAnimated.View
-      style={[styles.container, { transform: [{ translateY: slideAnim }], paddingBottom: 32 + bottomInset }]}
+    <BottomSheet
+      enablePanDownToClose
+      onClose={onClose}
+      backgroundStyle={styles.sheetBackground}
+      handleIndicatorStyle={styles.handle}
+      bottomInset={insets.bottom}
     >
-      <View style={styles.handle} />
-      <View style={styles.header}>
-        <View style={[styles.typeBadge, { backgroundColor: color + "22", borderColor: color + "55" }]}>
-          <Feather name={SPOT_ICONS[spot.type] as any} size={12} color={color} />
-          <Text style={[styles.typeLabel, { color }]}>{SPOT_LABELS[spot.type]}</Text>
+      <BottomSheetScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: 32 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <View style={[styles.typeBadge, { backgroundColor: color + "22", borderColor: color + "55" }]}>
+            <Feather name={SPOT_ICONS[spot.type] as any} size={12} color={color} />
+            <Text style={[styles.typeLabel, { color }]}>{SPOT_LABELS[spot.type]}</Text>
+          </View>
+          <Pressable onPress={onClose} style={styles.closeBtn}>
+            <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
+          </Pressable>
         </View>
-        <Pressable onPress={onClose} style={styles.closeBtn}>
-          <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
-        </Pressable>
-      </View>
 
-      <Text style={styles.title}>{spot.title}</Text>
-      <Text style={[styles.value, { color }]}>{spot.value}</Text>
+        <Text style={styles.title}>{spot.title}</Text>
+        <Text style={[styles.value, { color }]}>{spot.value}</Text>
 
-      <View style={styles.meta}>
-        <View style={styles.metaItem}>
-          <Feather name="map-pin" size={12} color={COLORS.dark.textMuted} />
-          <Text style={styles.metaText}>Raio: {spot.radius}m</Text>
-        </View>
-        {spot.expiresAt && (
+        <View style={styles.meta}>
           <View style={styles.metaItem}>
-            <Feather name="clock" size={12} color={COLORS.dark.textMuted} />
-            <Text style={styles.metaText}>Expira em: {formatExpiry(spot.expiresAt)}</Text>
+            <Feather name="map-pin" size={12} color={COLORS.dark.textMuted} />
+            <Text style={styles.metaText}>Raio: {spot.radius}m</Text>
+          </View>
+          {spot.expiresAt && (
+            <View style={styles.metaItem}>
+              <Feather name="clock" size={12} color={COLORS.dark.textMuted} />
+              <Text style={styles.metaText}>Expira em: {formatExpiry(spot.expiresAt)}</Text>
+            </View>
+          )}
+        </View>
+
+        {usersCollecting.length > 0 && (
+          <View style={styles.collectingSection}>
+            <Text style={styles.sectionLabel}>COLETANDO AGORA</Text>
+            {usersCollecting.map((u) => (
+              <View key={u.id} style={styles.collectingUser}>
+                <View style={styles.userAvatar}>
+                  <Text style={styles.userAvatarText}>{u.avatar}</Text>
+                </View>
+                <View style={styles.userProgress}>
+                  <Text style={styles.userName}>{u.name}</Text>
+                  <View style={styles.progressTrack}>
+                    <View
+                      style={[
+                        styles.progressBar,
+                        {
+                          width: `${u.collectProgress}%`,
+                          backgroundColor: u.collectProgress > 60 ? COLORS.dark.danger : COLORS.dark.warning,
+                        },
+                      ]}
+                    />
+                  </View>
+                </View>
+                <Text style={[styles.progressText, {
+                  color: u.collectProgress > 60 ? COLORS.dark.danger : COLORS.dark.warning,
+                }]}>{u.collectProgress}%</Text>
+              </View>
+            ))}
           </View>
         )}
-      </View>
 
-      {usersCollecting.length > 0 && (
-        <View style={styles.collectingSection}>
-          <Text style={styles.sectionLabel}>COLETANDO AGORA</Text>
-          {usersCollecting.map((u) => (
-            <View key={u.id} style={styles.collectingUser}>
-              <View style={styles.userAvatar}>
-                <Text style={styles.userAvatarText}>{u.avatar}</Text>
-              </View>
-              <View style={styles.userProgress}>
-                <Text style={styles.userName}>{u.name}</Text>
-                <View style={styles.progressTrack}>
-                  <View
-                    style={[
-                      styles.progressBar,
-                      {
-                        width: `${u.collectProgress}%`,
-                        backgroundColor: u.collectProgress > 60 ? COLORS.dark.danger : COLORS.dark.warning,
-                      },
-                    ]}
-                  />
-                </View>
-              </View>
-              <Text style={[styles.progressText, {
-                color: u.collectProgress > 60 ? COLORS.dark.danger : COLORS.dark.warning,
-              }]}>{u.collectProgress}%</Text>
+        {isCollecting && (
+          <View style={styles.myProgress}>
+            <Text style={styles.sectionLabel}>SEU PROGRESSO</Text>
+            <View style={styles.myProgressTrack}>
+              <RNAnimated.View
+                style={[
+                  styles.myProgressBar,
+                  {
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ["0%", "100%"],
+                    }),
+                    backgroundColor: color,
+                  },
+                ]}
+              />
             </View>
-          ))}
-        </View>
-      )}
-
-      {isCollecting && (
-        <View style={styles.myProgress}>
-          <Text style={styles.sectionLabel}>SEU PROGRESSO</Text>
-          <View style={styles.myProgressTrack}>
-            <RNAnimated.View
-              style={[
-                styles.myProgressBar,
-                {
-                  width: progressAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ["0%", "100%"],
-                  }),
-                  backgroundColor: color,
-                },
-              ]}
-            />
+            <Text style={[styles.progressPct, { color }]}>{progress}%</Text>
           </View>
-          <Text style={[styles.progressPct, { color }]}>{progress}%</Text>
-        </View>
-      )}
+        )}
 
-      <Pressable
-        onPress={handleCollect}
-        disabled={!isInRange}
-        style={({ pressed }) => [
-          styles.collectBtn,
-          {
-            backgroundColor: isCollecting
-              ? COLORS.dark.danger + "22"
-              : isInRange
-              ? color + "22"
-              : COLORS.dark.surface,
-            borderColor: isCollecting
-              ? COLORS.dark.danger
-              : isInRange
-              ? color
-              : COLORS.dark.border,
-            opacity: pressed ? 0.8 : 1,
-          },
-        ]}
-      >
-        <Feather
-          name={isCollecting ? "pause-circle" : "download"}
-          size={18}
-          color={isCollecting ? COLORS.dark.danger : isInRange ? color : COLORS.dark.textMuted}
-        />
-        <Text
-          style={[
-            styles.collectBtnText,
+        <Pressable
+          onPress={handleCollect}
+          disabled={!isInRange}
+          style={({ pressed }) => [
+            styles.collectBtn,
             {
-              color: isCollecting
+              backgroundColor: isCollecting
+                ? COLORS.dark.danger + "22"
+                : isInRange
+                ? color + "22"
+                : COLORS.dark.surface,
+              borderColor: isCollecting
                 ? COLORS.dark.danger
                 : isInRange
                 ? color
-                : COLORS.dark.textMuted,
+                : COLORS.dark.border,
+              opacity: pressed ? 0.8 : 1,
             },
           ]}
         >
-          {isCollecting ? "Parar Coleta" : isInRange ? "Coletar" : "Fora do Alcance"}
-        </Text>
-      </Pressable>
-    </RNAnimated.View>
+          <Feather
+            name={isCollecting ? "pause-circle" : "download"}
+            size={18}
+            color={isCollecting ? COLORS.dark.danger : isInRange ? color : COLORS.dark.textMuted}
+          />
+          <Text
+            style={[
+              styles.collectBtnText,
+              {
+                color: isCollecting
+                  ? COLORS.dark.danger
+                  : isInRange
+                  ? color
+                  : COLORS.dark.textMuted,
+              },
+            ]}
+          >
+            {isCollecting ? "Parar Coleta" : isInRange ? "Coletar" : "Fora do Alcance"}
+          </Text>
+        </Pressable>
+      </BottomSheetScrollView>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  sheetBackground: {
     backgroundColor: COLORS.dark.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingBottom: 32,
     borderWidth: 1,
     borderColor: COLORS.dark.border,
-    borderBottomWidth: 0,
   },
   handle: {
-    width: 36,
-    height: 4,
     backgroundColor: COLORS.dark.border,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 12,
-    marginBottom: 16,
+    width: 36,
+  },
+  content: {
+    paddingHorizontal: 20,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 8,
+    marginTop: 4,
   },
   typeBadge: {
     flexDirection: "row",

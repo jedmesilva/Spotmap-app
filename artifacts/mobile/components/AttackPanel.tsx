@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -8,6 +9,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
 import { ArtifactType, NearbyUser, useGame } from "@/context/GameContext";
@@ -34,25 +36,15 @@ interface AttackFeedback {
 interface AttackPanelProps {
   user: NearbyUser;
   onClose: () => void;
-  bottomInset?: number;
 }
 
-export function AttackPanel({ user, onClose, bottomInset = 0 }: AttackPanelProps) {
+export function AttackPanel({ user, onClose }: AttackPanelProps) {
+  const insets = useSafeAreaInsets();
   const { attackUser, userProfile } = useGame();
   const [feedback, setFeedback] = useState<AttackFeedback | null>(null);
   const [targetHealth, setTargetHealth] = useState(user.health);
-  const slideAnim = useRef(new RNAnimated.Value(300)).current;
   const shakeAnim = useRef(new RNAnimated.Value(0)).current;
   const feedbackOpacity = useRef(new RNAnimated.Value(0)).current;
-
-  useEffect(() => {
-    RNAnimated.spring(slideAnim, {
-      toValue: 0,
-      tension: 70,
-      friction: 10,
-      useNativeDriver: true,
-    }).start();
-  }, []);
 
   const handleAttack = (type: ArtifactType, artifactName: string) => {
     const itemInBag = userProfile.bag.find((i) => i.type === type);
@@ -92,185 +84,178 @@ export function AttackPanel({ user, onClose, bottomInset = 0 }: AttackPanelProps
       : COLORS.dark.danger;
 
   return (
-    <RNAnimated.View
-      style={[styles.container, { transform: [{ translateY: slideAnim }], paddingBottom: 32 + bottomInset }]}
+    <BottomSheet
+      enablePanDownToClose
+      onClose={onClose}
+      backgroundStyle={styles.sheetBackground}
+      handleIndicatorStyle={styles.handle}
+      bottomInset={insets.bottom}
     >
-      <View style={styles.handle} />
-
-      <View style={styles.header}>
-        <View style={styles.targetSection}>
-          <RNAnimated.View
-            style={[
-              styles.targetAvatar,
-              { transform: [{ translateX: shakeAnim }] },
-            ]}
-          >
-            <Text style={styles.avatarText}>{user.avatar}</Text>
-          </RNAnimated.View>
-          <View style={styles.targetInfo}>
-            <Text style={styles.targetName}>{user.name}</Text>
-            {user.collectingSpotId && (
-              <View style={styles.collectingBadge}>
-                <Feather name="download" size={10} color={COLORS.dark.warning} />
-                <Text style={styles.collectingText}>Coletando spot</Text>
-              </View>
-            )}
-            <View style={styles.healthContainer}>
-              <View style={styles.healthTrack}>
-                <View
-                  style={[
-                    styles.healthBar,
-                    {
-                      width: `${healthPercent * 100}%`,
-                      backgroundColor: healthColor,
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={[styles.healthText, { color: healthColor }]}>
-                {targetHealth}/{user.maxHealth}
-              </Text>
-            </View>
-          </View>
-        </View>
-        <Pressable onPress={onClose} style={styles.closeBtn}>
-          <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
-        </Pressable>
-      </View>
-
-      {user.immunities.length > 0 && (
-        <View style={styles.immunitiesRow}>
-          <Text style={styles.immunitiesLabel}>IMUNIDADES</Text>
-          {user.immunities.map((imm) => (
-            <View key={imm} style={styles.immunityBadge}>
-              <Feather name="shield" size={10} color={COLORS.dark.purple} />
-              <Text style={styles.immunityText}>{imm.replace("_", " ")}</Text>
-            </View>
-          ))}
-        </View>
-      )}
-
-      {user.collectingSpotId && (
-        <View style={styles.progressSection}>
-          <View style={styles.progressRow}>
-            <Feather name="loader" size={12} color={COLORS.dark.textMuted} />
-            <Text style={styles.progressLabel}>Progresso de coleta</Text>
-            <Text style={[styles.progressValue, { color: COLORS.dark.warning }]}>
-              {user.collectProgress}%
-            </Text>
-          </View>
-          <View style={styles.collectProgressTrack}>
-            <View
-              style={[
-                styles.collectProgressBar,
-                {
-                  width: `${user.collectProgress}%`,
-                  backgroundColor:
-                    user.collectProgress > 60 ? COLORS.dark.danger : COLORS.dark.warning,
-                },
-              ]}
-            />
-          </View>
-        </View>
-      )}
-
-      <Text style={styles.artifactsLabel}>SELECIONE UM ARTEFATO</Text>
-
-      <View style={styles.artifactsGrid}>
-        {ARTIFACTS.map((artifact) => {
-          const inBag = userProfile.bag.find((i) => i.type === artifact.type);
-          const qty = inBag?.quantity ?? 0;
-          const canUse = qty > 0;
-
-          return (
-            <Pressable
-              key={artifact.type}
-              onPress={() => canUse && handleAttack(artifact.type, artifact.name)}
-              style={({ pressed }) => [
-                styles.artifactBtn,
-                {
-                  backgroundColor: canUse ? artifact.color + "15" : COLORS.dark.surface,
-                  borderColor: canUse ? artifact.color + "66" : COLORS.dark.border,
-                  opacity: pressed ? 0.75 : canUse ? 1 : 0.4,
-                },
-              ]}
+      <BottomSheetScrollView
+        contentContainerStyle={[styles.content, { paddingBottom: 32 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+          <View style={styles.targetSection}>
+            <RNAnimated.View
+              style={[styles.targetAvatar, { transform: [{ translateX: shakeAnim }] }]}
             >
-              <Feather
-                name={artifact.icon as any}
-                size={22}
-                color={canUse ? artifact.color : COLORS.dark.textMuted}
-              />
-              <Text style={[styles.artifactName, { color: canUse ? artifact.color : COLORS.dark.textMuted }]}>
-                {artifact.name}
+              <Text style={styles.avatarText}>{user.avatar}</Text>
+            </RNAnimated.View>
+            <View style={styles.targetInfo}>
+              <Text style={styles.targetName}>{user.name}</Text>
+              {user.collectingSpotId && (
+                <View style={styles.collectingBadge}>
+                  <Feather name="download" size={10} color={COLORS.dark.warning} />
+                  <Text style={styles.collectingText}>Coletando spot</Text>
+                </View>
+              )}
+              <View style={styles.healthContainer}>
+                <View style={styles.healthTrack}>
+                  <View
+                    style={[
+                      styles.healthBar,
+                      { width: `${healthPercent * 100}%`, backgroundColor: healthColor },
+                    ]}
+                  />
+                </View>
+                <Text style={[styles.healthText, { color: healthColor }]}>
+                  {targetHealth}/{user.maxHealth}
+                </Text>
+              </View>
+            </View>
+          </View>
+          <Pressable onPress={onClose} style={styles.closeBtn}>
+            <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
+          </Pressable>
+        </View>
+
+        {user.immunities.length > 0 && (
+          <View style={styles.immunitiesRow}>
+            <Text style={styles.immunitiesLabel}>IMUNIDADES</Text>
+            {user.immunities.map((imm) => (
+              <View key={imm} style={styles.immunityBadge}>
+                <Feather name="shield" size={10} color={COLORS.dark.purple} />
+                <Text style={styles.immunityText}>{imm.replace("_", " ")}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {user.collectingSpotId && (
+          <View style={styles.progressSection}>
+            <View style={styles.progressRow}>
+              <Feather name="loader" size={12} color={COLORS.dark.textMuted} />
+              <Text style={styles.progressLabel}>Progresso de coleta</Text>
+              <Text style={[styles.progressValue, { color: COLORS.dark.warning }]}>
+                {user.collectProgress}%
               </Text>
-              <Text style={[styles.artifactDmg, { color: canUse ? COLORS.dark.textSecondary : COLORS.dark.textMuted }]}>
-                -{artifact.damage} HP
-              </Text>
+            </View>
+            <View style={styles.collectProgressTrack}>
               <View
                 style={[
-                  styles.qtyBadge,
-                  { backgroundColor: canUse ? artifact.color : COLORS.dark.border },
+                  styles.collectProgressBar,
+                  {
+                    width: `${user.collectProgress}%`,
+                    backgroundColor:
+                      user.collectProgress > 60 ? COLORS.dark.danger : COLORS.dark.warning,
+                  },
+                ]}
+              />
+            </View>
+          </View>
+        )}
+
+        <Text style={styles.artifactsLabel}>SELECIONE UM ARTEFATO</Text>
+
+        <View style={styles.artifactsGrid}>
+          {ARTIFACTS.map((artifact) => {
+            const inBag = userProfile.bag.find((i) => i.type === artifact.type);
+            const qty = inBag?.quantity ?? 0;
+            const canUse = qty > 0;
+
+            return (
+              <Pressable
+                key={artifact.type}
+                onPress={() => canUse && handleAttack(artifact.type, artifact.name)}
+                style={({ pressed }) => [
+                  styles.artifactBtn,
+                  {
+                    backgroundColor: canUse ? artifact.color + "15" : COLORS.dark.surface,
+                    borderColor: canUse ? artifact.color + "66" : COLORS.dark.border,
+                    opacity: pressed ? 0.75 : canUse ? 1 : 0.4,
+                  },
                 ]}
               >
-                <Text style={styles.qtyText}>{qty}</Text>
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
+                <Feather
+                  name={artifact.icon as any}
+                  size={22}
+                  color={canUse ? artifact.color : COLORS.dark.textMuted}
+                />
+                <Text style={[styles.artifactName, { color: canUse ? artifact.color : COLORS.dark.textMuted }]}>
+                  {artifact.name}
+                </Text>
+                <Text style={[styles.artifactDmg, { color: canUse ? COLORS.dark.textSecondary : COLORS.dark.textMuted }]}>
+                  -{artifact.damage} HP
+                </Text>
+                <View
+                  style={[
+                    styles.qtyBadge,
+                    { backgroundColor: canUse ? artifact.color : COLORS.dark.border },
+                  ]}
+                >
+                  <Text style={styles.qtyText}>{qty}</Text>
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
 
-      <RNAnimated.View style={[styles.feedbackBanner, { opacity: feedbackOpacity }]}>
-        {feedback && (
-          <>
-            <Feather
-              name={feedback.blocked ? "shield" : "zap"}
-              size={16}
-              color={feedback.blocked ? COLORS.dark.purple : COLORS.dark.danger}
-            />
-            <Text
-              style={[
-                styles.feedbackText,
-                {
-                  color: feedback.blocked ? COLORS.dark.purple : COLORS.dark.danger,
-                },
-              ]}
-            >
-              {feedback.blocked
-                ? `${feedback.artifact} BLOQUEADO — Imune!`
-                : `-${feedback.damage} HP — ${feedback.artifact} atingiu!`}
-            </Text>
-          </>
-        )}
-      </RNAnimated.View>
-    </RNAnimated.View>
+        <RNAnimated.View style={[styles.feedbackBanner, { opacity: feedbackOpacity }]}>
+          {feedback && (
+            <>
+              <Feather
+                name={feedback.blocked ? "shield" : "zap"}
+                size={16}
+                color={feedback.blocked ? COLORS.dark.purple : COLORS.dark.danger}
+              />
+              <Text
+                style={[
+                  styles.feedbackText,
+                  { color: feedback.blocked ? COLORS.dark.purple : COLORS.dark.danger },
+                ]}
+              >
+                {feedback.blocked
+                  ? `${feedback.artifact} BLOQUEADO — Imune!`
+                  : `-${feedback.damage} HP — ${feedback.artifact} atingiu!`}
+              </Text>
+            </>
+          )}
+        </RNAnimated.View>
+      </BottomSheetScrollView>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  sheetBackground: {
     backgroundColor: COLORS.dark.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingBottom: 32,
     borderWidth: 1,
     borderColor: COLORS.dark.border,
-    borderBottomWidth: 0,
   },
   handle: {
-    width: 36,
-    height: 4,
     backgroundColor: COLORS.dark.border,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 12,
-    marginBottom: 16,
+    width: 36,
+  },
+  content: {
+    paddingHorizontal: 20,
   },
   header: {
     flexDirection: "row",
     alignItems: "flex-start",
     justifyContent: "space-between",
     marginBottom: 12,
+    marginTop: 4,
   },
   targetSection: {
     flexDirection: "row",
