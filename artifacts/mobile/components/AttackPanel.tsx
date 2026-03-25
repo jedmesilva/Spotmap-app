@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -41,10 +41,15 @@ interface AttackPanelProps {
 export function AttackPanel({ user, onClose }: AttackPanelProps) {
   const insets = useSafeAreaInsets();
   const { attackUser, userProfile } = useGame();
+  const sheetRef = useRef<BottomSheetModal>(null);
   const [feedback, setFeedback] = useState<AttackFeedback | null>(null);
   const [targetHealth, setTargetHealth] = useState(user.health);
   const shakeAnim = useRef(new RNAnimated.Value(0)).current;
   const feedbackOpacity = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    sheetRef.current?.present();
+  }, []);
 
   const handleAttack = (type: ArtifactType, artifactName: string) => {
     const itemInBag = userProfile.bag.find((i) => i.type === type);
@@ -84,9 +89,10 @@ export function AttackPanel({ user, onClose }: AttackPanelProps) {
       : COLORS.dark.danger;
 
   return (
-    <BottomSheet
+    <BottomSheetModal
+      ref={sheetRef}
       enablePanDownToClose
-      onClose={onClose}
+      onDismiss={onClose}
       backgroundStyle={styles.sheetBackground}
       handleIndicatorStyle={styles.handle}
     >
@@ -232,7 +238,7 @@ export function AttackPanel({ user, onClose }: AttackPanelProps) {
           )}
         </RNAnimated.View>
       </BottomSheetScrollView>
-    </BottomSheet>
+    </BottomSheetModal>
   );
 }
 

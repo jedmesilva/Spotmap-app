@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import BottomSheet, { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -57,11 +57,13 @@ export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
   const isCollecting = activeCollection?.spotId === spot.id;
   const progress = isCollecting ? activeCollection?.progress ?? 0 : 0;
 
+  const sheetRef = useRef<BottomSheetModal>(null);
   const progressAnim = useRef(new RNAnimated.Value(0)).current;
   const [countdown, setCountdown] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
+    sheetRef.current?.present();
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -105,9 +107,10 @@ export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
     .sort((a, b) => b.collectProgress - a.collectProgress);
 
   return (
-    <BottomSheet
+    <BottomSheetModal
+      ref={sheetRef}
       enablePanDownToClose
-      onClose={onClose}
+      onDismiss={onClose}
       backgroundStyle={styles.sheetBackground}
       handleIndicatorStyle={styles.handle}
     >
@@ -233,7 +236,7 @@ export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
           </Text>
         </Pressable>
       </BottomSheetScrollView>
-    </BottomSheet>
+    </BottomSheetModal>
   );
 }
 
