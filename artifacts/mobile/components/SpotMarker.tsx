@@ -1,16 +1,6 @@
 import { Feather } from "@expo/vector-icons";
-import React, { useEffect } from "react";
-import { Platform, StyleSheet, View } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withTiming,
-  Easing,
-} from "react-native-reanimated";
-import { Marker } from "react-native-maps";
-
+import React from "react";
+import { Pressable, StyleSheet, View } from "react-native";
 import COLORS from "@/constants/colors";
 import { Spot } from "@/context/GameContext";
 
@@ -28,118 +18,91 @@ const SPOT_ICONS: Record<string, string> = {
   rare: "star",
 };
 
-interface SpotMarkerContentProps {
-  spot: Spot;
-  isSelected: boolean;
-}
-
-function SpotMarkerContent({ spot, isSelected }: SpotMarkerContentProps) {
-  const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
-  const iconName = SPOT_ICONS[spot.type] ?? "map-pin";
-
-  const scale = useSharedValue(1);
-  const opacity = useSharedValue(0.5);
-
-  useEffect(() => {
-    scale.value = withRepeat(
-      withSequence(
-        withTiming(1.6, { duration: 1000, easing: Easing.out(Easing.ease) }),
-        withTiming(1, { duration: 0 })
-      ),
-      -1,
-      false
-    );
-    opacity.value = withRepeat(
-      withSequence(
-        withTiming(0, { duration: 1000, easing: Easing.out(Easing.ease) }),
-        withTiming(0.6, { duration: 0 })
-      ),
-      -1,
-      false
-    );
-  }, []);
-
-  const pulseStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    opacity: opacity.value,
-  }));
-
-  return (
-    <View style={styles.wrapper}>
-      <Animated.View
-        style={[
-          styles.pulse,
-          { backgroundColor: color },
-          pulseStyle,
-        ]}
-      />
-      <View
-        style={[
-          styles.markerOuter,
-          {
-            borderColor: color,
-            backgroundColor: isSelected ? color + "40" : COLORS.dark.bgSecondary,
-            shadowColor: color,
-          },
-        ]}
-      >
-        <Feather name={iconName as any} size={16} color={color} />
-      </View>
-      {spot.isCollecting && (
-        <View style={[styles.collectingDot, { backgroundColor: COLORS.dark.accent }]} />
-      )}
-    </View>
-  );
-}
-
 interface SpotMarkerProps {
   spot: Spot;
   isSelected: boolean;
+  position: { x: number; y: number };
   onPress: () => void;
 }
 
-export function SpotMarker({ spot, isSelected, onPress }: SpotMarkerProps) {
+export function SpotMarker({ spot, isSelected, position, onPress }: SpotMarkerProps) {
+  const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
+  const iconName = SPOT_ICONS[spot.type] ?? "map-pin";
+  const SIZE = 44;
+
   return (
-    <Marker
-      coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
+    <Pressable
       onPress={onPress}
-      tracksViewChanges
-      anchor={{ x: 0.5, y: 0.5 }}
+      style={[
+        styles.container,
+        {
+          left: position.x - SIZE / 2,
+          top: position.y - SIZE / 2,
+          width: SIZE,
+          height: SIZE,
+        },
+      ]}
     >
-      <SpotMarkerContent spot={spot} isSelected={isSelected} />
-    </Marker>
+      <View
+        style={[
+          styles.outerRing,
+          {
+            borderColor: isSelected ? color : color + "70",
+            backgroundColor: isSelected ? color + "28" : color + "14",
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.innerCircle,
+            {
+              backgroundColor: isSelected ? color + "30" : COLORS.dark.bgSecondary,
+              borderColor: color,
+              shadowColor: color,
+            },
+          ]}
+        >
+          <Feather name={iconName as any} size={15} color={color} />
+        </View>
+      </View>
+
+      {spot.isCollecting && (
+        <View style={[styles.collectingDot, { backgroundColor: COLORS.dark.accent }]} />
+      )}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    width: 80,
-    height: 80,
+  container: {
+    position: "absolute",
     alignItems: "center",
     justifyContent: "center",
   },
-  pulse: {
-    position: "absolute",
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  outerRing: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  markerOuter: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+  innerCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.9,
-    shadowRadius: 10,
-    elevation: 6,
+    shadowOpacity: 0.8,
+    shadowRadius: 8,
+    elevation: 4,
   },
   collectingDot: {
     position: "absolute",
-    top: 16,
-    right: 16,
+    top: 2,
+    right: 2,
     width: 10,
     height: 10,
     borderRadius: 5,

@@ -1,2 +1,2 @@
 import React from "react";
-export function SpotMarker() { return null; }
+export function SpotMarker(_props: any) { return null; }

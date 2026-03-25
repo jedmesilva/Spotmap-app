@@ -1,8 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Platform,
   StyleSheet,
-  Text,
   View,
 } from "react-native";
 import MapView, { Circle } from "react-native-maps";
@@ -10,7 +9,7 @@ import * as Location from "expo-location";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
-import { useGame } from "@/context/GameContext";
+import { Spot, NearbyUser, useGame } from "@/context/GameContext";
 import { SpotMarker } from "@/components/SpotMarker";
 import { UserMarker } from "@/components/UserMarker";
 import { SpotPanel } from "@/components/SpotPanel";
@@ -41,30 +40,39 @@ const SPOT_COLORS: Record<string, string> = {
 
 const USER_RADIUS = 60;
 
-function getDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number
-): number {
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.sin(dLat / 2) ** 2 +
     Math.cos((lat1 * Math.PI) / 180) *
       Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+      Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+type ScreenPositions = Record<string, { x: number; y: number }>;
+
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
-  const { spots, nearbyUsers, selectedSpot, selectedUser, selectSpot, selectUser, userLocation, setUserLocation } = useGame();
-  const mapRef = useRef<MapView>(null);
+  const {
+    spots,
+    nearbyUsers,
+    selectedSpot,
+    selectedUser,
+    selectSpot,
+    selectUser,
+    userLocation,
+    setUserLocation,
+  } = useGame();
 
+  const mapRef = useRef<MapView>(null);
   const [locationPermission, setLocationPermission] = useState<string | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [spotPositions, setSpotPositions] = useState<ScreenPositions>({});
+  const [userPositions, setUserPositions] = useState<ScreenPositions>({});
+
   const [region, setRegion] = useState({
     latitude: -23.5505,
     longitude: -46.6333,
@@ -76,18 +84,50 @@ export default function MapScreen() {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       setLocationPermission(status);
-
       if (status === "granted") {
         const loc = await Location.getCurrentPositionAsync({});
-        const coords = {
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-        };
+        const coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
         setUserLocation(coords);
         setRegion((prev) => ({ ...prev, ...coords }));
       }
     })();
   }, []);
+
+  const recalcPositions = useCallback(async () => {
+    if (!mapRef.current || !mapReady) return;
+
+    const newSpotPos: ScreenPositions = {};
+    for (const spot of spots) {
+      try {
+        const pt = await mapRef.current.pointForCoordinate({
+          latitude: spot.latitude,
+          longitude: spot.longitude,
+        });
+        newSpotPos[spot.id] = pt;
+      } catch (_) {}
+    }
+    setSpotPositions(newSpotPos);
+
+    const newUserPos: ScreenPositions = {};
+    for (const user of nearbyUsers) {
+      try {
+        const pt = await mapRef.current.pointForCoordinate({
+          latitude: user.latitude,
+          longitude: user.longitude,
+        });
+        newUserPos[user.id] = pt;
+      } catch (_) {}
+    }
+    setUserPositions(newUserPos);
+  }, [mapReady, spots, nearbyUsers]);
+
+  useEffect(() => {
+    if (mapReady) recalcPositions();
+  }, [mapReady, recalcPositions]);
+
+  const handleRegionChange = useCallback(() => {
+    recalcPositions();
+  }, [recalcPositions]);
 
   const isSpotInRange = (spot: { latitude: number; longitude: number; radius: number }) => {
     if (!userLocation) return false;
@@ -105,6 +145,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
+      {/* ─── Map (circles stay inside MapView) ─── */}
       <MapView
         ref={mapRef}
         style={StyleSheet.absoluteFill}
@@ -115,28 +156,27 @@ export default function MapScreen() {
         showsCompass={false}
         showsScale={false}
         showsPointsOfInterest={false}
+        onMapReady={() => setMapReady(true)}
+        onRegionChange={handleRegionChange}
+        onRegionChangeComplete={handleRegionChange}
         onPress={() => {
           selectSpot(null);
           selectUser(null);
         }}
       >
+        {/* Radius circles per spot */}
         {spots.map((spot) => (
-          <React.Fragment key={spot.id}>
-            <Circle
-              center={{ latitude: spot.latitude, longitude: spot.longitude }}
-              radius={spot.radius}
-              fillColor={SPOT_COLORS[spot.type] + "18"}
-              strokeColor={SPOT_COLORS[spot.type] + "66"}
-              strokeWidth={1.5}
-            />
-            <SpotMarker
-              spot={spot}
-              isSelected={selectedSpot?.id === spot.id}
-              onPress={() => selectSpot(spot)}
-            />
-          </React.Fragment>
+          <Circle
+            key={spot.id}
+            center={{ latitude: spot.latitude, longitude: spot.longitude }}
+            radius={spot.radius}
+            fillColor={SPOT_COLORS[spot.type] + "18"}
+            strokeColor={SPOT_COLORS[spot.type] + "66"}
+            strokeWidth={1.5}
+          />
         ))}
 
+        {/* User radius */}
         {userLocation && (
           <Circle
             center={userLocation}
@@ -146,21 +186,45 @@ export default function MapScreen() {
             strokeWidth={2}
           />
         )}
+      </MapView>
 
-        {nearbyUsers.map((user) => (
+      {/* ─── Spot markers — plain RN views over the map ─── */}
+      {spots.map((spot) => {
+        const pos = spotPositions[spot.id];
+        if (!pos) return null;
+        return (
+          <SpotMarker
+            key={spot.id}
+            spot={spot}
+            isSelected={selectedSpot?.id === spot.id}
+            position={pos}
+            onPress={() => selectSpot(spot)}
+          />
+        );
+      })}
+
+      {/* ─── User markers — plain RN views over the map ─── */}
+      {nearbyUsers.map((user) => {
+        const pos = userPositions[user.id];
+        if (!pos) return null;
+        return (
           <UserMarker
             key={user.id}
             user={user}
             isSelected={selectedUser?.id === user.id}
+            position={pos}
             onPress={() => selectUser(user)}
           />
-        ))}
-      </MapView>
+        );
+      })}
 
+      {/* ─── HUD ─── */}
       <UserProfileHUD insets={{ top: topInset }} />
 
+      {/* ─── Right sidebar bag ─── */}
       <BagSidebar insets={{ top: topInset, bottom: bottomInset }} />
 
+      {/* ─── Bottom panels ─── */}
       {selectedSpot && (
         <View style={[styles.panelContainer, { bottom: bottomInset }]}>
           <SpotPanel
@@ -179,14 +243,6 @@ export default function MapScreen() {
           />
         </View>
       )}
-
-      {locationPermission && locationPermission !== "granted" && (
-        <View style={[styles.permissionBanner, { top: topInset + 90 }]}>
-          <Text style={styles.permissionText}>
-            Localização necessária para jogar
-          </Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -200,23 +256,5 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-  },
-  permissionBanner: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    backgroundColor: COLORS.dark.card,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.dark.warning,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    zIndex: 20,
-  },
-  permissionText: {
-    color: COLORS.dark.warning,
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    textAlign: "center",
   },
 });

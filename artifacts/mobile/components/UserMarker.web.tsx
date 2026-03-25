@@ -1,2 +1,2 @@
 import React from "react";
-export function UserMarker() { return null; }
+export function UserMarker(_props: any) { return null; }

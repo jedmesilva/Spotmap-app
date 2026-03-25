@@ -1,42 +1,17 @@
-import React, { useEffect } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming,
-  Easing,
-} from "react-native-reanimated";
-import { Marker } from "react-native-maps";
-
+import React from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 import COLORS from "@/constants/colors";
 import { NearbyUser } from "@/context/GameContext";
 
-interface UserMarkerContentProps {
+interface UserMarkerProps {
   user: NearbyUser;
   isSelected: boolean;
+  position: { x: number; y: number };
+  onPress: () => void;
 }
 
-function UserMarkerContent({ user, isSelected }: UserMarkerContentProps) {
+export function UserMarker({ user, isSelected, position, onPress }: UserMarkerProps) {
   const isCollecting = !!user.collectingSpotId;
-  const scale = useSharedValue(1);
-
-  useEffect(() => {
-    if (isCollecting) {
-      scale.value = withRepeat(
-        withTiming(1.1, { duration: 600 }),
-        -1,
-        true
-      );
-    } else {
-      scale.value = 1;
-    }
-  }, [isCollecting]);
-
-  const animStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
   const healthPercent = user.health / user.maxHealth;
   const healthColor =
     healthPercent > 0.6
@@ -45,81 +20,74 @@ function UserMarkerContent({ user, isSelected }: UserMarkerContentProps) {
       ? COLORS.dark.warning
       : COLORS.dark.danger;
 
+  const borderColor = isSelected
+    ? COLORS.dark.accent
+    : isCollecting
+    ? COLORS.dark.warning
+    : COLORS.dark.border;
+
+  const AVATAR = 40;
+  const TOTAL_WIDTH = 56;
+
   return (
-    <View style={styles.wrapper}>
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.container,
+        {
+          left: position.x - TOTAL_WIDTH / 2,
+          top: position.y - AVATAR / 2 - (isCollecting ? 14 : 0),
+        },
+      ]}
+    >
       {isCollecting && (
         <View style={styles.progressRing}>
           <View
             style={[
               styles.progressFill,
               {
-                width: `${user.collectProgress}%`,
-                backgroundColor: COLORS.dark.accent,
+                width: `${user.collectProgress}%` as any,
+                backgroundColor:
+                  user.collectProgress > 60
+                    ? COLORS.dark.danger
+                    : COLORS.dark.warning,
               },
             ]}
           />
         </View>
       )}
-      <Animated.View
-        style={[
-          styles.avatar,
-          {
-            borderColor: isSelected
-              ? COLORS.dark.accent
-              : isCollecting
-              ? COLORS.dark.warning
-              : COLORS.dark.border,
-            shadowColor: isSelected ? COLORS.dark.accent : "transparent",
-          },
-          animStyle,
-        ]}
-      >
+
+      <View style={[styles.avatar, { borderColor }]}>
         <Text style={styles.avatarText}>{user.avatar}</Text>
-      </Animated.View>
+      </View>
+
       <View style={styles.healthBar}>
         <View
           style={[
             styles.healthFill,
             {
-              width: `${healthPercent * 100}%`,
+              width: `${healthPercent * 100}%` as any,
               backgroundColor: healthColor,
             },
           ]}
         />
       </View>
-    </View>
-  );
-}
-
-interface UserMarkerProps {
-  user: NearbyUser;
-  isSelected: boolean;
-  onPress: () => void;
-}
-
-export function UserMarker({ user, isSelected, onPress }: UserMarkerProps) {
-  return (
-    <Marker
-      coordinate={{ latitude: user.latitude, longitude: user.longitude }}
-      onPress={onPress}
-      tracksViewChanges
-      anchor={{ x: 0.5, y: 0.5 }}
-    >
-      <UserMarkerContent user={user} isSelected={isSelected} />
-    </Marker>
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
+  container: {
+    position: "absolute",
     alignItems: "center",
+    width: 56,
   },
   progressRing: {
     width: 52,
-    height: 6,
+    height: 5,
     backgroundColor: COLORS.dark.surface,
     borderRadius: 3,
-    marginBottom: 4,
+    marginBottom: 3,
     overflow: "hidden",
   },
   progressFill: {
@@ -134,10 +102,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.dark.bgSecondary,
     alignItems: "center",
     justifyContent: "center",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 6,
-    elevation: 4,
   },
   avatarText: {
     color: COLORS.dark.text,
