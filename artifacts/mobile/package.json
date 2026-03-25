@@ -57,6 +57,7 @@
   },
   "dependencies": {
     "@nkzw/create-context-hook": "^1.1.0",
-    "react-native-maps": "1.18.0"
+    "react-native-maps": "1.18.0",
+    "react-native-webview": "13.15.0"
   }
 }

@@ -1,45 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Platform, StyleSheet, View } from "react-native";
-import MapView, { Circle } from "react-native-maps";
 import * as Location from "expo-location";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import COLORS from "@/constants/colors";
 import { useGame } from "@/context/GameContext";
-import { SpotMarker } from "@/components/SpotMarker";
-import { UserMarker } from "@/components/UserMarker";
+import { GameMap } from "@/components/GameMap";
 import { SpotPanel } from "@/components/SpotPanel";
 import { AttackPanel } from "@/components/AttackPanel";
 import { BagSidebar } from "@/components/BagSidebar";
 import { UserProfileHUD } from "@/components/UserProfileHUD";
-
-const MAP_STYLE = [
-  { elementType: "geometry", stylers: [{ color: "#050A14" }] },
-  { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#3D6080" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#050A14" }] },
-  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#1E3A5F" }] },
-  { featureType: "poi", stylers: [{ visibility: "off" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#0D1B2E" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#1E3A5F" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#132A4A" }] },
-  { featureType: "transit", stylers: [{ visibility: "off" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#03080F" }] },
-];
-
-const SPOT_COLORS: Record<string, string> = {
-  coupon: COLORS.dark.spotCoupon,
-  money: COLORS.dark.spotMoney,
-  product: COLORS.dark.spotProduct,
-  rare: COLORS.dark.spotRare,
-};
+import COLORS from "@/constants/colors";
 
 const USER_RADIUS = 60;
 
-function getDistance(
-  lat1: number, lon1: number,
-  lat2: number, lon2: number
-): number {
+function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -64,43 +38,52 @@ export default function MapScreen() {
     setUserLocation,
   } = useGame();
 
-  const [locationPermission, setLocationPermission] = useState<string | null>(null);
-  const [region, setRegion] = useState({
-    latitude: -23.5505,
-    longitude: -46.6333,
-    latitudeDelta: 0.005,
-    longitudeDelta: 0.005,
-  });
-
   useEffect(() => {
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      setLocationPermission(status);
       if (status === "granted") {
         const loc = await Location.getCurrentPositionAsync({});
-        const coords = {
+        setUserLocation({
           latitude: loc.coords.latitude,
           longitude: loc.coords.longitude,
-        };
-        setUserLocation(coords);
-        setRegion((r) => ({ ...r, ...coords }));
+        });
       }
     })();
   }, []);
 
-  const isSpotInRange = (spot: {
-    latitude: number;
-    longitude: number;
-    radius: number;
-  }) => {
+  const handleSpotPress = useCallback(
+    (spotId: string) => {
+      const spot = spots.find((s) => s.id === spotId);
+      selectSpot(spot ?? null);
+      selectUser(null);
+    },
+    [spots, selectSpot, selectUser]
+  );
+
+  const handleUserPress = useCallback(
+    (userId: string) => {
+      const user = nearbyUsers.find((u) => u.id === userId);
+      selectUser(user ?? null);
+      selectSpot(null);
+    },
+    [nearbyUsers, selectUser, selectSpot]
+  );
+
+  const handleMapPress = useCallback(() => {
+    selectSpot(null);
+    selectUser(null);
+  }, [selectSpot, selectUser]);
+
+  const isSpotInRange = (spot: { latitude: number; longitude: number; radius: number }) => {
     if (!userLocation) return false;
-    const dist = getDistance(
-      userLocation.latitude,
-      userLocation.longitude,
-      spot.latitude,
-      spot.longitude
+    return (
+      getDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        spot.latitude,
+        spot.longitude
+      ) <= spot.radius + USER_RADIUS
     );
-    return dist <= spot.radius + USER_RADIUS;
   };
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
@@ -108,71 +91,20 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <MapView
-        style={StyleSheet.absoluteFill}
-        customMapStyle={Platform.OS !== "web" ? MAP_STYLE : undefined}
-        initialRegion={region}
-        showsUserLocation={locationPermission === "granted"}
-        showsMyLocationButton={false}
-        showsCompass={false}
-        showsScale={false}
-        showsPointsOfInterest={false}
-        onPress={() => {
-          selectSpot(null);
-          selectUser(null);
-        }}
-      >
-        {/* Radius circles for each spot */}
-        {spots.map((spot) => (
-          <Circle
-            key={spot.id}
-            center={{ latitude: spot.latitude, longitude: spot.longitude }}
-            radius={spot.radius}
-            fillColor={SPOT_COLORS[spot.type] + "18"}
-            strokeColor={SPOT_COLORS[spot.type] + "66"}
-            strokeWidth={1.5}
-          />
-        ))}
+      <GameMap
+        spots={spots}
+        nearbyUsers={nearbyUsers}
+        selectedSpotId={selectedSpot?.id}
+        selectedUserId={selectedUser?.id}
+        userLocation={userLocation}
+        onSpotPress={handleSpotPress}
+        onUserPress={handleUserPress}
+        onMapPress={handleMapPress}
+      />
 
-        {/* Player radius */}
-        {userLocation && (
-          <Circle
-            center={userLocation}
-            radius={USER_RADIUS}
-            fillColor={COLORS.dark.accentGlow}
-            strokeColor={COLORS.dark.accent + "88"}
-            strokeWidth={2}
-          />
-        )}
-
-        {/* Spot markers — native Marker, no shadow/elevation inside */}
-        {spots.map((spot) => (
-          <SpotMarker
-            key={spot.id}
-            spot={spot}
-            isSelected={selectedSpot?.id === spot.id}
-            onPress={() => selectSpot(spot)}
-          />
-        ))}
-
-        {/* User markers — native Marker, no shadow/elevation inside */}
-        {nearbyUsers.map((user) => (
-          <UserMarker
-            key={user.id}
-            user={user}
-            isSelected={selectedUser?.id === user.id}
-            onPress={() => selectUser(user)}
-          />
-        ))}
-      </MapView>
-
-      {/* HUD overlay */}
       <UserProfileHUD insets={{ top: topInset }} />
-
-      {/* Bag sidebar */}
       <BagSidebar insets={{ top: topInset, bottom: bottomInset }} />
 
-      {/* Bottom panel: spot or attack */}
       {selectedSpot && (
         <View style={[styles.panel, { bottom: bottomInset }]}>
           <SpotPanel
@@ -185,10 +117,7 @@ export default function MapScreen() {
 
       {selectedUser && (
         <View style={[styles.panel, { bottom: bottomInset }]}>
-          <AttackPanel
-            user={selectedUser}
-            onClose={() => selectUser(null)}
-          />
+          <AttackPanel user={selectedUser} onClose={() => selectUser(null)} />
         </View>
       )}
     </View>
