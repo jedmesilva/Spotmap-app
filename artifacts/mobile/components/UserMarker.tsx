@@ -13,13 +13,6 @@ interface UserMarkerProps {
 
 export function UserMarker({ user, isSelected, onPress }: UserMarkerProps) {
   const isCollecting = !!user.collectingSpotId;
-  const healthPercent = user.health / user.maxHealth;
-  const healthColor =
-    healthPercent > 0.6
-      ? COLORS.dark.accent
-      : healthPercent > 0.3
-      ? COLORS.dark.warning
-      : COLORS.dark.danger;
 
   const borderColor = isSelected
     ? COLORS.dark.accent
@@ -43,25 +36,22 @@ export function UserMarker({ user, isSelected, onPress }: UserMarkerProps) {
           <Text style={styles.avatarText}>{user.avatar}</Text>
         </View>
 
-        <View style={styles.bar}>
-          <View
-            style={[
-              styles.barFill,
-              isCollecting
-                ? {
-                    width: `${user.collectProgress}%` as any,
-                    backgroundColor:
-                      user.collectProgress > 60
-                        ? COLORS.dark.danger
-                        : COLORS.dark.warning,
-                  }
-                : {
-                    width: `${healthPercent * 100}%` as any,
-                    backgroundColor: healthColor,
-                  },
-            ]}
-          />
-        </View>
+        {isCollecting && (
+          <View style={styles.bar}>
+            <View
+              style={[
+                styles.barFill,
+                {
+                  width: `${user.collectProgress}%` as any,
+                  backgroundColor:
+                    user.collectProgress > 60
+                      ? COLORS.dark.danger
+                      : COLORS.dark.warning,
+                },
+              ]}
+            />
+          </View>
+        )}
       </View>
       {/* Suppress the default Google Maps navigation callout */}
       <Callout tooltip>
