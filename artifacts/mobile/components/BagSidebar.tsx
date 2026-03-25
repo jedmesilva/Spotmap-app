@@ -137,12 +137,7 @@ export function BagSidebar({ insets }: BagSidebarProps) {
 
   return (
     <>
-      <View
-        style={[
-          styles.sidebar,
-          { top: insets.top + 80 },
-        ]}
-      >
+      <View style={[styles.sidebar, { bottom: insets.bottom + 16 }]}>
         <View style={styles.sidebarContainer}>
           <Pressable
             onPress={() => setBagOpen(true)}
@@ -152,8 +147,8 @@ export function BagSidebar({ insets }: BagSidebarProps) {
             <View style={styles.coinBadge}>
               <Text style={styles.coinText}>{userProfile.coins}</Text>
             </View>
+            <Text style={styles.bagLabel}>BAG</Text>
           </Pressable>
-          <Text style={styles.bagLabel}>BAG</Text>
 
           {quickItems.length > 0 && (
             <>
