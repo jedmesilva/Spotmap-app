@@ -230,7 +230,24 @@ function updateUsers(users){
   applyUserVisibility();
 }
 
-function updatePlayer(loc,radius){
+function playerIcon(profile){
+  var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
+  var healthPct=profile.health/profile.maxHealth;
+  var hColor=healthPct>0.6?C.accent:healthPct>0.3?C.warning:C.danger;
+  var html=''
+    +'<div style="width:170px;display:flex;flex-direction:column;align-items:center;">'
+      +'<div style="width:46px;height:46px;border-radius:50%;border:2.5px solid '+C.accent+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 14px '+C.accent+'88;">'+profile.avatar+'</div>'
+      +'<div style="margin-top:4px;color:'+C.text+';font-size:12px;font-weight:700;letter-spacing:0.3px;text-align:center;'+shadow+';">Você</div>'
+      +'<div style="margin-top:2px;display:flex;align-items:center;justify-content:center;gap:4px;">'
+        +heartSvg(hColor)
+        +'<span style="color:'+hColor+';font-size:11px;font-weight:700;'+shadow+';">'+profile.health+'</span>'
+        +'<span style="color:'+C.textMuted+';font-size:10px;'+shadow+';">/'+profile.maxHealth+'</span>'
+      +'</div>'
+    +'</div>';
+  return L.divIcon({html:html,className:'',iconSize:[170,110],iconAnchor:[85,27]});
+}
+
+function updatePlayer(loc,radius,profile){
   if(!loc)return;
   var ll=[loc.latitude,loc.longitude];
   if(playerCircle){playerCircle.setLatLng(ll)}
@@ -238,14 +255,12 @@ function updatePlayer(loc,radius){
     playerCircle=L.circle(ll,{radius:radius||60,color:C.accent,fillColor:C.accent,fillOpacity:0.06,weight:2,opacity:0.5}).addTo(map);
     map.setView(ll,17);
   }
-  if(playerDot){playerDot.setLatLng(ll)}
-  else{
-    var icon=L.divIcon({
-      html:'<div style="width:16px;height:16px;border-radius:50%;background:'+C.accent+';border:2.5px solid white;box-shadow:0 0 10px '+C.accent+'99;"></div>',
-      className:'',iconSize:[16,16],iconAnchor:[8,8]
-    });
-    playerDot=L.marker(ll,{icon:icon,zIndexOffset:200,interactive:false}).addTo(map);
-  }
+  var icon=profile?playerIcon(profile):L.divIcon({
+    html:'<div style="width:16px;height:16px;border-radius:50%;background:'+C.accent+';border:2.5px solid white;box-shadow:0 0 10px '+C.accent+'99;"></div>',
+    className:'',iconSize:[16,16],iconAnchor:[8,8]
+  });
+  if(playerDot){playerDot.setLatLng(ll);playerDot.setIcon(icon);}
+  else{playerDot=L.marker(ll,{icon:icon,zIndexOffset:200,interactive:false}).addTo(map);}
 }
 
 window.receiveFromRN=function(jsonStr){
@@ -256,7 +271,7 @@ window.receiveFromRN=function(jsonStr){
       selUser=d.selectedUserId||null;
       updateSpots(d.spots||[]);
       updateUsers(d.users||[]);
-      updatePlayer(d.userLocation,d.userRadius);
+      updatePlayer(d.userLocation,d.userRadius,d.userProfile||null);
     } else if(d.type==='CENTER'){
       map.setView([d.lat,d.lng],d.zoom||17);
     } else if(d.type==='EMOJI_REACTION'){
@@ -282,6 +297,7 @@ interface GameMapProps {
   selectedSpotId?: string | null;
   selectedUserId?: string | null;
   userLocation?: { latitude: number; longitude: number } | null;
+  userProfile?: { name: string; avatar: string; health: number; maxHealth: number } | null;
   onSpotPress: (spotId: string) => void;
   onUserPress: (userId: string) => void;
   onMapPress: () => void;
@@ -293,6 +309,7 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
   selectedSpotId,
   selectedUserId,
   userLocation,
+  userProfile,
   onSpotPress,
   onUserPress,
   onMapPress,
@@ -331,8 +348,11 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
       userRadius: USER_RADIUS,
       selectedSpotId: selectedSpotId ?? null,
       selectedUserId: selectedUserId ?? null,
+      userProfile: userProfile
+        ? { name: userProfile.name, avatar: userProfile.avatar, health: userProfile.health, maxHealth: userProfile.maxHealth }
+        : null,
     });
-  }, [mapReady, spots, nearbyUsers, userLocation, selectedSpotId, selectedUserId, inject]);
+  }, [mapReady, spots, nearbyUsers, userLocation, userProfile, selectedSpotId, selectedUserId, inject]);
 
   const handleMessage = useCallback(
     (event: any) => {

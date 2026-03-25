@@ -37,6 +37,7 @@ export default function MapScreen() {
     selectUser,
     userLocation,
     setUserLocation,
+    userProfile,
   } = useGame();
 
   useEffect(() => {
@@ -99,6 +100,7 @@ export default function MapScreen() {
         selectedSpotId={selectedSpot?.id}
         selectedUserId={selectedUser?.id}
         userLocation={userLocation}
+        userProfile={userProfile}
         onSpotPress={handleSpotPress}
         onUserPress={handleUserPress}
         onMapPress={handleMapPress}
