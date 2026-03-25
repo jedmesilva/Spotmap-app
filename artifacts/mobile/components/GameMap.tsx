@@ -93,26 +93,28 @@ function userIcon(user,selected){
     var healthPct=user.health/user.maxHealth;
     var hColor=healthPct>0.6?C.accent:healthPct>0.3?C.warning:C.danger;
     var bc=user.collectingSpotId?C.warning:C.accent;
+    var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
 
-    var badgeRow=user.collectingSpotId
-      ?'<div style="display:flex;justify-content:center;margin-bottom:6px;">'+collectBadge(user.collectProgress)+'</div>'
+    var statusRow=user.collectingSpotId
+      ?'<div style="display:flex;justify-content:center;gap:4px;margin-bottom:5px;">'+collectBadge(user.collectProgress)+'</div>'
       :'';
 
-    var cardH=user.collectingSpotId?110:90;
+    var avatarOffsetY=user.collectingSpotId?25:0;
+    var totalH=user.collectingSpotId?148:122;
+
     var html=''
       +'<div style="display:flex;flex-direction:column;align-items:center;">'
-        +'<div style="background:'+C.bgSec+';border:1.5px solid '+bc+'55;border-radius:12px;padding:8px 14px;margin-bottom:7px;text-align:center;min-width:130px;">'
-          +badgeRow
-          +'<div style="color:'+C.text+';font-size:13px;font-weight:700;letter-spacing:0.3px;margin-bottom:5px;">'+user.name+'</div>'
-          +'<div style="display:flex;align-items:center;justify-content:center;gap:5px;">'
-            +heartSvg(hColor)
-            +'<span style="color:'+hColor+';font-size:13px;font-weight:700;">'+user.health+'</span>'
-            +'<span style="color:'+C.textMuted+';font-size:11px;">/'+user.maxHealth+'</span>'
-          +'</div>'
+        +statusRow
+        +'<div style="width:54px;height:54px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 16px '+bc+'66;">'+user.avatar+'</div>'
+        +'<div style="margin-top:5px;color:'+C.text+';font-size:12px;font-weight:700;letter-spacing:0.3px;'+shadow+';">'+user.name+'</div>'
+        +'<div style="margin-top:3px;display:flex;align-items:center;gap:4px;">'
+          +heartSvg(hColor)
+          +'<span style="color:'+hColor+';font-size:11px;font-weight:700;'+shadow+';">'+user.health+'</span>'
+          +'<span style="color:'+C.textMuted+';font-size:10px;'+shadow+';">/'+user.maxHealth+'</span>'
         +'</div>'
-        +'<div style="width:54px;height:54px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 14px '+bc+'55;">'+user.avatar+'</div>'
       +'</div>';
-    return L.divIcon({html:html,className:'',iconSize:[158,cardH+7+54],iconAnchor:[79,cardH+7+27]});
+
+    return L.divIcon({html:html,className:'',iconSize:[170,totalH],iconAnchor:[85,avatarOffsetY+27]});
   }
 
   var bc=user.collectingSpotId?C.warning:C.border33;
