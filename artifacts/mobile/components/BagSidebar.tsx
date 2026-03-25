@@ -170,28 +170,28 @@ export function BagSidebar({ insets, onLocate }: BagSidebarProps) {
               {quickItems.map((item) => (
                 <QuickItem key={item.id} item={item} onUse={handleUseItem} />
               ))}
-              <TouchableOpacity
-                style={styles.viewAllBtn}
-                onPress={() => setModalOpen(true)}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.viewAllText}>VER TUDO</Text>
-                <Feather name="chevron-right" size={11} color={COLORS.dark.textMuted} />
-              </TouchableOpacity>
               <View style={styles.itemsDivider} />
             </>
           )}
 
-          <Pressable
+          <TouchableOpacity
+            style={styles.expandBtn}
             onPress={toggleExpand}
+            activeOpacity={0.75}
+          >
+            <Feather
+              name={expanded ? "chevron-down" : "chevron-up"}
+              size={14}
+              color={COLORS.dark.textSecondary}
+            />
+          </TouchableOpacity>
+
+          <Pressable
+            onPress={() => setModalOpen(true)}
             style={({ pressed }) => [styles.bagBtn, { opacity: pressed ? 0.8 : 1 }]}
           >
             <View style={styles.bagBtnInner}>
-              <Feather
-                name={expanded ? "chevron-down" : "briefcase"}
-                size={20}
-                color={COLORS.dark.accent}
-              />
+              <Feather name="briefcase" size={20} color={COLORS.dark.accent} />
               <View style={styles.coinBadge}>
                 <Text style={styles.coinText}>{userProfile.coins}</Text>
               </View>
@@ -338,18 +338,15 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: COLORS.dark.bg,
   },
-  viewAllBtn: {
-    flexDirection: "row",
+  expandBtn: {
+    width: 36,
+    height: 22,
+    borderRadius: 8,
+    backgroundColor: COLORS.dark.surface,
+    borderWidth: 1,
+    borderColor: COLORS.dark.border,
     alignItems: "center",
-    gap: 2,
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-  },
-  viewAllText: {
-    fontSize: 8,
-    fontFamily: "Inter_700Bold",
-    color: COLORS.dark.textMuted,
-    letterSpacing: 1,
+    justifyContent: "center",
   },
   bagBtn: {
     alignItems: "center",
