@@ -143,13 +143,9 @@ function showEmojiReaction(userId,emoji){
     'left:'+pt.x+'px',
     'top:'+(pt.y-70)+'px',
     'transform:translateX(-50%) translateY(0)',
-    'font-size:26px',
+    'font-size:30px',
     'z-index:999',
     'pointer-events:none',
-    'background:rgba(13,27,46,0.88)',
-    'border:1px solid #1E3A5F',
-    'border-radius:12px',
-    'padding:5px 9px',
     'animation:emojiFloat 1.4s ease-out forwards'
   ].join(';');
   el.textContent=emoji;
