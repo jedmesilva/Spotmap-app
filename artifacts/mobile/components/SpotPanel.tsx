@@ -142,29 +142,48 @@ export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
 
         {allCollecting.length > 0 && (
           <View style={styles.collectingSection}>
-            <Text style={styles.sectionLabel}>COLETANDO AGORA</Text>
-            {allCollecting.map((u) => {
-              const barColor = u.isMe ? color : u.collectProgress > 60 ? COLORS.dark.danger : COLORS.dark.warning;
-              return (
-                <View key={u.id} style={styles.collectingUser}>
-                  <View style={[styles.userAvatar, u.isMe && { borderColor: color + "88" }]}>
-                    <Text style={styles.userAvatarText}>{u.avatar}</Text>
-                  </View>
-                  <View style={styles.userProgress}>
-                    <Text style={[styles.userName, u.isMe && { color: color }]}>{u.name}</Text>
-                    <View style={styles.progressTrack}>
-                      <View
-                        style={[
-                          styles.progressBar,
-                          { width: `${u.collectProgress}%`, backgroundColor: barColor },
-                        ]}
-                      />
+            <Text style={styles.sectionLabel}>
+              COLETANDO AGORA · {allCollecting.length} {allCollecting.length === 1 ? "jogador" : "jogadores"}
+            </Text>
+            <View style={styles.badgesWrap}>
+              {allCollecting.map((u) => {
+                const badgeColor = u.isMe
+                  ? color
+                  : u.collectProgress > 60
+                  ? COLORS.dark.danger
+                  : COLORS.dark.warning;
+                return (
+                  <View
+                    key={u.id}
+                    style={[
+                      styles.userBadge,
+                      { borderColor: badgeColor + (u.isMe ? "88" : "44") },
+                    ]}
+                  >
+                    <View style={[styles.badgeAvatar, { borderColor: badgeColor + "66" }]}>
+                      <Text style={styles.badgeAvatarText}>{u.avatar}</Text>
+                    </View>
+                    <View style={styles.badgeBody}>
+                      <Text style={[styles.badgeName, u.isMe && { color }]} numberOfLines={1}>
+                        {u.name}
+                      </Text>
+                      <View style={[styles.fillBadge, { borderColor: badgeColor + "77" }]}>
+                        <View
+                          style={[
+                            styles.fillLayer,
+                            { width: `${u.collectProgress}%` as any, backgroundColor: badgeColor + "28" },
+                          ]}
+                        />
+                        <Text style={styles.fillIcon}>⛏️</Text>
+                        <Text style={[styles.fillText, { color: badgeColor }]}>
+                          {u.collectProgress}%
+                        </Text>
+                      </View>
                     </View>
                   </View>
-                  <Text style={[styles.progressText, { color: barColor }]}>{u.collectProgress}%</Text>
-                </View>
-              );
-            })}
+                );
+              })}
+            </View>
           </View>
         )}
 
@@ -296,56 +315,66 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.dark.border,
   },
-  collectingUser: {
+  badgesWrap: {
+    gap: 8,
+  },
+  userBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 6,
-  },
-  userAvatar: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    gap: 10,
     backgroundColor: COLORS.dark.bgSecondary,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  badgeAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: COLORS.dark.surface,
     borderWidth: 1.5,
-    borderColor: COLORS.dark.border,
     alignItems: "center",
     justifyContent: "center",
   },
-  userAvatarText: {
-    color: COLORS.dark.text,
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-  },
-  userProgress: {
-    flex: 1,
-  },
-  userName: {
-    fontSize: 12,
-    color: COLORS.dark.textSecondary,
-    fontFamily: "Inter_500Medium",
-    marginBottom: 3,
-  },
-  progressTrack: {
-    height: 4,
-    backgroundColor: COLORS.dark.bgSecondary,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  progressBar: {
-    height: "100%",
-    borderRadius: 2,
-  },
-  progressText: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    width: 32,
-    textAlign: "right",
-  },
-  progressPct: {
+  badgeAvatarText: {
     fontSize: 13,
     fontFamily: "Inter_700Bold",
-    textAlign: "right",
+    color: COLORS.dark.text,
+  },
+  badgeBody: {
+    flex: 1,
+    gap: 4,
+  },
+  badgeName: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: COLORS.dark.textSecondary,
+  },
+  fillBadge: {
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    overflow: "hidden",
+    alignSelf: "flex-start",
+  },
+  fillLayer: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+  },
+  fillIcon: {
+    fontSize: 10,
+  },
+  fillText: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
   },
   collectBtn: {
     flexDirection: "row",
