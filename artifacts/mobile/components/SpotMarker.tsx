@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, View } from "react-native";
-import { Marker } from "react-native-maps";
+import { Callout, Marker } from "react-native-maps";
 
 import COLORS from "@/constants/colors";
 import { Spot } from "@/context/GameContext";
@@ -75,6 +75,10 @@ export function SpotMarker({ spot, isSelected, onPress }: SpotMarkerProps) {
           />
         )}
       </View>
+      {/* Suppress the default Google Maps navigation callout */}
+      <Callout tooltip>
+        <View />
+      </Callout>
     </Marker>
   );
 }

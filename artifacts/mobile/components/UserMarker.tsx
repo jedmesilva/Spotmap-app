@@ -1,6 +1,6 @@
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Marker } from "react-native-maps";
+import { Callout, Marker } from "react-native-maps";
 
 import COLORS from "@/constants/colors";
 import { NearbyUser } from "@/context/GameContext";
@@ -72,6 +72,10 @@ export function UserMarker({ user, isSelected, onPress }: UserMarkerProps) {
           />
         </View>
       </View>
+      {/* Suppress the default Google Maps navigation callout */}
+      <Callout tooltip>
+        <View />
+      </Callout>
     </Marker>
   );
 }
