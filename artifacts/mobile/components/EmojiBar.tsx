@@ -31,9 +31,10 @@ interface FloatingEmoji {
 interface EmojiBarProps {
   user: NearbyUser;
   bottomInset: number;
+  onSendEmoji?: (emoji: string) => void;
 }
 
-export function EmojiBar({ user, bottomInset }: EmojiBarProps) {
+export function EmojiBar({ user, bottomInset, onSendEmoji }: EmojiBarProps) {
   const slideAnim = useRef(new Animated.Value(120)).current;
   const [floaters, setFloaters] = useState<FloatingEmoji[]>([]);
   const counterRef = useRef(0);
@@ -51,6 +52,8 @@ export function EmojiBar({ user, bottomInset }: EmojiBarProps) {
     if (Platform.OS !== "web") {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
+
+    onSendEmoji?.(emoji);
 
     const id = ++counterRef.current;
     const anim = new Animated.Value(0);

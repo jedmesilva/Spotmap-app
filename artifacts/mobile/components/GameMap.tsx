@@ -6,6 +6,7 @@ import { NearbyUser, Spot } from "@/context/GameContext";
 
 export interface GameMapHandle {
   centerOnUser: () => void;
+  sendEmojiReaction: (userId: string, emoji: string) => void;
 }
 
 const USER_RADIUS = 60;
@@ -22,6 +23,8 @@ html,body,#map{width:100%;height:100%;background:#050A14;overflow:hidden}
 .leaflet-container{background:#050A14}
 .leaflet-control-attribution{display:none}
 .leaflet-pane,.leaflet-top,.leaflet-bottom{z-index:1}
+@keyframes badgePop{0%{transform:translateX(-50%) scale(0.5);opacity:0}60%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1);opacity:1}}
+@keyframes emojiFloat{0%{transform:translateX(-50%) translateY(0);opacity:1}100%{transform:translateX(-50%) translateY(-60px);opacity:0}}
 </style>
 </head>
 <body>
@@ -29,7 +32,7 @@ html,body,#map{width:100%;height:100%;background:#050A14;overflow:hidden}
 <script>
 var C={
   accent:'#00FF88',bg:'#050A14',bgSec:'#0D1B2E',
-  surface:'#1E3A5F',border:'#1E3A5F33',
+  surface:'#1E3A5F',border:'#1E3A5F',border33:'#1E3A5F33',
   coupon:'#00BFFF',money:'#00FF88',product:'#FF8C00',rare:'#BF5FFF',
   warning:'#FFB800',danger:'#FF4444',text:'#E8F4FD',textMuted:'#5A7A9A'
 };
@@ -57,6 +60,17 @@ function heartSvg(color){
   return '<svg width="13" height="13" viewBox="0 0 24 24" fill="'+color+'" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
 }
 
+function collectBadge(progress){
+  return '<div style="'
+    +'display:inline-flex;align-items:center;gap:3px;'
+    +'background:'+C.warning+'18;border:1px solid '+C.warning+'77;'
+    +'border-radius:8px;padding:2px 7px;white-space:nowrap;'
+    +'animation:badgePop 0.25s ease-out forwards;">'
+    +'<span style="font-size:10px;">⛏️</span>'
+    +'<span style="color:'+C.warning+';font-size:10px;font-weight:700;">'+progress+'%</span>'
+    +'</div>';
+}
+
 function spotIcon(spot,selected){
   var color=SPOT_COLOR[spot.type]||C.accent;
   var bo=selected?color:color+'99';
@@ -79,17 +93,16 @@ function userIcon(user,selected){
     var healthPct=user.health/user.maxHealth;
     var hColor=healthPct>0.6?C.accent:healthPct>0.3?C.warning:C.danger;
     var bc=user.collectingSpotId?C.warning:C.accent;
-    var collectLine=user.collectingSpotId
-      ?'<div style="margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:4px;">'
-       +'<span style="font-size:12px;">⛏️</span>'
-       +'<span style="color:'+C.warning+';font-size:12px;font-weight:700;">'+user.collectProgress+'%</span>'
-       +'</div>'
+
+    var badgeRow=user.collectingSpotId
+      ?'<div style="display:flex;justify-content:center;margin-bottom:6px;">'+collectBadge(user.collectProgress)+'</div>'
       :'';
-    var cardH=user.collectingSpotId?108:92;
+
+    var cardH=user.collectingSpotId?110:90;
     var html=''
       +'<div style="display:flex;flex-direction:column;align-items:center;">'
         +'<div style="background:'+C.bgSec+';border:1.5px solid '+bc+'55;border-radius:12px;padding:8px 14px;margin-bottom:7px;text-align:center;min-width:130px;">'
-          +collectLine
+          +badgeRow
           +'<div style="color:'+C.text+';font-size:13px;font-weight:700;letter-spacing:0.3px;margin-bottom:5px;">'+user.name+'</div>'
           +'<div style="display:flex;align-items:center;justify-content:center;gap:5px;">'
             +heartSvg(hColor)
@@ -102,19 +115,44 @@ function userIcon(user,selected){
     return L.divIcon({html:html,className:'',iconSize:[158,cardH+7+54],iconAnchor:[79,cardH+7+27]});
   }
 
-  var bc=user.collectingSpotId?C.warning:C.border;
-  var prog=user.collectingSpotId
-    ?'<div style="width:40px;height:4px;background:'+C.surface+';border-radius:2px;margin-bottom:3px;overflow:hidden;">'
-     +'<div style="width:'+user.collectProgress+'%;height:100%;border-radius:2px;background:'+(user.collectProgress>60?C.danger:C.warning)+';"></div></div>'
-    :'';
-  var extraH=user.collectingSpotId?7:0;
-  var totalH=40+extraH;
-  var anchorY=extraH+20;
-  var html='<div style="display:flex;flex-direction:column;align-items:center;width:56px;">'
-    +prog
+  var bc=user.collectingSpotId?C.warning:C.border33;
+  if(user.collectingSpotId){
+    var badge=collectBadge(user.collectProgress);
+    var html='<div style="position:relative;display:flex;flex-direction:column;align-items:center;width:64px;padding-top:20px;">'
+      +'<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);animation:badgePop 0.25s ease-out forwards;">'+badge+'</div>'
+      +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+C.warning+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;">'+user.avatar+'</div>'
+      +'</div>';
+    return L.divIcon({html:html,className:'',iconSize:[64,60],iconAnchor:[32,40]});
+  }
+
+  var html='<div style="display:flex;align-items:center;justify-content:center;width:56px;height:40px;">'
     +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;">'+user.avatar+'</div>'
     +'</div>';
-  return L.divIcon({html:html,className:'',iconSize:[56,totalH],iconAnchor:[28,anchorY]});
+  return L.divIcon({html:html,className:'',iconSize:[56,40],iconAnchor:[28,20]});
+}
+
+function showEmojiReaction(userId,emoji){
+  var m=userMarkers[userId];
+  if(!m)return;
+  var pt=map.latLngToContainerPoint(m.getLatLng());
+  var el=document.createElement('div');
+  el.style.cssText=[
+    'position:absolute',
+    'left:'+pt.x+'px',
+    'top:'+(pt.y-70)+'px',
+    'transform:translateX(-50%) translateY(0)',
+    'font-size:26px',
+    'z-index:999',
+    'pointer-events:none',
+    'background:rgba(13,27,46,0.88)',
+    'border:1px solid #1E3A5F',
+    'border-radius:12px',
+    'padding:5px 9px',
+    'animation:emojiFloat 1.4s ease-out forwards'
+  ].join(';');
+  el.textContent=emoji;
+  document.getElementById('map').appendChild(el);
+  setTimeout(function(){el.parentNode&&el.parentNode.removeChild(el)},1500);
 }
 
 function applySpotVisibility(){
@@ -129,9 +167,7 @@ function applySpotVisibility(){
         el.style.pointerEvents=hide?'none':'auto';
       }
     }
-    if(c){
-      c.setStyle({opacity:hide?0:0.35,fillOpacity:hide?0:0.07});
-    }
+    if(c){c.setStyle({opacity:hide?0:0.35,fillOpacity:hide?0:0.07});}
   });
 }
 
@@ -223,6 +259,8 @@ window.receiveFromRN=function(jsonStr){
       updatePlayer(d.userLocation,d.userRadius);
     } else if(d.type==='CENTER'){
       map.setView([d.lat,d.lng],d.zoom||17);
+    } else if(d.type==='EMOJI_REACTION'){
+      showEmojiReaction(d.userId,d.emoji);
     }
   }catch(e){}
 };
@@ -277,6 +315,9 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
       const loc = userLocationRef.current;
       if (!loc) return;
       inject({ type: "CENTER", lat: loc.latitude, lng: loc.longitude, zoom: 17 });
+    },
+    sendEmojiReaction: (userId: string, emoji: string) => {
+      inject({ type: "EMOJI_REACTION", userId, emoji });
     },
   }), [inject]);
 

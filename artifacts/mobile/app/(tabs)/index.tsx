@@ -120,7 +120,13 @@ export default function MapScreen() {
       )}
 
       {selectedUser && (
-        <EmojiBar user={selectedUser} bottomInset={bottomInset} />
+        <EmojiBar
+          user={selectedUser}
+          bottomInset={bottomInset}
+          onSendEmoji={(emoji) =>
+            mapRef.current?.sendEmojiReaction(selectedUser.id, emoji)
+          }
+        />
       )}
 
     </View>
