@@ -102,7 +102,8 @@ export function UserMarker({ user, isSelected, onPress }: UserMarkerProps) {
     <Marker
       coordinate={{ latitude: user.latitude, longitude: user.longitude }}
       onPress={onPress}
-      tracksViewChanges={Platform.OS !== "web"}
+      tracksViewChanges
+      anchor={{ x: 0.5, y: 0.5 }}
     >
       <UserMarkerContent user={user} isSelected={isSelected} />
     </Marker>

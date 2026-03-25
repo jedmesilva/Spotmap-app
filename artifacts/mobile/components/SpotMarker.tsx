@@ -1,6 +1,6 @@
-import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
-import React, { useEffect, useRef } from "react";
-import { Platform, StyleSheet, Text, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import React, { useEffect } from "react";
+import { Platform, StyleSheet, View } from "react-native";
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -38,21 +38,21 @@ function SpotMarkerContent({ spot, isSelected }: SpotMarkerContentProps) {
   const iconName = SPOT_ICONS[spot.type] ?? "map-pin";
 
   const scale = useSharedValue(1);
-  const opacity = useSharedValue(0.6);
+  const opacity = useSharedValue(0.5);
 
   useEffect(() => {
     scale.value = withRepeat(
       withSequence(
-        withTiming(1.15, { duration: 900, easing: Easing.inOut(Easing.ease) }),
-        withTiming(1, { duration: 900, easing: Easing.inOut(Easing.ease) })
+        withTiming(1.6, { duration: 1000, easing: Easing.out(Easing.ease) }),
+        withTiming(1, { duration: 0 })
       ),
       -1,
       false
     );
     opacity.value = withRepeat(
       withSequence(
-        withTiming(0.8, { duration: 900 }),
-        withTiming(0.3, { duration: 900 })
+        withTiming(0, { duration: 1000, easing: Easing.out(Easing.ease) }),
+        withTiming(0.6, { duration: 0 })
       ),
       -1,
       false
@@ -65,7 +65,7 @@ function SpotMarkerContent({ spot, isSelected }: SpotMarkerContentProps) {
   }));
 
   return (
-    <View style={styles.markerWrapper}>
+    <View style={styles.wrapper}>
       <Animated.View
         style={[
           styles.pulse,
@@ -78,9 +78,7 @@ function SpotMarkerContent({ spot, isSelected }: SpotMarkerContentProps) {
           styles.markerOuter,
           {
             borderColor: color,
-            backgroundColor: isSelected
-              ? color + "33"
-              : COLORS.dark.bgSecondary,
+            backgroundColor: isSelected ? color + "40" : COLORS.dark.bgSecondary,
             shadowColor: color,
           },
         ]}
@@ -105,7 +103,8 @@ export function SpotMarker({ spot, isSelected, onPress }: SpotMarkerProps) {
     <Marker
       coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
       onPress={onPress}
-      tracksViewChanges={Platform.OS !== "web"}
+      tracksViewChanges
+      anchor={{ x: 0.5, y: 0.5 }}
     >
       <SpotMarkerContent spot={spot} isSelected={isSelected} />
     </Marker>
@@ -113,34 +112,34 @@ export function SpotMarker({ spot, isSelected, onPress }: SpotMarkerProps) {
 }
 
 const styles = StyleSheet.create({
-  markerWrapper: {
+  wrapper: {
+    width: 80,
+    height: 80,
     alignItems: "center",
     justifyContent: "center",
-    width: 52,
-    height: 52,
   },
   pulse: {
     position: "absolute",
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   markerOuter: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.9,
+    shadowRadius: 10,
+    elevation: 6,
   },
   collectingDot: {
     position: "absolute",
-    top: 2,
-    right: 2,
+    top: 16,
+    right: 16,
     width: 10,
     height: 10,
     borderRadius: 5,
