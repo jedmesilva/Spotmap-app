@@ -46,9 +46,10 @@ interface SpotPanelProps {
   spot: Spot;
   onClose: () => void;
   isInRange: boolean;
+  bottomInset?: number;
 }
 
-export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
+export function SpotPanel({ spot, onClose, isInRange, bottomInset = 0 }: SpotPanelProps) {
   const { activeCollection, startCollecting, stopCollecting, updateCollectProgress, completeCollection, nearbyUsers } = useGame();
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
   const isCollecting = activeCollection?.spotId === spot.id;
@@ -109,7 +110,7 @@ export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
 
   return (
     <RNAnimated.View
-      style={[styles.container, { transform: [{ translateY: slideAnim }] }]}
+      style={[styles.container, { transform: [{ translateY: slideAnim }], paddingBottom: 32 + bottomInset }]}
     >
       <View style={styles.handle} />
       <View style={styles.header}>

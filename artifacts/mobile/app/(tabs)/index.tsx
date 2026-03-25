@@ -111,18 +111,19 @@ export default function MapScreen() {
       />
 
       {selectedSpot && (
-        <View style={[styles.panel, { bottom: bottomInset }]}>
+        <View style={styles.panel}>
           <SpotPanel
             spot={selectedSpot}
             onClose={() => selectSpot(null)}
             isInRange={isSpotInRange(selectedSpot)}
+            bottomInset={bottomInset}
           />
         </View>
       )}
 
       {selectedUser && (
-        <View style={[styles.panel, { bottom: bottomInset }]}>
-          <AttackPanel user={selectedUser} onClose={() => selectUser(null)} />
+        <View style={styles.panel}>
+          <AttackPanel user={selectedUser} onClose={() => selectUser(null)} bottomInset={bottomInset} />
         </View>
       )}
     </View>
@@ -138,6 +139,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
+    bottom: 0,
     zIndex: 50,
   },
 });

@@ -34,9 +34,10 @@ interface AttackFeedback {
 interface AttackPanelProps {
   user: NearbyUser;
   onClose: () => void;
+  bottomInset?: number;
 }
 
-export function AttackPanel({ user, onClose }: AttackPanelProps) {
+export function AttackPanel({ user, onClose, bottomInset = 0 }: AttackPanelProps) {
   const { attackUser, userProfile } = useGame();
   const [feedback, setFeedback] = useState<AttackFeedback | null>(null);
   const [targetHealth, setTargetHealth] = useState(user.health);
@@ -92,7 +93,7 @@ export function AttackPanel({ user, onClose }: AttackPanelProps) {
 
   return (
     <RNAnimated.View
-      style={[styles.container, { transform: [{ translateY: slideAnim }] }]}
+      style={[styles.container, { transform: [{ translateY: slideAnim }], paddingBottom: 32 + bottomInset }]}
     >
       <View style={styles.handle} />
 
