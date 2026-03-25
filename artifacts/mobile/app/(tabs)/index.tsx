@@ -8,6 +8,7 @@ import { GameMap, GameMapHandle } from "@/components/GameMap";
 import { SpotPanel } from "@/components/SpotPanel";
 import { BagSidebar } from "@/components/BagSidebar";
 import { UserProfileHUD } from "@/components/UserProfileHUD";
+import { EmojiBar } from "@/components/EmojiBar";
 import COLORS from "@/constants/colors";
 
 const USER_RADIUS = 60;
@@ -115,6 +116,10 @@ export default function MapScreen() {
           onClose={() => selectSpot(null)}
           isInRange={isSpotInRange(selectedSpot)}
         />
+      )}
+
+      {selectedUser && (
+        <EmojiBar user={selectedUser} bottomInset={bottomInset} />
       )}
 
     </View>
