@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useRef, useState } from "react";
 import {
@@ -8,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -54,14 +56,12 @@ const SUBSTANCE_TYPES: SubstanceType[] = [
   "barrier",
 ];
 
-function SidebarItem({
+function QuickItem({
   item,
   onUse,
-  isQuick = false,
 }: {
   item: InventoryItem;
   onUse: (item: InventoryItem) => void;
-  isQuick?: boolean;
 }) {
   const color = ITEM_COLORS[item.type] ?? COLORS.dark.accent;
   const icon = ITEM_ICONS[item.type] ?? "package";
@@ -76,33 +76,42 @@ function SidebarItem({
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
-  if (isQuick) {
-    return (
-      <Pressable onPress={handlePress}>
-        <RNAnimated.View
-          style={[
-            styles.quickItem,
-            {
-              backgroundColor: color + "18",
-              borderColor: color + "55",
-              transform: [{ scale }],
-            },
-          ]}
-        >
-          <Feather name={icon as any} size={16} color={color} />
-          {item.quantity > 1 && (
-            <View style={[styles.qtyDot, { backgroundColor: color }]}>
-              <Text style={styles.qtyDotText}>{item.quantity}</Text>
-            </View>
-          )}
-        </RNAnimated.View>
-      </Pressable>
-    );
-  }
+  return (
+    <Pressable onPress={handlePress}>
+      <RNAnimated.View
+        style={[
+          styles.quickItem,
+          {
+            backgroundColor: color + "18",
+            borderColor: color + "55",
+            transform: [{ scale }],
+          },
+        ]}
+      >
+        <Feather name={icon as any} size={16} color={color} />
+        {item.quantity > 1 && (
+          <View style={[styles.qtyDot, { backgroundColor: color }]}>
+            <Text style={styles.qtyDotText}>{item.quantity}</Text>
+          </View>
+        )}
+      </RNAnimated.View>
+    </Pressable>
+  );
+}
+
+function FullItem({
+  item,
+  onUse,
+}: {
+  item: InventoryItem;
+  onUse: (item: InventoryItem) => void;
+}) {
+  const color = ITEM_COLORS[item.type] ?? COLORS.dark.accent;
+  const icon = ITEM_ICONS[item.type] ?? "package";
 
   return (
     <Pressable
-      onPress={handlePress}
+      onPress={() => onUse(item)}
       style={({ pressed }) => [styles.bagItem, { opacity: pressed ? 0.8 : 1 }]}
     >
       <View style={[styles.bagItemIcon, { backgroundColor: color + "20", borderColor: color + "44" }]}>
@@ -121,59 +130,85 @@ function SidebarItem({
 
 interface BagSidebarProps {
   insets: { top: number; bottom: number };
+  onLocate?: () => void;
 }
 
-export function BagSidebar({ insets }: BagSidebarProps) {
+export function BagSidebar({ insets, onLocate }: BagSidebarProps) {
   const { userProfile, useSubstance } = useGame();
-  const [bagOpen, setBagOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  const quickItems = userProfile.bag.filter((i) => i.quantity > 0).slice(0, 4);
+  const quickItems = userProfile.bag.filter((i) => i.quantity > 0).slice(0, 5);
 
   const handleUseItem = (item: InventoryItem) => {
     if (SUBSTANCE_TYPES.includes(item.type as SubstanceType)) {
       useSubstance(item.type as SubstanceType);
     }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const toggleExpand = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setExpanded((v) => !v);
   };
 
   return (
     <>
-      <View style={[styles.sidebar, { bottom: insets.bottom + 16 }]}>
-        <View style={styles.sidebarContainer}>
+      <View style={[styles.column, { bottom: insets.bottom + 16 }]}>
+        <TouchableOpacity
+          style={styles.locateBtn}
+          onPress={onLocate}
+          activeOpacity={0.75}
+        >
+          <Ionicons name="locate" size={22} color={COLORS.dark.accent} />
+        </TouchableOpacity>
+
+        <View style={styles.bagSection}>
+          {expanded && quickItems.length > 0 && (
+            <>
+              <View style={styles.itemsDivider} />
+              {quickItems.map((item) => (
+                <QuickItem key={item.id} item={item} onUse={handleUseItem} />
+              ))}
+              <TouchableOpacity
+                style={styles.viewAllBtn}
+                onPress={() => setModalOpen(true)}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.viewAllText}>VER TUDO</Text>
+                <Feather name="chevron-right" size={11} color={COLORS.dark.textMuted} />
+              </TouchableOpacity>
+              <View style={styles.itemsDivider} />
+            </>
+          )}
+
           <Pressable
-            onPress={() => setBagOpen(true)}
+            onPress={toggleExpand}
             style={({ pressed }) => [styles.bagBtn, { opacity: pressed ? 0.8 : 1 }]}
           >
-            <Feather name="briefcase" size={20} color={COLORS.dark.accent} />
-            <View style={styles.coinBadge}>
-              <Text style={styles.coinText}>{userProfile.coins}</Text>
+            <View style={styles.bagBtnInner}>
+              <Feather
+                name={expanded ? "chevron-down" : "briefcase"}
+                size={20}
+                color={COLORS.dark.accent}
+              />
+              <View style={styles.coinBadge}>
+                <Text style={styles.coinText}>{userProfile.coins}</Text>
+              </View>
             </View>
             <Text style={styles.bagLabel}>BAG</Text>
           </Pressable>
-
-          {quickItems.length > 0 && (
-            <>
-              <View style={styles.divider} />
-              {quickItems.map((item) => (
-                <SidebarItem
-                  key={item.id}
-                  item={item}
-                  onUse={handleUseItem}
-                  isQuick
-                />
-              ))}
-            </>
-          )}
         </View>
       </View>
 
       <Modal
-        visible={bagOpen}
+        visible={modalOpen}
         animationType="slide"
         transparent
-        onRequestClose={() => setBagOpen(false)}
+        onRequestClose={() => setModalOpen(false)}
       >
         <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setBagOpen(false)} />
+          <Pressable style={styles.modalBackdrop} onPress={() => setModalOpen(false)} />
           <View style={[styles.bagModal, { paddingBottom: insets.bottom + 16 }]}>
             <View style={styles.handle} />
             <View style={styles.bagHeader}>
@@ -192,7 +227,7 @@ export function BagSidebar({ insets }: BagSidebarProps) {
                   </Text>
                 </View>
               </View>
-              <Pressable onPress={() => setBagOpen(false)} style={styles.closeBtn}>
+              <Pressable onPress={() => setModalOpen(false)} style={styles.closeBtn}>
                 <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
               </Pressable>
             </View>
@@ -216,7 +251,7 @@ export function BagSidebar({ insets }: BagSidebarProps) {
               {userProfile.bag
                 .filter((i) => i.quantity > 0)
                 .map((item) => (
-                  <SidebarItem key={item.id} item={item} onUse={handleUseItem} />
+                  <FullItem key={item.id} item={item} onUse={handleUseItem} />
                 ))}
               {userProfile.bag.filter((i) => i.quantity > 0).length === 0 && (
                 <View style={styles.emptyBag}>
@@ -233,62 +268,47 @@ export function BagSidebar({ insets }: BagSidebarProps) {
 }
 
 const styles = StyleSheet.create({
-  sidebar: {
+  column: {
     position: "absolute",
-    right: 12,
+    right: 16,
     alignItems: "center",
+    flexDirection: "column",
+    gap: 8,
     zIndex: 10,
   },
-  sidebarContainer: {
+  locateBtn: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.dark.card,
+    borderWidth: 1.5,
+    borderColor: COLORS.dark.accent + "44",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  bagSection: {
+    alignItems: "center",
     backgroundColor: COLORS.dark.card,
     borderRadius: 18,
     borderWidth: 1.5,
     borderColor: COLORS.dark.accent + "33",
-    paddingVertical: 12,
+    paddingVertical: 10,
     paddingHorizontal: 8,
+    gap: 8,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.5,
     shadowRadius: 10,
     elevation: 8,
   },
-  bagLabel: {
-    fontSize: 9,
-    fontFamily: "Inter_700Bold",
-    color: COLORS.dark.accent,
-    letterSpacing: 1.5,
-  },
-  bagBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: COLORS.dark.accent + "18",
-    borderWidth: 1.5,
-    borderColor: COLORS.dark.accent + "55",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  coinBadge: {
-    position: "absolute",
-    bottom: -5,
-    right: -5,
-    backgroundColor: COLORS.dark.bg,
-    borderWidth: 1,
-    borderColor: COLORS.dark.spotMoney,
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-  },
-  coinText: {
-    fontSize: 8,
-    fontFamily: "Inter_700Bold",
-    color: COLORS.dark.spotMoney,
-  },
-  divider: {
-    width: 2,
-    height: 16,
+  itemsDivider: {
+    width: 28,
+    height: 1.5,
     backgroundColor: COLORS.dark.border,
     borderRadius: 1,
   },
@@ -317,6 +337,55 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontFamily: "Inter_700Bold",
     color: COLORS.dark.bg,
+  },
+  viewAllBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+  },
+  viewAllText: {
+    fontSize: 8,
+    fontFamily: "Inter_700Bold",
+    color: COLORS.dark.textMuted,
+    letterSpacing: 1,
+  },
+  bagBtn: {
+    alignItems: "center",
+    gap: 4,
+  },
+  bagBtnInner: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: COLORS.dark.accent + "18",
+    borderWidth: 1.5,
+    borderColor: COLORS.dark.accent + "55",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  coinBadge: {
+    position: "absolute",
+    bottom: -5,
+    right: -5,
+    backgroundColor: COLORS.dark.bg,
+    borderWidth: 1,
+    borderColor: COLORS.dark.spotMoney,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  coinText: {
+    fontSize: 8,
+    fontFamily: "Inter_700Bold",
+    color: COLORS.dark.spotMoney,
+  },
+  bagLabel: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    color: COLORS.dark.accent,
+    letterSpacing: 1.5,
   },
   modalOverlay: {
     flex: 1,

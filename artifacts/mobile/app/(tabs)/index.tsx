@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useRef } from "react";
-import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, View } from "react-native";
 import * as Location from "expo-location";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
 
 import { useGame } from "@/context/GameContext";
 import { GameMap, GameMapHandle } from "@/components/GameMap";
@@ -106,7 +105,10 @@ export default function MapScreen() {
       />
 
       <UserProfileHUD insets={{ top: topInset }} />
-      <BagSidebar insets={{ top: topInset, bottom: bottomInset }} />
+      <BagSidebar
+        insets={{ top: topInset, bottom: bottomInset }}
+        onLocate={() => mapRef.current?.centerOnUser()}
+      />
 
       {selectedSpot && (
         <View style={[styles.panel, { bottom: bottomInset }]}>
@@ -123,14 +125,6 @@ export default function MapScreen() {
           <AttackPanel user={selectedUser} onClose={() => selectUser(null)} />
         </View>
       )}
-
-      <TouchableOpacity
-        style={[styles.centerBtn, { bottom: bottomInset + 16 }]}
-        onPress={() => mapRef.current?.centerOnUser()}
-        activeOpacity={0.75}
-      >
-        <Ionicons name="locate" size={22} color="#00FF88" />
-      </TouchableOpacity>
     </View>
   );
 }
@@ -144,22 +138,5 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 0,
     right: 0,
-  },
-  centerBtn: {
-    position: "absolute",
-    right: 16,
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: "#0D1B2E",
-    borderWidth: 1.5,
-    borderColor: "#00FF8844",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#00FF88",
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 6,
   },
 });
