@@ -1,8 +1,12 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import { StyleSheet } from "react-native";
 import { WebView } from "react-native-webview";
 
 import { NearbyUser, Spot } from "@/context/GameContext";
+
+export interface GameMapHandle {
+  centerOnUser: () => void;
+}
 
 const USER_RADIUS = 60;
 
@@ -183,7 +187,7 @@ interface GameMapProps {
   onMapPress: () => void;
 }
 
-export function GameMap({
+export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap({
   spots,
   nearbyUsers,
   selectedSpotId,
@@ -192,9 +196,11 @@ export function GameMap({
   onSpotPress,
   onUserPress,
   onMapPress,
-}: GameMapProps) {
+}, ref) {
   const webViewRef = useRef<WebView>(null);
   const [mapReady, setMapReady] = useState(false);
+  const userLocationRef = useRef(userLocation);
+  userLocationRef.current = userLocation;
 
   const inject = useCallback((data: object) => {
     if (!webViewRef.current) return;
@@ -203,6 +209,14 @@ export function GameMap({
       `window.receiveFromRN(${JSON.stringify(json)});true;`
     );
   }, []);
+
+  useImperativeHandle(ref, () => ({
+    centerOnUser: () => {
+      const loc = userLocationRef.current;
+      if (!loc) return;
+      inject({ type: "CENTER", lat: loc.latitude, lng: loc.longitude, zoom: 17 });
+    },
+  }), [inject]);
 
   useEffect(() => {
     if (!mapReady) return;
@@ -247,4 +261,4 @@ export function GameMap({
       cacheEnabled
     />
   );
-}
+});
