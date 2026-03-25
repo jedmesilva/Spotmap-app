@@ -251,6 +251,7 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
       scrollEnabled={false}
       overScrollMode="never"
       bounces={false}
+      onLoadStart={() => setMapReady(false)}
       onMessage={handleMessage}
       mixedContentMode="always"
       allowFileAccess
