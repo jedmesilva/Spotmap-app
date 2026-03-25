@@ -8,7 +8,7 @@ import { GameMap, GameMapHandle } from "@/components/GameMap";
 import { SpotPanel } from "@/components/SpotPanel";
 import { BagSidebar } from "@/components/BagSidebar";
 import { UserProfileHUD } from "@/components/UserProfileHUD";
-import { EmojiBar } from "@/components/EmojiBar";
+import { EmojiBar, EMOJI_BAR_HEIGHT } from "@/components/EmojiBar";
 import COLORS from "@/constants/colors";
 
 const USER_RADIUS = 60;
@@ -108,6 +108,7 @@ export default function MapScreen() {
       <BagSidebar
         insets={{ top: topInset, bottom: bottomInset }}
         onLocate={() => mapRef.current?.centerOnUser()}
+        extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
       />
 
       {selectedSpot && (

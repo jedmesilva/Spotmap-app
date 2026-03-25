@@ -13,16 +13,13 @@ import {
 import COLORS from "@/constants/colors";
 import { NearbyUser } from "@/context/GameContext";
 
+export const EMOJI_BAR_HEIGHT = 94;
+
 const EMOJIS = [
   "😂", "🔥", "💀", "👏", "😤", "🤡", "💪", "👑",
   "😈", "⚡", "🎯", "💣", "🤣", "😱", "🏆", "🫡",
   "💅", "🐢", "🥶", "😴",
 ];
-
-interface EmojiBarProps {
-  user: NearbyUser;
-  bottomInset: number;
-}
 
 interface FloatingEmoji {
   id: number;
@@ -31,8 +28,13 @@ interface FloatingEmoji {
   opacity: Animated.Value;
 }
 
+interface EmojiBarProps {
+  user: NearbyUser;
+  bottomInset: number;
+}
+
 export function EmojiBar({ user, bottomInset }: EmojiBarProps) {
-  const slideAnim = useRef(new Animated.Value(80)).current;
+  const slideAnim = useRef(new Animated.Value(120)).current;
   const [floaters, setFloaters] = useState<FloatingEmoji[]>([]);
   const counterRef = useRef(0);
 
@@ -43,13 +45,6 @@ export function EmojiBar({ user, bottomInset }: EmojiBarProps) {
       tension: 70,
       friction: 11,
     }).start();
-    return () => {
-      Animated.timing(slideAnim, {
-        toValue: 80,
-        duration: 180,
-        useNativeDriver: true,
-      }).start();
-    };
   }, []);
 
   const handleEmojiPress = useCallback((emoji: string) => {
@@ -65,7 +60,7 @@ export function EmojiBar({ user, bottomInset }: EmojiBarProps) {
 
     Animated.parallel([
       Animated.timing(anim, {
-        toValue: -90,
+        toValue: -100,
         duration: 900,
         useNativeDriver: true,
       }),
@@ -90,6 +85,7 @@ export function EmojiBar({ user, bottomInset }: EmojiBarProps) {
           style={[
             styles.floater,
             {
+              bottom: bottomInset + EMOJI_BAR_HEIGHT + 16,
               transform: [{ translateY: f.anim }],
               opacity: f.opacity,
             },
@@ -102,7 +98,10 @@ export function EmojiBar({ user, bottomInset }: EmojiBarProps) {
       <Animated.View
         style={[
           styles.container,
-          { paddingBottom: bottomInset + 8, transform: [{ translateY: slideAnim }] },
+          {
+            bottom: bottomInset + 10,
+            transform: [{ translateY: slideAnim }],
+          },
         ]}
       >
         <View style={styles.label}>
@@ -118,7 +117,10 @@ export function EmojiBar({ user, bottomInset }: EmojiBarProps) {
             <Pressable
               key={emoji}
               onPress={() => handleEmojiPress(emoji)}
-              style={({ pressed }) => [styles.emojiBtn, pressed && styles.emojiBtnPressed]}
+              style={({ pressed }) => [
+                styles.emojiBtn,
+                pressed && styles.emojiBtnPressed,
+              ]}
             >
               <Text style={styles.emoji}>{emoji}</Text>
             </Pressable>
@@ -132,23 +134,30 @@ export function EmojiBar({ user, bottomInset }: EmojiBarProps) {
 const styles = StyleSheet.create({
   container: {
     position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: COLORS.dark.card ?? COLORS.dark.bgSecondary,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.dark.border,
+    left: 16,
+    right: 16,
+    backgroundColor: COLORS.dark.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.dark.border,
     paddingTop: 10,
+    paddingBottom: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 12,
+    elevation: 10,
+    zIndex: 20,
   },
   label: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     marginBottom: 8,
   },
   labelText: {
     fontSize: 12,
-    color: COLORS.dark.textMuted ?? COLORS.dark.textSecondary,
+    color: COLORS.dark.textMuted,
     fontFamily: "Inter_400Regular",
   },
   labelName: {
@@ -157,9 +166,8 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
   },
   scroll: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     gap: 6,
-    paddingBottom: 4,
   },
   emojiBtn: {
     width: 46,
@@ -174,16 +182,15 @@ const styles = StyleSheet.create({
   emojiBtnPressed: {
     backgroundColor: COLORS.dark.accent + "22",
     borderColor: COLORS.dark.accent + "66",
-    transform: [{ scale: 0.9 }],
+    transform: [{ scale: 0.88 }],
   },
   emoji: {
     fontSize: 24,
   },
   floater: {
     position: "absolute",
-    bottom: 100,
     alignSelf: "center",
-    fontSize: 36,
+    fontSize: 38,
     zIndex: 100,
   },
 });

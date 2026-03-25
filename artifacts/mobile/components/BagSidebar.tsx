@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { Ionicons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Animated as RNAnimated,
   Modal,
@@ -131,12 +131,23 @@ function FullItem({
 interface BagSidebarProps {
   insets: { top: number; bottom: number };
   onLocate?: () => void;
+  extraBottomOffset?: number;
 }
 
-export function BagSidebar({ insets, onLocate }: BagSidebarProps) {
+export function BagSidebar({ insets, onLocate, extraBottomOffset = 0 }: BagSidebarProps) {
   const { userProfile, useSubstance } = useGame();
   const [expanded, setExpanded] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+
+  const bottomAnim = useRef(new RNAnimated.Value(extraBottomOffset)).current;
+  useEffect(() => {
+    RNAnimated.spring(bottomAnim, {
+      toValue: extraBottomOffset,
+      useNativeDriver: false,
+      tension: 70,
+      friction: 11,
+    }).start();
+  }, [extraBottomOffset]);
 
   const quickItems = userProfile.bag.filter((i) => i.quantity > 0).slice(0, 5);
 
@@ -154,7 +165,7 @@ export function BagSidebar({ insets, onLocate }: BagSidebarProps) {
 
   return (
     <>
-      <View style={[styles.column, { bottom: insets.bottom + 16 }]}>
+      <RNAnimated.View style={[styles.column, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}>
         <TouchableOpacity
           style={styles.locateBtn}
           onPress={onLocate}
@@ -199,7 +210,7 @@ export function BagSidebar({ insets, onLocate }: BagSidebarProps) {
             <Text style={styles.bagLabel}>BAG</Text>
           </Pressable>
         </View>
-      </View>
+      </RNAnimated.View>
 
       <Modal
         visible={modalOpen}
