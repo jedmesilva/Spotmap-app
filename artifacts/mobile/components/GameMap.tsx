@@ -123,8 +123,10 @@ function applySpotVisibility(){
     var c=spotCircles[id];
     if(m){
       var el=m.getElement();
-      if(el)el.style.opacity=hide?'0':'1';
-      m.options.interactive=!hide;
+      if(el){
+        el.style.opacity=hide?'0':'1';
+        el.style.pointerEvents=hide?'none':'auto';
+      }
     }
     if(c){
       c.setStyle({opacity:hide?0:0.35,fillOpacity:hide?0:0.07});
@@ -138,8 +140,10 @@ function applyUserVisibility(){
     var m=userMarkers[id];
     if(m){
       var el=m.getElement();
-      if(el)el.style.opacity=hide?'0':'1';
-      m.options.interactive=!hide;
+      if(el){
+        el.style.opacity=hide?'0':'1';
+        el.style.pointerEvents=hide?'none':'auto';
+      }
     }
   });
 }
