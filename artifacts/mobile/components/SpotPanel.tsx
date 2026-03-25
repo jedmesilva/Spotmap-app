@@ -1,9 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import {
-  Animated as RNAnimated,
   Pressable,
   StyleSheet,
   Text,
@@ -52,14 +51,12 @@ interface SpotPanelProps {
 
 export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
   const insets = useSafeAreaInsets();
-  const { activeCollection, startCollecting, stopCollecting, updateCollectProgress, completeCollection, nearbyUsers } = useGame();
+  const { activeCollection, startCollecting, stopCollecting, updateCollectProgress, completeCollection, nearbyUsers, userProfile } = useGame();
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
   const isCollecting = activeCollection?.spotId === spot.id;
   const progress = isCollecting ? activeCollection?.progress ?? 0 : 0;
 
   const sheetRef = useRef<BottomSheetModal>(null);
-  const progressAnim = useRef(new RNAnimated.Value(0)).current;
-  const [countdown, setCountdown] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
@@ -68,14 +65,6 @@ export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    RNAnimated.timing(progressAnim, {
-      toValue: progress / 100,
-      duration: 300,
-      useNativeDriver: false,
-    }).start();
-  }, [progress]);
 
   const handleCollect = () => {
     if (!isInRange) return;
@@ -102,9 +91,16 @@ export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
     }, 100);
   };
 
-  const usersCollecting = nearbyUsers
+  const othersCollecting = nearbyUsers
     .filter((u) => u.collectingSpotId === spot.id)
     .sort((a, b) => b.collectProgress - a.collectProgress);
+
+  const allCollecting = [
+    ...(isCollecting
+      ? [{ id: "me", name: "Você", avatar: userProfile.avatar, collectProgress: progress, isMe: true }]
+      : []),
+    ...othersCollecting.map((u) => ({ ...u, isMe: false })),
+  ];
 
   return (
     <BottomSheetModal
@@ -144,54 +140,31 @@ export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
           )}
         </View>
 
-        {usersCollecting.length > 0 && (
+        {allCollecting.length > 0 && (
           <View style={styles.collectingSection}>
             <Text style={styles.sectionLabel}>COLETANDO AGORA</Text>
-            {usersCollecting.map((u) => (
-              <View key={u.id} style={styles.collectingUser}>
-                <View style={styles.userAvatar}>
-                  <Text style={styles.userAvatarText}>{u.avatar}</Text>
-                </View>
-                <View style={styles.userProgress}>
-                  <Text style={styles.userName}>{u.name}</Text>
-                  <View style={styles.progressTrack}>
-                    <View
-                      style={[
-                        styles.progressBar,
-                        {
-                          width: `${u.collectProgress}%`,
-                          backgroundColor: u.collectProgress > 60 ? COLORS.dark.danger : COLORS.dark.warning,
-                        },
-                      ]}
-                    />
+            {allCollecting.map((u) => {
+              const barColor = u.isMe ? color : u.collectProgress > 60 ? COLORS.dark.danger : COLORS.dark.warning;
+              return (
+                <View key={u.id} style={styles.collectingUser}>
+                  <View style={[styles.userAvatar, u.isMe && { borderColor: color + "88" }]}>
+                    <Text style={styles.userAvatarText}>{u.avatar}</Text>
                   </View>
+                  <View style={styles.userProgress}>
+                    <Text style={[styles.userName, u.isMe && { color: color }]}>{u.name}</Text>
+                    <View style={styles.progressTrack}>
+                      <View
+                        style={[
+                          styles.progressBar,
+                          { width: `${u.collectProgress}%`, backgroundColor: barColor },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                  <Text style={[styles.progressText, { color: barColor }]}>{u.collectProgress}%</Text>
                 </View>
-                <Text style={[styles.progressText, {
-                  color: u.collectProgress > 60 ? COLORS.dark.danger : COLORS.dark.warning,
-                }]}>{u.collectProgress}%</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {isCollecting && (
-          <View style={styles.myProgress}>
-            <Text style={styles.sectionLabel}>SEU PROGRESSO</Text>
-            <View style={styles.myProgressTrack}>
-              <RNAnimated.View
-                style={[
-                  styles.myProgressBar,
-                  {
-                    width: progressAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: ["0%", "100%"],
-                    }),
-                    backgroundColor: color,
-                  },
-                ]}
-              />
-            </View>
-            <Text style={[styles.progressPct, { color }]}>{progress}%</Text>
+              );
+            })}
           </View>
         )}
 
@@ -368,20 +341,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     width: 32,
     textAlign: "right",
-  },
-  myProgress: {
-    marginBottom: 16,
-  },
-  myProgressTrack: {
-    height: 8,
-    backgroundColor: COLORS.dark.surface,
-    borderRadius: 4,
-    overflow: "hidden",
-    marginBottom: 6,
-  },
-  myProgressBar: {
-    height: "100%",
-    borderRadius: 4,
   },
   progressPct: {
     fontSize: 13,
