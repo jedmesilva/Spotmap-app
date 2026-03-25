@@ -1,16 +1,17 @@
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
+import { Marker } from "react-native-maps";
+
 import COLORS from "@/constants/colors";
 import { NearbyUser } from "@/context/GameContext";
 
 interface UserMarkerProps {
   user: NearbyUser;
   isSelected: boolean;
-  position: { x: number; y: number };
   onPress: () => void;
 }
 
-export function UserMarker({ user, isSelected, position, onPress }: UserMarkerProps) {
+export function UserMarker({ user, isSelected, onPress }: UserMarkerProps) {
   const isCollecting = !!user.collectingSpotId;
   const healthPercent = user.health / user.maxHealth;
   const healthColor =
@@ -26,63 +27,62 @@ export function UserMarker({ user, isSelected, position, onPress }: UserMarkerPr
     ? COLORS.dark.warning
     : COLORS.dark.border;
 
-  const AVATAR = 40;
-  const TOTAL_WIDTH = 56;
-
   return (
-    <Pressable
+    <Marker
+      coordinate={{ latitude: user.latitude, longitude: user.longitude }}
       onPress={onPress}
-      style={[
-        styles.container,
-        {
-          left: position.x - TOTAL_WIDTH / 2,
-          top: position.y - AVATAR / 2 - (isCollecting ? 14 : 0),
-        },
-      ]}
+      anchor={{ x: 0.5, y: 0.5 }}
+      tracksViewChanges={false}
     >
-      {isCollecting && (
-        <View style={styles.progressRing}>
+      {/*
+        Padding buffer: prevents Android bitmap snapshot from clipping views.
+        No shadow/elevation inside — those cause clipping on Android.
+      */}
+      <View style={styles.padding}>
+        {isCollecting && (
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                {
+                  width: `${user.collectProgress}%` as any,
+                  backgroundColor:
+                    user.collectProgress > 60
+                      ? COLORS.dark.danger
+                      : COLORS.dark.warning,
+                },
+              ]}
+            />
+          </View>
+        )}
+
+        <View style={[styles.avatar, { borderColor }]}>
+          <Text style={styles.avatarText}>{user.avatar}</Text>
+        </View>
+
+        <View style={styles.healthBar}>
           <View
             style={[
-              styles.progressFill,
+              styles.healthFill,
               {
-                width: `${user.collectProgress}%` as any,
-                backgroundColor:
-                  user.collectProgress > 60
-                    ? COLORS.dark.danger
-                    : COLORS.dark.warning,
+                width: `${healthPercent * 100}%` as any,
+                backgroundColor: healthColor,
               },
             ]}
           />
         </View>
-      )}
-
-      <View style={[styles.avatar, { borderColor }]}>
-        <Text style={styles.avatarText}>{user.avatar}</Text>
       </View>
-
-      <View style={styles.healthBar}>
-        <View
-          style={[
-            styles.healthFill,
-            {
-              width: `${healthPercent * 100}%` as any,
-              backgroundColor: healthColor,
-            },
-          ]}
-        />
-      </View>
-    </Pressable>
+    </Marker>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    position: "absolute",
+  padding: {
+    padding: 10,
     alignItems: "center",
-    width: 56,
+    /* NO shadow/elevation */
   },
-  progressRing: {
+  progressBar: {
     width: 52,
     height: 5,
     backgroundColor: COLORS.dark.surface,
@@ -102,6 +102,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.dark.bgSecondary,
     alignItems: "center",
     justifyContent: "center",
+    /* NO elevation */
   },
   avatarText: {
     color: COLORS.dark.text,

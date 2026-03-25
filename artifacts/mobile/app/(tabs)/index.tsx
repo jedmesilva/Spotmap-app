@@ -1,15 +1,11 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import {
-  Platform,
-  StyleSheet,
-  View,
-} from "react-native";
+import React, { useEffect, useState } from "react";
+import { Platform, StyleSheet, View } from "react-native";
 import MapView, { Circle } from "react-native-maps";
 import * as Location from "expo-location";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
-import { Spot, NearbyUser, useGame } from "@/context/GameContext";
+import { useGame } from "@/context/GameContext";
 import { SpotMarker } from "@/components/SpotMarker";
 import { UserMarker } from "@/components/UserMarker";
 import { SpotPanel } from "@/components/SpotPanel";
@@ -40,7 +36,10 @@ const SPOT_COLORS: Record<string, string> = {
 
 const USER_RADIUS = 60;
 
-function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+function getDistance(
+  lat1: number, lon1: number,
+  lat2: number, lon2: number
+): number {
   const R = 6371000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
@@ -51,8 +50,6 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
       Math.sin(dLon / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
-
-type ScreenPositions = Record<string, { x: number; y: number }>;
 
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
@@ -67,12 +64,7 @@ export default function MapScreen() {
     setUserLocation,
   } = useGame();
 
-  const mapRef = useRef<MapView>(null);
   const [locationPermission, setLocationPermission] = useState<string | null>(null);
-  const [mapReady, setMapReady] = useState(false);
-  const [spotPositions, setSpotPositions] = useState<ScreenPositions>({});
-  const [userPositions, setUserPositions] = useState<ScreenPositions>({});
-
   const [region, setRegion] = useState({
     latitude: -23.5505,
     longitude: -46.6333,
@@ -86,50 +78,21 @@ export default function MapScreen() {
       setLocationPermission(status);
       if (status === "granted") {
         const loc = await Location.getCurrentPositionAsync({});
-        const coords = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
+        const coords = {
+          latitude: loc.coords.latitude,
+          longitude: loc.coords.longitude,
+        };
         setUserLocation(coords);
-        setRegion((prev) => ({ ...prev, ...coords }));
+        setRegion((r) => ({ ...r, ...coords }));
       }
     })();
   }, []);
 
-  const recalcPositions = useCallback(async () => {
-    if (!mapRef.current || !mapReady) return;
-
-    const newSpotPos: ScreenPositions = {};
-    for (const spot of spots) {
-      try {
-        const pt = await mapRef.current.pointForCoordinate({
-          latitude: spot.latitude,
-          longitude: spot.longitude,
-        });
-        newSpotPos[spot.id] = pt;
-      } catch (_) {}
-    }
-    setSpotPositions(newSpotPos);
-
-    const newUserPos: ScreenPositions = {};
-    for (const user of nearbyUsers) {
-      try {
-        const pt = await mapRef.current.pointForCoordinate({
-          latitude: user.latitude,
-          longitude: user.longitude,
-        });
-        newUserPos[user.id] = pt;
-      } catch (_) {}
-    }
-    setUserPositions(newUserPos);
-  }, [mapReady, spots, nearbyUsers]);
-
-  useEffect(() => {
-    if (mapReady) recalcPositions();
-  }, [mapReady, recalcPositions]);
-
-  const handleRegionChange = useCallback(() => {
-    recalcPositions();
-  }, [recalcPositions]);
-
-  const isSpotInRange = (spot: { latitude: number; longitude: number; radius: number }) => {
+  const isSpotInRange = (spot: {
+    latitude: number;
+    longitude: number;
+    radius: number;
+  }) => {
     if (!userLocation) return false;
     const dist = getDistance(
       userLocation.latitude,
@@ -145,9 +108,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      {/* ─── Map (circles stay inside MapView) ─── */}
       <MapView
-        ref={mapRef}
         style={StyleSheet.absoluteFill}
         customMapStyle={Platform.OS !== "web" ? MAP_STYLE : undefined}
         initialRegion={region}
@@ -156,15 +117,12 @@ export default function MapScreen() {
         showsCompass={false}
         showsScale={false}
         showsPointsOfInterest={false}
-        onMapReady={() => setMapReady(true)}
-        onRegionChange={handleRegionChange}
-        onRegionChangeComplete={handleRegionChange}
         onPress={() => {
           selectSpot(null);
           selectUser(null);
         }}
       >
-        {/* Radius circles per spot */}
+        {/* Radius circles for each spot */}
         {spots.map((spot) => (
           <Circle
             key={spot.id}
@@ -176,7 +134,7 @@ export default function MapScreen() {
           />
         ))}
 
-        {/* User radius */}
+        {/* Player radius */}
         {userLocation && (
           <Circle
             center={userLocation}
@@ -186,47 +144,37 @@ export default function MapScreen() {
             strokeWidth={2}
           />
         )}
-      </MapView>
 
-      {/* ─── Spot markers — plain RN views over the map ─── */}
-      {spots.map((spot) => {
-        const pos = spotPositions[spot.id];
-        if (!pos) return null;
-        return (
+        {/* Spot markers — native Marker, no shadow/elevation inside */}
+        {spots.map((spot) => (
           <SpotMarker
             key={spot.id}
             spot={spot}
             isSelected={selectedSpot?.id === spot.id}
-            position={pos}
             onPress={() => selectSpot(spot)}
           />
-        );
-      })}
+        ))}
 
-      {/* ─── User markers — plain RN views over the map ─── */}
-      {nearbyUsers.map((user) => {
-        const pos = userPositions[user.id];
-        if (!pos) return null;
-        return (
+        {/* User markers — native Marker, no shadow/elevation inside */}
+        {nearbyUsers.map((user) => (
           <UserMarker
             key={user.id}
             user={user}
             isSelected={selectedUser?.id === user.id}
-            position={pos}
             onPress={() => selectUser(user)}
           />
-        );
-      })}
+        ))}
+      </MapView>
 
-      {/* ─── HUD ─── */}
+      {/* HUD overlay */}
       <UserProfileHUD insets={{ top: topInset }} />
 
-      {/* ─── Right sidebar bag ─── */}
+      {/* Bag sidebar */}
       <BagSidebar insets={{ top: topInset, bottom: bottomInset }} />
 
-      {/* ─── Bottom panels ─── */}
+      {/* Bottom panel: spot or attack */}
       {selectedSpot && (
-        <View style={[styles.panelContainer, { bottom: bottomInset }]}>
+        <View style={[styles.panel, { bottom: bottomInset }]}>
           <SpotPanel
             spot={selectedSpot}
             onClose={() => selectSpot(null)}
@@ -236,7 +184,7 @@ export default function MapScreen() {
       )}
 
       {selectedUser && (
-        <View style={[styles.panelContainer, { bottom: bottomInset }]}>
+        <View style={[styles.panel, { bottom: bottomInset }]}>
           <AttackPanel
             user={selectedUser}
             onClose={() => selectUser(null)}
@@ -252,7 +200,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.dark.bg,
   },
-  panelContainer: {
+  panel: {
     position: "absolute",
     left: 0,
     right: 0,

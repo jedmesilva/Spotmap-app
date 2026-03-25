@@ -1,6 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import React from "react";
-import { Pressable, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { Marker } from "react-native-maps";
+
 import COLORS from "@/constants/colors";
 import { Spot } from "@/context/GameContext";
 
@@ -21,88 +23,90 @@ const SPOT_ICONS: Record<string, string> = {
 interface SpotMarkerProps {
   spot: Spot;
   isSelected: boolean;
-  position: { x: number; y: number };
   onPress: () => void;
 }
 
-export function SpotMarker({ spot, isSelected, position, onPress }: SpotMarkerProps) {
+export function SpotMarker({ spot, isSelected, onPress }: SpotMarkerProps) {
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
   const iconName = SPOT_ICONS[spot.type] ?? "map-pin";
-  const SIZE = 44;
 
   return (
-    <Pressable
+    <Marker
+      coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
       onPress={onPress}
-      style={[
-        styles.container,
-        {
-          left: position.x - SIZE / 2,
-          top: position.y - SIZE / 2,
-          width: SIZE,
-          height: SIZE,
-        },
-      ]}
+      anchor={{ x: 0.5, y: 0.5 }}
+      tracksViewChanges={false}
     >
-      <View
-        style={[
-          styles.outerRing,
-          {
-            borderColor: isSelected ? color : color + "70",
-            backgroundColor: isSelected ? color + "28" : color + "14",
-          },
-        ]}
-      >
+      {/*
+        Padding externo garante que o bitmap do Android não corte o conteúdo.
+        Nenhuma sombra ou elevation dentro do Marker — isso causava o clipping.
+      */}
+      <View style={styles.padding}>
         <View
           style={[
-            styles.innerCircle,
+            styles.outer,
             {
-              backgroundColor: isSelected ? color + "30" : COLORS.dark.bgSecondary,
-              borderColor: color,
-              shadowColor: color,
+              borderColor: isSelected ? color : color + "70",
+              backgroundColor: isSelected ? color + "30" : color + "15",
             },
           ]}
         >
-          <Feather name={iconName as any} size={15} color={color} />
+          <View
+            style={[
+              styles.inner,
+              {
+                backgroundColor: isSelected
+                  ? color + "35"
+                  : COLORS.dark.bgSecondary,
+                borderColor: color,
+              },
+            ]}
+          >
+            <Feather name={iconName as any} size={15} color={color} />
+          </View>
         </View>
-      </View>
 
-      {spot.isCollecting && (
-        <View style={[styles.collectingDot, { backgroundColor: COLORS.dark.accent }]} />
-      )}
-    </Pressable>
+        {spot.isCollecting && (
+          <View
+            style={[
+              styles.dot,
+              { backgroundColor: COLORS.dark.accent },
+            ]}
+          />
+        )}
+      </View>
+    </Marker>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    position: "absolute",
+  /* padding buffer: prevents Android bitmap snapshot from clipping */
+  padding: {
+    padding: 12,
     alignItems: "center",
     justifyContent: "center",
   },
-  outerRing: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+  outer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
   },
-  innerCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  inner: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
-    shadowRadius: 8,
-    elevation: 4,
+    /* NO shadow/elevation — causes bitmap clipping on Android */
   },
-  collectingDot: {
+  dot: {
     position: "absolute",
-    top: 2,
-    right: 2,
+    top: 10,
+    right: 10,
     width: 10,
     height: 10,
     borderRadius: 5,
