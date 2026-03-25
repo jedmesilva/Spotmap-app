@@ -105,11 +105,11 @@ function userIcon(user,selected){
     var totalH=user.collectingSpotId?148:122;
 
     var html=''
-      +'<div style="display:flex;flex-direction:column;align-items:center;">'
+      +'<div style="width:170px;display:flex;flex-direction:column;align-items:center;">'
         +statusRow
         +'<div style="width:54px;height:54px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 16px '+bc+'66;">'+user.avatar+'</div>'
-        +'<div style="margin-top:5px;color:'+C.text+';font-size:12px;font-weight:700;letter-spacing:0.3px;'+shadow+';">'+user.name+'</div>'
-        +'<div style="margin-top:3px;display:flex;align-items:center;gap:4px;">'
+        +'<div style="margin-top:5px;color:'+C.text+';font-size:12px;font-weight:700;letter-spacing:0.3px;text-align:center;'+shadow+';">'+user.name+'</div>'
+        +'<div style="margin-top:3px;display:flex;align-items:center;justify-content:center;gap:4px;">'
           +heartSvg(hColor)
           +'<span style="color:'+hColor+';font-size:11px;font-weight:700;'+shadow+';">'+user.health+'</span>'
           +'<span style="color:'+C.textMuted+';font-size:10px;'+shadow+';">/'+user.maxHealth+'</span>'
