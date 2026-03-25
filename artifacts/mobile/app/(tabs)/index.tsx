@@ -41,16 +41,25 @@ export default function MapScreen() {
   } = useGame();
 
   useEffect(() => {
+    let sub: Location.LocationSubscription | null = null;
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === "granted") {
-        const loc = await Location.getCurrentPositionAsync({});
-        setUserLocation({
-          latitude: loc.coords.latitude,
-          longitude: loc.coords.longitude,
-        });
-      }
+      if (status !== "granted") return;
+      sub = await Location.watchPositionAsync(
+        {
+          accuracy: Location.Accuracy.High,
+          timeInterval: 2000,
+          distanceInterval: 2,
+        },
+        (loc) => {
+          setUserLocation({
+            latitude: loc.coords.latitude,
+            longitude: loc.coords.longitude,
+          });
+        }
+      );
     })();
+    return () => { sub?.remove(); };
   }, []);
 
   const handleSpotPress = useCallback(
