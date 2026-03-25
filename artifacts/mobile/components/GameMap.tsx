@@ -31,7 +31,7 @@ var C={
   accent:'#00FF88',bg:'#050A14',bgSec:'#0D1B2E',
   surface:'#1E3A5F',border:'#1E3A5F33',
   coupon:'#00BFFF',money:'#00FF88',product:'#FF8C00',rare:'#BF5FFF',
-  warning:'#FFB800',danger:'#FF4444',text:'#E8F4FD'
+  warning:'#FFB800',danger:'#FF4444',text:'#E8F4FD',textMuted:'#5A7A9A'
 };
 var SPOT_COLOR={coupon:C.coupon,money:C.money,product:C.product,rare:C.rare};
 var ICONS={
@@ -53,6 +53,10 @@ var spotMarkers={},spotCircles={},userMarkers={};
 var playerDot=null,playerCircle=null;
 var selSpot=null,selUser=null;
 
+function heartSvg(color){
+  return '<svg width="13" height="13" viewBox="0 0 24 24" fill="'+color+'" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
+}
+
 function spotIcon(spot,selected){
   var color=SPOT_COLOR[spot.type]||C.accent;
   var bo=selected?color:color+'99';
@@ -71,7 +75,34 @@ function spotIcon(spot,selected){
 }
 
 function userIcon(user,selected){
-  var bc=selected?C.accent:user.collectingSpotId?C.warning:C.border;
+  if(selected){
+    var healthPct=user.health/user.maxHealth;
+    var hColor=healthPct>0.6?C.accent:healthPct>0.3?C.warning:C.danger;
+    var bc=user.collectingSpotId?C.warning:C.accent;
+    var collectLine=user.collectingSpotId
+      ?'<div style="margin-top:5px;display:flex;align-items:center;gap:4px;">'
+       +'<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="'+C.warning+'" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="3" x2="12" y2="21"/></svg>'
+       +'<span style="color:'+C.warning+';font-size:10px;">Coletando...</span>'
+       +'</div>'
+      :'';
+    var html=''
+      +'<div style="display:flex;flex-direction:column;align-items:center;">'
+        +'<div style="width:54px;height:54px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 14px '+bc+'55;">'+user.avatar+'</div>'
+        +'<div style="background:'+C.bgSec+';border:1.5px solid '+bc+'55;border-radius:12px;padding:8px 14px;margin-top:7px;text-align:center;min-width:130px;">'
+          +'<div style="color:'+C.text+';font-size:13px;font-weight:700;letter-spacing:0.3px;margin-bottom:5px;">'+user.name+'</div>'
+          +'<div style="display:flex;align-items:center;justify-content:center;gap:5px;">'
+            +heartSvg(hColor)
+            +'<span style="color:'+hColor+';font-size:13px;font-weight:700;">'+user.health+'</span>'
+            +'<span style="color:'+C.textMuted+';font-size:11px;">/'+user.maxHealth+'</span>'
+          +'</div>'
+          +collectLine
+        +'</div>'
+      +'</div>';
+    var cardH=user.collectingSpotId?108:92;
+    return L.divIcon({html:html,className:'',iconSize:[158,cardH],iconAnchor:[79,27]});
+  }
+
+  var bc=user.collectingSpotId?C.warning:C.border;
   var prog=user.collectingSpotId
     ?'<div style="width:40px;height:4px;background:'+C.surface+';border-radius:2px;margin-top:3px;overflow:hidden;">'
      +'<div style="width:'+user.collectProgress+'%;height:100%;border-radius:2px;background:'+(user.collectProgress>60?C.danger:C.warning)+';"></div></div>'
@@ -83,6 +114,34 @@ function userIcon(user,selected){
     +prog
     +'</div>';
   return L.divIcon({html:html,className:'',iconSize:[56,totalH],iconAnchor:[28,totalH/2]});
+}
+
+function applySpotVisibility(){
+  Object.keys(spotMarkers).forEach(function(id){
+    var hide=selUser!==null;
+    var m=spotMarkers[id];
+    var c=spotCircles[id];
+    if(m){
+      var el=m.getElement();
+      if(el)el.style.opacity=hide?'0':'1';
+      m.options.interactive=!hide;
+    }
+    if(c){
+      c.setStyle({opacity:hide?0:0.35,fillOpacity:hide?0:0.07});
+    }
+  });
+}
+
+function applyUserVisibility(){
+  Object.keys(userMarkers).forEach(function(id){
+    var hide=selUser!==null&&selUser!==id;
+    var m=userMarkers[id];
+    if(m){
+      var el=m.getElement();
+      if(el)el.style.opacity=hide?'0':'1';
+      m.options.interactive=!hide;
+    }
+  });
 }
 
 function updateSpots(spots){
@@ -108,6 +167,7 @@ function updateSpots(spots){
       spotCircles[spot.id]=L.circle(ll,{radius:spot.radius,color:color,fillColor:color,fillOpacity:0.07,weight:1.5,opacity:0.35}).addTo(map);
     }
   });
+  applySpotVisibility();
 }
 
 function updateUsers(users){
@@ -126,6 +186,7 @@ function updateUsers(users){
       m.addTo(map);userMarkers[user.id]=m;
     }
   });
+  applyUserVisibility();
 }
 
 function updatePlayer(loc,radius){

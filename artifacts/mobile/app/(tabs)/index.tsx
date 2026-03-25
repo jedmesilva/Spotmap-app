@@ -6,7 +6,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useGame } from "@/context/GameContext";
 import { GameMap, GameMapHandle } from "@/components/GameMap";
 import { SpotPanel } from "@/components/SpotPanel";
-import { AttackPanel } from "@/components/AttackPanel";
 import { BagSidebar } from "@/components/BagSidebar";
 import { UserProfileHUD } from "@/components/UserProfileHUD";
 import COLORS from "@/constants/colors";
@@ -118,9 +117,6 @@ export default function MapScreen() {
         />
       )}
 
-      {selectedUser && (
-        <AttackPanel user={selectedUser} onClose={() => selectUser(null)} />
-      )}
     </View>
   );
 }
