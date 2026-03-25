@@ -143,26 +143,32 @@ export function BagSidebar({ insets }: BagSidebarProps) {
           { top: insets.top + 80 },
         ]}
       >
-        <Pressable
-          onPress={() => setBagOpen(true)}
-          style={({ pressed }) => [styles.bagBtn, { opacity: pressed ? 0.8 : 1 }]}
-        >
-          <Feather name="briefcase" size={20} color={COLORS.dark.accent} />
-          <View style={styles.coinBadge}>
-            <Text style={styles.coinText}>{userProfile.coins}</Text>
-          </View>
-        </Pressable>
+        <View style={styles.sidebarContainer}>
+          <Pressable
+            onPress={() => setBagOpen(true)}
+            style={({ pressed }) => [styles.bagBtn, { opacity: pressed ? 0.8 : 1 }]}
+          >
+            <Feather name="briefcase" size={20} color={COLORS.dark.accent} />
+            <View style={styles.coinBadge}>
+              <Text style={styles.coinText}>{userProfile.coins}</Text>
+            </View>
+          </Pressable>
+          <Text style={styles.bagLabel}>BAG</Text>
 
-        <View style={styles.divider} />
-
-        {quickItems.map((item) => (
-          <SidebarItem
-            key={item.id}
-            item={item}
-            onUse={handleUseItem}
-            isQuick
-          />
-        ))}
+          {quickItems.length > 0 && (
+            <>
+              <View style={styles.divider} />
+              {quickItems.map((item) => (
+                <SidebarItem
+                  key={item.id}
+                  item={item}
+                  onUse={handleUseItem}
+                  isQuick
+                />
+              ))}
+            </>
+          )}
+        </View>
       </View>
 
       <Modal
@@ -234,25 +240,40 @@ export function BagSidebar({ insets }: BagSidebarProps) {
 const styles = StyleSheet.create({
   sidebar: {
     position: "absolute",
-    right: 16,
+    right: 12,
     alignItems: "center",
-    gap: 8,
     zIndex: 10,
   },
-  bagBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+  sidebarContainer: {
+    alignItems: "center",
+    gap: 8,
     backgroundColor: COLORS.dark.card,
+    borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: COLORS.dark.accent + "66",
+    borderColor: COLORS.dark.accent + "33",
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  bagLabel: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    color: COLORS.dark.accent,
+    letterSpacing: 1.5,
+  },
+  bagBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: COLORS.dark.accent + "18",
+    borderWidth: 1.5,
+    borderColor: COLORS.dark.accent + "55",
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: COLORS.dark.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
   },
   coinBadge: {
     position: "absolute",
