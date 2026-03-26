@@ -104,9 +104,10 @@ export default function MapScreen() {
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const mineableSpotId = selectedSpot && isSpotInRange(selectedSpot)
-    ? selectedSpot.id
-    : activeCollection?.spotId ?? null;
+  const spotsInRange = spots.filter((s) => isSpotInRange(s));
+  const mineableSpotId = activeCollection?.spotId
+    ?? (selectedSpot && isSpotInRange(selectedSpot) ? selectedSpot.id : null)
+    ?? (spotsInRange.length > 0 ? spotsInRange[0].id : null);
   const canMine = mineableSpotId !== null;
   const miningProgress = activeCollection?.progress ?? 0;
 
