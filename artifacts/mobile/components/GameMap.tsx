@@ -296,12 +296,17 @@ function playerIcon(profile){
   return L.divIcon({html:html,className:'',iconSize:[170,110],iconAnchor:[85,27]});
 }
 
+var lastPlayerLat=null,lastPlayerLng=null;
+
 function updatePlayer(loc,radius,profile){
   if(!loc)return;
   var ll=[loc.latitude,loc.longitude];
-  if(!playerDot&&!playerCircle){
+  var isFirst=!playerDot&&!playerCircle;
+  var posChanged=(ll[0]!==lastPlayerLat||ll[1]!==lastPlayerLng);
+  lastPlayerLat=ll[0];lastPlayerLng=ll[1];
+  if(isFirst){
     map.setView(ll,17);
-  } else {
+  } else if(posChanged&&selSpot===null&&selUser===null){
     map.panTo(ll,{animate:true,duration:0.6,easeLinearity:0.5});
   }
   if(playerCircle){map.removeLayer(playerCircle);playerCircle=null;}
@@ -325,11 +330,17 @@ window.receiveFromRN=function(jsonStr){
   try{
     var d=JSON.parse(jsonStr);
     if(d.type==='UPDATE'){
+      var prevSelUser=selUser,prevSelSpot=selSpot;
       selSpot=d.selectedSpotId||null;
       selUser=d.selectedUserId||null;
       updateSpots(d.spots||[]);
       updateUsers(d.users||[]);
       updatePlayer(d.userLocation,d.userRadius,d.userProfile||null);
+      if(selUser&&selUser!==prevSelUser&&userMarkers[selUser]){
+        map.panTo(userMarkers[selUser].getLatLng(),{animate:true,duration:0.5,easeLinearity:0.5});
+      } else if(selSpot&&selSpot!==prevSelSpot&&spotMarkers[selSpot]){
+        map.panTo(spotMarkers[selSpot].getLatLng(),{animate:true,duration:0.5,easeLinearity:0.5});
+      }
     } else if(d.type==='CENTER'){
       map.setView([d.lat,d.lng],d.zoom||17);
     } else if(d.type==='EMOJI_REACTION'){
