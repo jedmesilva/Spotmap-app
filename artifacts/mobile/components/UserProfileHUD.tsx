@@ -16,10 +16,8 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
 
   return (
     <View style={[styles.row, { top }]}>
-      <View style={styles.card}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{userProfile.avatar}</Text>
-        </View>
+      <View style={styles.avatar}>
+        <Text style={styles.avatarText}>{userProfile.avatar}</Text>
       </View>
 
       <View style={styles.card}>
