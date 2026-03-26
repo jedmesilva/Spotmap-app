@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
@@ -27,7 +28,7 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
       <View style={styles.info}>
         <Text style={styles.name}>{userProfile.name}</Text>
         <View style={styles.healthRow}>
-          <Text style={styles.heartIcon}>❤</Text>
+          <Ionicons name="heart" size={10} color="#FF3D00" />
           <View style={styles.healthBarBg}>
             <View style={[styles.healthBarFill, { width: `${healthPct * 100}%` as any }]} />
           </View>
@@ -107,10 +108,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-  },
-  heartIcon: {
-    fontSize: 10,
-    color: "#FF3D00",
   },
   healthBarBg: {
     width: 60,
