@@ -118,6 +118,7 @@ export default function MapScreen() {
         nearbyUsers={nearbyUsers}
         selectedSpotId={selectedSpot?.id}
         selectedUserId={selectedUser?.id}
+        mineableSpotId={mineableSpotId}
         userLocation={userLocation}
         userProfile={userProfile}
         onSpotPress={handleSpotPress}

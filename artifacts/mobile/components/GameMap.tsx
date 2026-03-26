@@ -67,7 +67,7 @@ map.getContainer().querySelector('.leaflet-map-pane').appendChild(navyOverlay);
 var spotMarkers={},spotCircles={},userMarkers={};
 var playerDot=null,playerCircle=null;
 var selSpot=null,selUser=null;
-var currentSpots=[];var playerLoc=null;
+var currentSpots=[];var playerLoc=null;var mineableSpotId=null;
 
 function haversineM(lat1,lon1,lat2,lon2){
   var R=6371000,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
@@ -273,7 +273,7 @@ function updateSpots(spots){
       m.addTo(map);spotMarkers[spot.id]=m;
     }
     var color=SPOT_COLOR[spot.type]||C.accent;
-    var playerInRange=playerLoc?haversineM(playerLoc.latitude,playerLoc.longitude,spot.latitude,spot.longitude)<=spot.radius:false;
+    var playerInRange=mineableSpotId===spot.id;
     var circleOpts=playerInRange
       ?{radius:spot.radius,color:color,fillColor:color,fillOpacity:0.15,weight:3,opacity:0.9}
       :{radius:spot.radius,color:color,fillColor:color,fillOpacity:0.07,weight:1.5,opacity:0.35};
@@ -364,6 +364,7 @@ window.receiveFromRN=function(jsonStr){
       selSpot=d.selectedSpotId||null;
       selUser=d.selectedUserId||null;
       playerLoc=d.userLocation||null;
+      mineableSpotId=d.mineableSpotId||null;
       updateSpots(d.spots||[]);
       updateUsers(d.users||[]);
       updatePlayer(d.userLocation,d.userRadius,d.userProfile||null);
@@ -432,6 +433,7 @@ interface GameMapProps {
   nearbyUsers: NearbyUser[];
   selectedSpotId?: string | null;
   selectedUserId?: string | null;
+  mineableSpotId?: string | null;
   userLocation?: { latitude: number; longitude: number } | null;
   userProfile?: { name: string; avatar: string; health: number; maxHealth: number } | null;
   onSpotPress: (spotId: string) => void;
@@ -442,6 +444,7 @@ interface GameMapProps {
 export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap({
   spots,
   nearbyUsers,
+  mineableSpotId,
   selectedSpotId,
   selectedUserId,
   userLocation,
@@ -490,11 +493,12 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
       userRadius: USER_RADIUS,
       selectedSpotId: selectedSpotId ?? null,
       selectedUserId: selectedUserId ?? null,
+      mineableSpotId: mineableSpotId ?? null,
       userProfile: userProfile
         ? { name: userProfile.name, avatar: userProfile.avatar, health: userProfile.health, maxHealth: userProfile.maxHealth }
         : null,
     });
-  }, [mapReady, spots, nearbyUsers, userLocation, userProfile, selectedSpotId, selectedUserId, inject]);
+  }, [mapReady, spots, nearbyUsers, userLocation, userProfile, selectedSpotId, selectedUserId, mineableSpotId, inject]);
 
   const handleMessage = useCallback(
     (event: any) => {
