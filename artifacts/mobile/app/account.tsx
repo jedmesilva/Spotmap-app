@@ -4,11 +4,9 @@ import * as ImagePicker from "expo-image-picker";
 import React, { useState } from "react";
 import {
   Alert,
-  ActionSheetIOS,
   ActivityIndicator,
   Image,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -77,6 +75,7 @@ export default function AccountScreen() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
+  const [avatarActionVisible, setAvatarActionVisible] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(userProfile?.avatar ?? "😎");
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -168,26 +167,7 @@ export default function AccountScreen() {
   };
 
   const handleAvatarPress = () => {
-    if (Platform.OS === "ios") {
-      ActionSheetIOS.showActionSheetWithOptions(
-        {
-          options: ["Cancelar", "Tirar foto", "Escolher da galeria", "Escolher emoji"],
-          cancelButtonIndex: 0,
-        },
-        (index) => {
-          if (index === 1) handlePickImage(true);
-          else if (index === 2) handlePickImage(false);
-          else if (index === 3) setAvatarPickerVisible(true);
-        }
-      );
-    } else {
-      Alert.alert("Alterar foto", "Escolha uma opção", [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Tirar foto", onPress: () => handlePickImage(true) },
-        { text: "Escolher da galeria", onPress: () => handlePickImage(false) },
-        { text: "Escolher emoji", onPress: () => setAvatarPickerVisible(true) },
-      ]);
-    }
+    setAvatarActionVisible(true);
   };
 
   const handleSave = async () => {
@@ -306,6 +286,41 @@ export default function AccountScreen() {
         </View>
       </ScrollView>
 
+      {/* Avatar action sheet */}
+      <Modal
+        visible={avatarActionVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAvatarActionVisible(false)}
+      >
+        <Pressable style={styles.actionBackdrop} onPress={() => setAvatarActionVisible(false)}>
+          <View style={styles.actionSheet}>
+            <Text style={styles.actionTitle}>Alterar avatar</Text>
+            <TouchableOpacity
+              style={styles.actionOption}
+              onPress={() => { setAvatarActionVisible(false); handlePickImage(false); }}
+            >
+              <Ionicons name="images-outline" size={20} color={COLORS.dark.text} />
+              <Text style={styles.actionOptionText}>Escolher da galeria</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.actionOption}
+              onPress={() => { setAvatarActionVisible(false); setAvatarPickerVisible(true); }}
+            >
+              <Ionicons name="happy-outline" size={20} color={COLORS.dark.text} />
+              <Text style={styles.actionOptionText}>Escolher emoji</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionOption, styles.actionCancel]}
+              onPress={() => setAvatarActionVisible(false)}
+            >
+              <Text style={styles.actionCancelText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Emoji picker */}
       <Modal
         visible={avatarPickerVisible}
         transparent
@@ -484,6 +499,54 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
     color: COLORS.dark.danger,
+  },
+  actionBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
+  },
+  actionSheet: {
+    backgroundColor: COLORS.dark.bgSecondary,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 16,
+    paddingBottom: 32,
+    borderTopWidth: 1,
+    borderColor: COLORS.dark.border,
+    gap: 4,
+  },
+  actionTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: COLORS.dark.textMuted,
+    textAlign: "center",
+    paddingBottom: 8,
+  },
+  actionOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    backgroundColor: COLORS.dark.surface,
+    marginBottom: 2,
+  },
+  actionOptionText: {
+    fontSize: 15,
+    fontFamily: "Inter_500Medium",
+    color: COLORS.dark.text,
+  },
+  actionCancel: {
+    marginTop: 6,
+    justifyContent: "center",
+  },
+  actionCancelText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: COLORS.dark.textMuted,
+    textAlign: "center",
+    width: "100%",
   },
   modalBackdrop: {
     flex: 1,
