@@ -256,7 +256,11 @@ function playerIcon(profile){
 function updatePlayer(loc,radius,profile){
   if(!loc)return;
   var ll=[loc.latitude,loc.longitude];
-  if(!playerDot&&!playerCircle){map.setView(ll,17);}
+  if(!playerDot&&!playerCircle){
+    map.setView(ll,17);
+  } else {
+    map.panTo(ll,{animate:true,duration:0.6,easeLinearity:0.5});
+  }
   if(playerCircle){map.removeLayer(playerCircle);playerCircle=null;}
   var icon=profile?playerIcon(profile):L.divIcon({
     html:'<div style="width:16px;height:16px;border-radius:50%;background:'+C.accent+';border:2.5px solid white;box-shadow:0 0 10px '+C.accent+'99;"></div>',
