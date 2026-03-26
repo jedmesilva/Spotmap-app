@@ -1,4 +1,4 @@
-import { Feather, Ionicons } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -18,7 +18,7 @@ function getHealthColor(health: number, maxHealth: number): string {
 }
 
 export function UserProfileHUD({ insets }: UserProfileHUDProps) {
-  const { userProfile, selectedUser, selectUser } = useGame();
+  const { userProfile, selectedUser } = useGame();
 
   const top = Math.max(insets.top + 10, 50);
   const isInspecting = selectedUser !== null;
@@ -47,18 +47,9 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
       </View>
 
       {isInspecting && (
-        <>
-          <Text style={styles.inspectName} numberOfLines={1}>
-            {selectedUser.name}
-          </Text>
-          <TouchableOpacity
-            onPress={() => selectUser(null)}
-            activeOpacity={0.6}
-            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-          >
-            <Feather name="x" size={16} color={COLORS.dark.textMuted} />
-          </TouchableOpacity>
-        </>
+        <Text style={styles.inspectName} numberOfLines={1}>
+          {selectedUser.name}
+        </Text>
       )}
     </View>
   );

@@ -6,6 +6,7 @@ import { NearbyUser, Spot } from "@/context/GameContext";
 
 export interface GameMapHandle {
   centerOnUser: () => void;
+  centerOn: (lat: number, lng: number) => void;
   sendEmojiReaction: (userId: string, emoji: string, fromUserId?: string) => void;
   mineHit: (spotId: string, clickCount: number) => void;
 }
@@ -441,6 +442,9 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
       const loc = userLocationRef.current;
       if (!loc) return;
       inject({ type: "CENTER", lat: loc.latitude, lng: loc.longitude, zoom: 17 });
+    },
+    centerOn: (lat: number, lng: number) => {
+      inject({ type: "CENTER", lat, lng, zoom: 17 });
     },
     sendEmojiReaction: (userId: string, emoji: string, fromUserId?: string) => {
       inject({ type: "EMOJI_REACTION", userId, emoji, fromUserId: fromUserId ?? null });

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from "react";
 import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import * as Location from "expo-location";
-import { Ionicons } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useGame } from "@/context/GameContext";
@@ -130,13 +130,34 @@ export default function MapScreen() {
       <UserProfileHUD insets={{ top: topInset }} />
       <MedalsStrip insets={{ top: topInset }} />
 
-      <TouchableOpacity
-        style={[styles.locateBtn, { top: topInset + 16 }]}
-        onPress={() => mapRef.current?.centerOnUser()}
-        activeOpacity={0.75}
-      >
-        <Ionicons name="locate" size={22} color={COLORS.dark.accent} />
-      </TouchableOpacity>
+      <View style={[styles.rightButtons, { top: topInset + 16 }]}>
+        {selectedUser ? (
+          <>
+            <TouchableOpacity
+              style={styles.mapBtn}
+              onPress={() => mapRef.current?.centerOn(selectedUser.latitude, selectedUser.longitude)}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="locate" size={22} color={COLORS.dark.accent} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.mapBtn, styles.exitBtn]}
+              onPress={() => selectUser(null)}
+              activeOpacity={0.75}
+            >
+              <Feather name="x" size={20} color={COLORS.dark.danger} />
+            </TouchableOpacity>
+          </>
+        ) : (
+          <TouchableOpacity
+            style={styles.mapBtn}
+            onPress={() => mapRef.current?.centerOnUser()}
+            activeOpacity={0.75}
+          >
+            <Ionicons name="locate" size={22} color={COLORS.dark.accent} />
+          </TouchableOpacity>
+        )}
+      </View>
 
       <BagSidebar
         insets={{ top: topInset, bottom: bottomInset }}
@@ -178,9 +199,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.dark.bg,
   },
-  locateBtn: {
+  rightButtons: {
     position: "absolute",
     right: 16,
+    flexDirection: "column",
+    gap: 8,
+    zIndex: 10,
+  },
+  mapBtn: {
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -194,6 +220,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 6,
     elevation: 5,
-    zIndex: 10,
+  },
+  exitBtn: {
+    borderColor: COLORS.dark.danger + "44",
   },
 });
