@@ -28,7 +28,6 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
   const displayAvatar = isInspecting ? selectedUser.avatar : userProfile.avatar;
 
   const healthColor = getHealthColor(displayHealth, displayMaxHealth);
-  const healthRatio = displayMaxHealth > 0 ? displayHealth / displayMaxHealth : 1;
 
   return (
     <View style={[styles.row, { top }]}>
@@ -61,14 +60,6 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
             <Text style={[styles.healthText, styles.healthTextSmall, { color: healthColor }]}>
               {displayHealth}
             </Text>
-            <View style={styles.healthBarTrack}>
-              <View
-                style={[
-                  styles.healthBarFill,
-                  { width: `${Math.round(healthRatio * 100)}%` as any, backgroundColor: healthColor },
-                ]}
-              />
-            </View>
           </View>
         </View>
       ) : (
@@ -163,16 +154,5 @@ const styles = StyleSheet.create({
   },
   healthTextSmall: {
     fontSize: 12,
-  },
-  healthBarTrack: {
-    flex: 1,
-    height: 4,
-    backgroundColor: COLORS.dark.border,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  healthBarFill: {
-    height: 4,
-    borderRadius: 2,
   },
 });
