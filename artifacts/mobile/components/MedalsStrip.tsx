@@ -67,8 +67,9 @@ export function MedalsStrip({ insets }: MedalsStripProps) {
   const { userProfile, selectedUser } = useGame();
   const [selected, setSelected] = useState<Medal | null>(null);
 
-  const top = Math.max(insets.top + 10, 50) + 50;
   const isInspecting = selectedUser !== null;
+  const hudHeight = isInspecting ? 72 : 50;
+  const top = Math.max(insets.top + 10, 50) + hudHeight;
 
   const medals = isInspecting
     ? (selectedUser.medals ?? [])
@@ -87,11 +88,6 @@ export function MedalsStrip({ insets }: MedalsStripProps) {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.scroll}
         >
-          {isInspecting && (
-            <View style={styles.inspectLabel}>
-              <Text style={styles.inspectLabelText}>MEDALHAS</Text>
-            </View>
-          )}
           {unlockedFirst.length > 0 ? (
             unlockedFirst.map((medal) => (
               <MedalBadge key={medal.id} medal={medal} onPress={() => setSelected(medal)} />
@@ -189,17 +185,6 @@ const styles = StyleSheet.create({
     gap: 10,
     flexDirection: "row",
     alignItems: "flex-start",
-  },
-  inspectLabel: {
-    justifyContent: "center",
-    paddingRight: 4,
-    paddingTop: 2,
-  },
-  inspectLabelText: {
-    fontSize: 8,
-    fontFamily: "Inter_700Bold",
-    color: COLORS.dark.warning,
-    letterSpacing: 1.5,
   },
   emptyMedals: {
     justifyContent: "center",
