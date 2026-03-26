@@ -142,6 +142,7 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
   const [expanded, setExpanded] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const pickaxeScale = useRef(new RNAnimated.Value(1)).current;
+  const pickaxeY = useRef(new RNAnimated.Value(0)).current;
 
   const bottomAnim = useRef(new RNAnimated.Value(extraBottomOffset)).current;
   useEffect(() => {
@@ -169,10 +170,17 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
 
   const handleMine = () => {
     if (!canMine) return;
-    RNAnimated.sequence([
-      RNAnimated.timing(pickaxeScale, { toValue: 0.75, duration: 80, useNativeDriver: true }),
-      RNAnimated.timing(pickaxeScale, { toValue: 1.1, duration: 80, useNativeDriver: true }),
-      RNAnimated.timing(pickaxeScale, { toValue: 1, duration: 60, useNativeDriver: true }),
+    RNAnimated.parallel([
+      RNAnimated.sequence([
+        RNAnimated.timing(pickaxeScale, { toValue: 0.75, duration: 80, useNativeDriver: true }),
+        RNAnimated.timing(pickaxeScale, { toValue: 1.1, duration: 80, useNativeDriver: true }),
+        RNAnimated.timing(pickaxeScale, { toValue: 1, duration: 60, useNativeDriver: true }),
+      ]),
+      RNAnimated.sequence([
+        RNAnimated.timing(pickaxeY, { toValue: -10, duration: 80, useNativeDriver: true }),
+        RNAnimated.timing(pickaxeY, { toValue: 3, duration: 80, useNativeDriver: true }),
+        RNAnimated.timing(pickaxeY, { toValue: 0, duration: 60, useNativeDriver: true }),
+      ]),
     ]).start();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     onMine?.();
@@ -223,7 +231,7 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
           activeOpacity={canMine ? 0.8 : 1}
           style={[styles.pickaxeBtn, canMine && styles.pickaxeBtnActive]}
         >
-          <RNAnimated.View style={{ transform: [{ scale: pickaxeScale }] }}>
+          <RNAnimated.View style={{ transform: [{ scale: pickaxeScale }, { translateY: pickaxeY }] }}>
             <MaterialCommunityIcons
               name="pickaxe"
               size={24}
