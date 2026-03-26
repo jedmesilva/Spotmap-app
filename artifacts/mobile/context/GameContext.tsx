@@ -99,6 +99,7 @@ interface GameActions {
   startCollecting: (spotId: string) => void;
   stopCollecting: () => void;
   updateCollectProgress: (progress: number) => void;
+  mineSpot: (spotId: string) => void;
   selectSpot: (spot: Spot | null) => void;
   selectUser: (user: NearbyUser | null) => void;
   attackUser: (targetUserId: string, artifactType: ArtifactType) => AttackEvent;
@@ -107,6 +108,13 @@ interface GameActions {
   completeCollection: (spotId: string) => void;
   updateProfile: (fields: Partial<Pick<UserProfile, "name" | "nickname" | "email" | "avatar">>) => void;
 }
+
+const SPOT_HITS: Record<SpotType, number> = {
+  coupon: 5,
+  money: 8,
+  product: 12,
+  rare: 20,
+};
 
 const ARTIFACT_DAMAGE: Record<ArtifactType, number> = {
   fire: 25,
@@ -257,6 +265,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [attackEvents, setAttackEvents] = useState<AttackEvent[]>([]);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
+  const activeCollectionRef = useRef<GameState["activeCollection"]>(null);
+  useEffect(() => {
+    activeCollectionRef.current = activeCollection;
+  }, [activeCollection]);
+
   const setUserLocationCb = useCallback((loc: { latitude: number; longitude: number }) => {
     setUserLocation(loc);
   }, []);
@@ -282,6 +295,39 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const updateCollectProgress = useCallback((progress: number) => {
     setActiveCollection((prev) => (prev ? { ...prev, progress } : null));
   }, []);
+
+  const mineSpot = useCallback((spotId: string) => {
+    const spot = spots.find((s) => s.id === spotId);
+    if (!spot) return;
+
+    const hitsRequired = SPOT_HITS[spot.type];
+    const progressPerHit = 100 / hitsRequired;
+
+    const prev = activeCollectionRef.current;
+    const currentProgress = prev?.spotId === spotId ? prev.progress : 0;
+    const newProgress = Math.min(100, currentProgress + progressPerHit);
+
+    if (newProgress >= 100) {
+      setSpots((prevSpots) => prevSpots.filter((s) => s.id !== spotId));
+      setActiveCollection(null);
+      setSelectedSpot(null);
+      setUserProfile((prevProfile) => ({
+        ...prevProfile,
+        xp: prevProfile.xp + 100,
+        coins: prevProfile.coins + (spot.type === "money" ? 50 : 10),
+      }));
+      return;
+    }
+
+    if (!prev || prev.spotId !== spotId) {
+      setActiveCollection({ spotId, progress: newProgress, startedAt: Date.now() });
+      setSpots((prevSpots) =>
+        prevSpots.map((s) => (s.id === spotId ? { ...s, isCollecting: true } : s))
+      );
+    } else {
+      setActiveCollection({ ...prev, progress: newProgress });
+    }
+  }, [spots]);
 
   const selectSpot = useCallback((spot: Spot | null) => {
     setSelectedSpot(spot);
@@ -400,6 +446,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     startCollecting,
     stopCollecting,
     updateCollectProgress,
+    mineSpot,
     selectSpot,
     selectUser,
     attackUser,

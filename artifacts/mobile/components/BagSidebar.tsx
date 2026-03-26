@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import { Ionicons } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -130,14 +130,17 @@ function FullItem({
 
 interface BagSidebarProps {
   insets: { top: number; bottom: number };
-  onLocate?: () => void;
+  onMine?: () => void;
+  canMine?: boolean;
+  miningProgress?: number;
   extraBottomOffset?: number;
 }
 
-export function BagSidebar({ insets, onLocate, extraBottomOffset = 0 }: BagSidebarProps) {
+export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0, extraBottomOffset = 0 }: BagSidebarProps) {
   const { userProfile, useSubstance } = useGame();
   const [expanded, setExpanded] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const pickaxeScale = useRef(new RNAnimated.Value(1)).current;
 
   const bottomAnim = useRef(new RNAnimated.Value(extraBottomOffset)).current;
   useEffect(() => {
@@ -163,17 +166,20 @@ export function BagSidebar({ insets, onLocate, extraBottomOffset = 0 }: BagSideb
     setExpanded((v) => !v);
   };
 
+  const handleMine = () => {
+    if (!canMine) return;
+    RNAnimated.sequence([
+      RNAnimated.timing(pickaxeScale, { toValue: 0.75, duration: 80, useNativeDriver: true }),
+      RNAnimated.timing(pickaxeScale, { toValue: 1.1, duration: 80, useNativeDriver: true }),
+      RNAnimated.timing(pickaxeScale, { toValue: 1, duration: 60, useNativeDriver: true }),
+    ]).start();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    onMine?.();
+  };
+
   return (
     <>
       <RNAnimated.View style={[styles.column, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}>
-        <TouchableOpacity
-          style={styles.locateBtn}
-          onPress={onLocate}
-          activeOpacity={0.75}
-        >
-          <Ionicons name="locate" size={22} color={COLORS.dark.accent} />
-        </TouchableOpacity>
-
         <View style={styles.bagSection}>
           <TouchableOpacity
             style={styles.expandBtn}
@@ -210,6 +216,26 @@ export function BagSidebar({ insets, onLocate, extraBottomOffset = 0 }: BagSideb
             <Text style={styles.bagLabel}>BAG</Text>
           </Pressable>
         </View>
+
+        <TouchableOpacity
+          onPress={handleMine}
+          activeOpacity={canMine ? 0.8 : 1}
+          style={[styles.pickaxeBtn, canMine && styles.pickaxeBtnActive]}
+        >
+          <RNAnimated.View style={{ transform: [{ scale: pickaxeScale }] }}>
+            <MaterialCommunityIcons
+              name="pickaxe"
+              size={24}
+              color={canMine ? "#F5C518" : COLORS.dark.textMuted}
+            />
+          </RNAnimated.View>
+          {canMine && miningProgress > 0 && (
+            <View style={styles.mineProgressBadge}>
+              <Text style={styles.mineProgressText}>{Math.round(miningProgress)}%</Text>
+            </View>
+          )}
+          <Text style={[styles.pickaxeLabel, canMine && { color: "#F5C518" }]}>MINE</Text>
+        </TouchableOpacity>
       </RNAnimated.View>
 
       <Modal
@@ -286,21 +312,6 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 8,
     zIndex: 10,
-  },
-  locateBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.dark.card,
-    borderWidth: 1.5,
-    borderColor: COLORS.dark.accent + "44",
-    alignItems: "center",
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
-    elevation: 5,
   },
   bagSection: {
     alignItems: "center",
@@ -550,5 +561,50 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.dark.textMuted,
     fontFamily: "Inter_400Regular",
+  },
+  pickaxeBtn: {
+    alignItems: "center",
+    gap: 4,
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    backgroundColor: COLORS.dark.card,
+    borderWidth: 1.5,
+    borderColor: COLORS.dark.border,
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 8,
+    position: "relative",
+  },
+  pickaxeBtnActive: {
+    borderColor: "#F5C518" + "88",
+    backgroundColor: "#F5C518" + "14",
+    shadowColor: "#F5C518",
+    shadowOpacity: 0.3,
+  },
+  pickaxeLabel: {
+    fontSize: 8,
+    fontFamily: "Inter_700Bold",
+    color: COLORS.dark.textMuted,
+    letterSpacing: 1.5,
+  },
+  mineProgressBadge: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: COLORS.dark.bg,
+    borderWidth: 1,
+    borderColor: "#F5C518",
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  mineProgressText: {
+    fontSize: 8,
+    fontFamily: "Inter_700Bold",
+    color: "#F5C518",
   },
 });

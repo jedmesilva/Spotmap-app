@@ -1,6 +1,5 @@
 import { Feather } from "@expo/vector-icons";
 import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
-import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef } from "react";
 import {
   Pressable,
@@ -12,6 +11,13 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
 import { Spot, useGame } from "@/context/GameContext";
+
+const SPOT_HITS: Record<string, number> = {
+  coupon: 5,
+  money: 8,
+  product: 12,
+  rare: 20,
+};
 
 const SPOT_COLORS: Record<string, string> = {
   coupon: COLORS.dark.spotCoupon,
@@ -51,45 +57,18 @@ interface SpotPanelProps {
 
 export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
   const insets = useSafeAreaInsets();
-  const { activeCollection, startCollecting, stopCollecting, updateCollectProgress, completeCollection, nearbyUsers, userProfile } = useGame();
+  const { activeCollection, nearbyUsers, userProfile } = useGame();
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
   const isCollecting = activeCollection?.spotId === spot.id;
   const progress = isCollecting ? activeCollection?.progress ?? 0 : 0;
+  const hitsRequired = SPOT_HITS[spot.type] ?? 10;
+  const hitsRemaining = Math.ceil(((100 - progress) / 100) * hitsRequired);
 
   const sheetRef = useRef<BottomSheetModal>(null);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
     sheetRef.current?.present();
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
   }, []);
-
-  const handleCollect = () => {
-    if (!isInRange) return;
-    if (isCollecting) {
-      stopCollecting();
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      return;
-    }
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    startCollecting(spot.id);
-    setCountdown(0);
-
-    let prog = 0;
-    intervalRef.current = setInterval(() => {
-      prog += 2;
-      updateCollectProgress(prog);
-      if (prog >= 100) {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        completeCollection(spot.id);
-        onClose();
-      }
-    }, 100);
-  };
 
   const othersCollecting = nearbyUsers
     .filter((u) => u.collectingSpotId === spot.id)
@@ -187,46 +166,39 @@ export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
           </View>
         )}
 
-        <Pressable
-          onPress={handleCollect}
-          disabled={!isInRange}
-          style={({ pressed }) => [
-            styles.collectBtn,
-            {
-              backgroundColor: isCollecting
-                ? COLORS.dark.danger + "22"
-                : isInRange
-                ? color + "22"
-                : COLORS.dark.surface,
-              borderColor: isCollecting
-                ? COLORS.dark.danger
-                : isInRange
-                ? color
-                : COLORS.dark.border,
-              opacity: pressed ? 0.8 : 1,
-            },
-          ]}
-        >
-          <Feather
-            name={isCollecting ? "pause-circle" : "download"}
-            size={18}
-            color={isCollecting ? COLORS.dark.danger : isInRange ? color : COLORS.dark.textMuted}
-          />
-          <Text
-            style={[
-              styles.collectBtnText,
-              {
-                color: isCollecting
-                  ? COLORS.dark.danger
-                  : isInRange
-                  ? color
-                  : COLORS.dark.textMuted,
-              },
-            ]}
-          >
-            {isCollecting ? "Parar Coleta" : isInRange ? "Coletar" : "Fora do Alcance"}
-          </Text>
-        </Pressable>
+        {isCollecting && (
+          <View style={styles.progressSection}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${progress}%` as any, backgroundColor: color }]} />
+            </View>
+            <Text style={[styles.progressText, { color }]}>{Math.round(progress)}%</Text>
+          </View>
+        )}
+
+        <View style={[
+          styles.mineHint,
+          {
+            borderColor: isInRange ? color + "55" : COLORS.dark.border,
+            backgroundColor: isInRange ? color + "10" : COLORS.dark.surface,
+          }
+        ]}>
+          <Text style={styles.mineHintIcon}>⛏️</Text>
+          <View style={styles.mineHintBody}>
+            <Text style={[styles.mineHintTitle, { color: isInRange ? color : COLORS.dark.textMuted }]}>
+              {isInRange
+                ? isCollecting
+                  ? `${hitsRemaining} picaretada${hitsRemaining !== 1 ? "s" : ""} restante${hitsRemaining !== 1 ? "s" : ""}`
+                  : "Use o botão ⛏️ para minerar"
+                : "Fora do alcance"}
+            </Text>
+            <Text style={styles.mineHintSub}>
+              {hitsRequired} picaretada{hitsRequired !== 1 ? "s" : ""} necessária{hitsRequired !== 1 ? "s" : ""}
+            </Text>
+          </View>
+          {!isInRange && (
+            <Feather name="map-pin" size={16} color={COLORS.dark.textMuted} />
+          )}
+        </View>
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
@@ -376,17 +348,48 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "Inter_700Bold",
   },
-  collectBtn: {
+  progressSection: {
+    marginBottom: 12,
+    gap: 6,
+  },
+  progressBar: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: COLORS.dark.border,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+  progressText: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    textAlign: "right",
+  },
+  mineHint: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
+    gap: 12,
     paddingVertical: 14,
+    paddingHorizontal: 16,
     borderRadius: 14,
     borderWidth: 1.5,
   },
-  collectBtnText: {
-    fontSize: 15,
+  mineHintIcon: {
+    fontSize: 22,
+  },
+  mineHintBody: {
+    flex: 1,
+    gap: 2,
+  },
+  mineHintTitle: {
+    fontSize: 14,
     fontFamily: "Inter_600SemiBold",
+  },
+  mineHintSub: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: COLORS.dark.textMuted,
   },
 });

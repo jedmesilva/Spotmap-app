@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef } from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import * as Location from "expo-location";
+import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useGame } from "@/context/GameContext";
@@ -39,6 +40,8 @@ export default function MapScreen() {
     userLocation,
     setUserLocation,
     userProfile,
+    mineSpot,
+    activeCollection,
   } = useGame();
 
   useEffect(() => {
@@ -101,6 +104,12 @@ export default function MapScreen() {
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
+  const mineableSpotId = selectedSpot && isSpotInRange(selectedSpot)
+    ? selectedSpot.id
+    : activeCollection?.spotId ?? null;
+  const canMine = mineableSpotId !== null;
+  const miningProgress = activeCollection?.progress ?? 0;
+
   return (
     <View style={styles.container}>
       <GameMap
@@ -118,9 +127,20 @@ export default function MapScreen() {
 
       <UserProfileHUD insets={{ top: topInset }} />
       <MedalsStrip insets={{ top: topInset }} />
+
+      <TouchableOpacity
+        style={[styles.locateBtn, { top: topInset + 16 }]}
+        onPress={() => mapRef.current?.centerOnUser()}
+        activeOpacity={0.75}
+      >
+        <Ionicons name="locate" size={22} color={COLORS.dark.accent} />
+      </TouchableOpacity>
+
       <BagSidebar
         insets={{ top: topInset, bottom: bottomInset }}
-        onLocate={() => mapRef.current?.centerOnUser()}
+        onMine={() => mineableSpotId && mineSpot(mineableSpotId)}
+        canMine={canMine}
+        miningProgress={miningProgress}
         extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
       />
 
@@ -150,5 +170,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.dark.bg,
+  },
+  locateBtn: {
+    position: "absolute",
+    right: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: COLORS.dark.card,
+    borderWidth: 1.5,
+    borderColor: COLORS.dark.accent + "44",
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 5,
+    zIndex: 10,
   },
 });
