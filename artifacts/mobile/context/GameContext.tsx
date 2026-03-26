@@ -377,7 +377,7 @@ const DEFAULT_PROFILE: UserProfile = {
 const GameContext = createContext<(GameState & GameActions) | null>(null);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
-  const { session } = useAuth();
+  const { session, userProfile: authUserProfile } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const supabaseSpots = useSpots();
   const spotCollections = useSpotCollections();
@@ -414,6 +414,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       else setSelectedUser(null);
     }
   }, [nearbyUsers]);
+
+  useEffect(() => {
+    if (!authUserProfile) return;
+    setUserProfile((prev) => ({
+      ...prev,
+      id: authUserProfile.id,
+      name: authUserProfile.name,
+      nickname: authUserProfile.nickname,
+      email: authUserProfile.email,
+      avatar: authUserProfile.avatar,
+    }));
+  }, [authUserProfile?.avatar, authUserProfile?.name, authUserProfile?.id]);
 
   useEffect(() => {
     const userId = session?.user?.id;
