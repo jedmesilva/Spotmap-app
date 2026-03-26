@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -18,39 +18,75 @@ function getHealthColor(health: number, maxHealth: number): string {
 }
 
 export function UserProfileHUD({ insets }: UserProfileHUDProps) {
-  const { userProfile } = useGame();
+  const { userProfile, selectedUser, selectUser } = useGame();
 
   const top = Math.max(insets.top + 10, 50);
-  const healthColor = getHealthColor(userProfile.health, userProfile.maxHealth);
+  const isInspecting = selectedUser !== null;
+
+  const displayHealth = isInspecting ? selectedUser.health : userProfile.health;
+  const displayMaxHealth = isInspecting ? selectedUser.maxHealth : userProfile.maxHealth;
+  const displayAvatar = isInspecting ? selectedUser.avatar : userProfile.avatar;
+  const displayName = isInspecting ? selectedUser.name : null;
+
+  const healthColor = getHealthColor(displayHealth, displayMaxHealth);
 
   return (
-    <View style={[styles.row, { top }]}>
-      <TouchableOpacity
-        style={styles.avatar}
-        onPress={() => router.push("/account")}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.avatarText}>{userProfile.avatar}</Text>
-      </TouchableOpacity>
+    <View style={[styles.wrapper, { top }]}>
+      <View style={styles.row}>
+        <TouchableOpacity
+          style={[
+            styles.avatar,
+            isInspecting && styles.avatarInspecting,
+          ]}
+          onPress={() => {
+            if (!isInspecting) router.push("/account");
+          }}
+          activeOpacity={isInspecting ? 1 : 0.8}
+        >
+          <Text style={styles.avatarText}>{displayAvatar}</Text>
+        </TouchableOpacity>
 
-      <View style={styles.card}>
-        <Ionicons name="heart" size={16} color={healthColor} />
-        <Text style={[styles.healthText, { color: healthColor }]}>
-          {userProfile.health}
-        </Text>
+        <View style={[styles.card, isInspecting && styles.cardInspecting]}>
+          <Ionicons name="heart" size={16} color={healthColor} />
+          <Text style={[styles.healthText, { color: healthColor }]}>
+            {displayHealth}
+          </Text>
+        </View>
+
+        {isInspecting && (
+          <TouchableOpacity
+            style={styles.closeBtn}
+            onPress={() => selectUser(null)}
+            activeOpacity={0.75}
+          >
+            <Feather name="x" size={14} color={COLORS.dark.textSecondary} />
+          </TouchableOpacity>
+        )}
       </View>
+
+      {isInspecting && displayName && (
+        <View style={styles.inspectingBanner}>
+          <Feather name="eye" size={9} color={COLORS.dark.warning} />
+          <Text style={styles.inspectingText} numberOfLines={1}>
+            {displayName}
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: {
+  wrapper: {
     position: "absolute",
     left: 16,
+    zIndex: 10,
+    gap: 4,
+  },
+  row: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    zIndex: 10,
   },
   card: {
     flexDirection: "row",
@@ -63,6 +99,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.dark.border,
   },
+  cardInspecting: {
+    borderColor: COLORS.dark.warning + "55",
+  },
   avatar: {
     width: 40,
     height: 40,
@@ -73,6 +112,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  avatarInspecting: {
+    borderColor: COLORS.dark.warning,
+  },
   avatarText: {
     color: COLORS.dark.text,
     fontSize: 16,
@@ -81,5 +123,34 @@ const styles = StyleSheet.create({
   healthText: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
+  },
+  closeBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: COLORS.dark.card,
+    borderWidth: 1,
+    borderColor: COLORS.dark.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inspectingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: COLORS.dark.warning + "18",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: COLORS.dark.warning + "44",
+    alignSelf: "flex-start",
+  },
+  inspectingText: {
+    color: COLORS.dark.warning,
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.3,
+    maxWidth: 120,
   },
 });

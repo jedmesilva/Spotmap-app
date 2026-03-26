@@ -35,6 +35,14 @@ export interface Spot {
   isCollecting?: boolean;
 }
 
+export interface InventoryItem {
+  id: string;
+  type: SpotType | ArtifactType | SubstanceType;
+  name: string;
+  quantity: number;
+  icon: string;
+}
+
 export interface NearbyUser {
   id: string;
   name: string;
@@ -46,14 +54,9 @@ export interface NearbyUser {
   health: number;
   maxHealth: number;
   immunities: SubstanceType[];
-}
-
-export interface InventoryItem {
-  id: string;
-  type: SpotType | ArtifactType | SubstanceType;
-  name: string;
-  quantity: number;
-  icon: string;
+  medals?: Medal[];
+  bag?: InventoryItem[];
+  coins?: number;
 }
 
 export interface UserProfile {
@@ -216,6 +219,18 @@ const MOCK_USERS: NearbyUser[] = [
     health: 75,
     maxHealth: 100,
     immunities: ["flame_shield"],
+    coins: 840,
+    bag: [
+      { id: "f1", type: "fire", name: "Bola de Fogo", quantity: 2, icon: "fire" },
+      { id: "f2", type: "cryo_armor", name: "Armadura de Gelo", quantity: 1, icon: "shield" },
+      { id: "f3", type: "coupon", name: "Cupom 15%", quantity: 3, icon: "tag" },
+    ],
+    medals: [
+      { id: "fm1", icon: "🎯", name: "Primeiro Passo", description: "Realizou sua primeira coleta.", rarity: "common", unlockedAt: Date.now() - 86400000 * 15 },
+      { id: "fm2", icon: "🦊", name: "Raposa Veloz", description: "Coletou 3 spots em menos de 1 hora.", rarity: "rare", unlockedAt: Date.now() - 86400000 * 5 },
+      { id: "fm3", icon: "🗺️", name: "Explorador", description: "Visite 20 spots diferentes.", rarity: "epic" },
+      { id: "fm4", icon: "👑", name: "Lendário", description: "Alcance o nível 10.", rarity: "legendary" },
+    ],
   },
   {
     id: "user3",
@@ -228,6 +243,22 @@ const MOCK_USERS: NearbyUser[] = [
     health: 100,
     maxHealth: 100,
     immunities: ["cryo_armor", "antidote"],
+    coins: 2100,
+    bag: [
+      { id: "s1", type: "lightning", name: "Raio", quantity: 4, icon: "zap" },
+      { id: "s2", type: "poison", name: "Veneno", quantity: 2, icon: "activity" },
+      { id: "s3", type: "barrier", name: "Barreira", quantity: 1, icon: "shield" },
+      { id: "s4", type: "money", name: "R$ 100", quantity: 2, icon: "dollar-sign" },
+    ],
+    medals: [
+      { id: "sm1", icon: "🎯", name: "Primeiro Passo", description: "Realizou sua primeira coleta.", rarity: "common", unlockedAt: Date.now() - 86400000 * 30 },
+      { id: "sm2", icon: "🏹", name: "Caçador", description: "Completou 5 coletas no mapa.", rarity: "common", unlockedAt: Date.now() - 86400000 * 20 },
+      { id: "sm3", icon: "⚔️", name: "Guerreiro", description: "Atacou 10 jogadores diferentes.", rarity: "rare", unlockedAt: Date.now() - 86400000 * 10 },
+      { id: "sm4", icon: "💀", name: "Sobrevivente", description: "Sobreviveu com menos de 20% de vida.", rarity: "rare", unlockedAt: Date.now() - 86400000 * 4 },
+      { id: "sm5", icon: "🛡️", name: "Intocável", description: "Bloqueie 5 ataques seguidos.", rarity: "epic", unlockedAt: Date.now() - 86400000 * 2 },
+      { id: "sm6", icon: "🗺️", name: "Explorador", description: "Visite 20 spots diferentes.", rarity: "epic" },
+      { id: "sm7", icon: "👑", name: "Lendário", description: "Alcance o nível 10.", rarity: "legendary" },
+    ],
   },
   {
     id: "user4",
@@ -240,6 +271,16 @@ const MOCK_USERS: NearbyUser[] = [
     health: 45,
     maxHealth: 100,
     immunities: [],
+    coins: 320,
+    bag: [
+      { id: "n1", type: "ice", name: "Bomba de Gelo", quantity: 1, icon: "wind" },
+      { id: "n2", type: "product", name: "Item Raro", quantity: 1, icon: "box" },
+    ],
+    medals: [
+      { id: "nm1", icon: "🎯", name: "Primeiro Passo", description: "Realizou sua primeira coleta.", rarity: "common", unlockedAt: Date.now() - 86400000 * 3 },
+      { id: "nm2", icon: "🏹", name: "Caçador", description: "Completou 5 coletas no mapa.", rarity: "common" },
+      { id: "nm3", icon: "⚔️", name: "Guerreiro", description: "Atacou 10 jogadores diferentes.", rarity: "rare" },
+    ],
   },
 ];
 
@@ -290,6 +331,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     activeCollectionRef.current = activeCollection;
   }, [activeCollection]);
+
+  useEffect(() => {
+    if (selectedUser) {
+      const updated = nearbyUsers.find((u) => u.id === selectedUser.id);
+      if (updated) setSelectedUser(updated);
+      else setSelectedUser(null);
+    }
+  }, [nearbyUsers]);
 
   const setUserLocationCb = useCallback((loc: { latitude: number; longitude: number }) => {
     setUserLocation(loc);

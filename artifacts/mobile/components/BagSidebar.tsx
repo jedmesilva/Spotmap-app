@@ -59,15 +59,18 @@ const SUBSTANCE_TYPES: SubstanceType[] = [
 function QuickItem({
   item,
   onUse,
+  readOnly,
 }: {
   item: InventoryItem;
   onUse: (item: InventoryItem) => void;
+  readOnly?: boolean;
 }) {
   const color = ITEM_COLORS[item.type] ?? COLORS.dark.accent;
   const icon = ITEM_ICONS[item.type] ?? "package";
   const scale = useRef(new RNAnimated.Value(1)).current;
 
   const handlePress = () => {
+    if (readOnly) return;
     RNAnimated.sequence([
       RNAnimated.timing(scale, { toValue: 0.85, duration: 80, useNativeDriver: true }),
       RNAnimated.timing(scale, { toValue: 1, duration: 80, useNativeDriver: true }),
@@ -85,6 +88,7 @@ function QuickItem({
             backgroundColor: color + "18",
             borderColor: color + "55",
             transform: [{ scale }],
+            opacity: readOnly ? 0.7 : 1,
           },
         ]}
       >
@@ -102,17 +106,19 @@ function QuickItem({
 function FullItem({
   item,
   onUse,
+  readOnly,
 }: {
   item: InventoryItem;
   onUse: (item: InventoryItem) => void;
+  readOnly?: boolean;
 }) {
   const color = ITEM_COLORS[item.type] ?? COLORS.dark.accent;
   const icon = ITEM_ICONS[item.type] ?? "package";
 
   return (
     <Pressable
-      onPress={() => onUse(item)}
-      style={({ pressed }) => [styles.bagItem, { opacity: pressed ? 0.8 : 1 }]}
+      onPress={() => { if (!readOnly) onUse(item); }}
+      style={({ pressed }) => [styles.bagItem, { opacity: pressed && !readOnly ? 0.8 : 1 }]}
     >
       <View style={[styles.bagItemIcon, { backgroundColor: color + "20", borderColor: color + "44" }]}>
         <Feather name={icon as any} size={20} color={color} />
@@ -138,7 +144,7 @@ interface BagSidebarProps {
 }
 
 export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0, miningClicks = 0, extraBottomOffset = 0 }: BagSidebarProps) {
-  const { userProfile, useSubstance } = useGame();
+  const { userProfile, useSubstance, selectedUser } = useGame();
   const [expanded, setExpanded] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const pickaxeScale = useRef(new RNAnimated.Value(1)).current;
@@ -156,9 +162,15 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
     }).start();
   }, [extraBottomOffset]);
 
-  const quickItems = userProfile.bag.filter((i) => i.quantity > 0).slice(0, 5);
+  const isInspecting = selectedUser !== null;
+  const displayBag = isInspecting ? (selectedUser.bag ?? []) : userProfile.bag;
+  const displayCoins = isInspecting ? (selectedUser.coins ?? 0) : userProfile.coins;
+  const displayImmunities = isInspecting ? selectedUser.immunities : userProfile.immunities;
+
+  const quickItems = displayBag.filter((i) => i.quantity > 0).slice(0, 5);
 
   const handleUseItem = (item: InventoryItem) => {
+    if (isInspecting) return;
     if (SUBSTANCE_TYPES.includes(item.type as SubstanceType)) {
       useSubstance(item.type as SubstanceType);
     }
@@ -203,7 +215,7 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
   return (
     <>
       <RNAnimated.View style={[styles.column, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}>
-        <View style={styles.bagSection}>
+        <View style={[styles.bagSection, isInspecting && styles.bagSectionInspecting]}>
           <TouchableOpacity
             style={styles.expandBtn}
             onPress={toggleExpand}
@@ -220,7 +232,7 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
             <>
               <View style={styles.itemsDivider} />
               {quickItems.map((item) => (
-                <QuickItem key={item.id} item={item} onUse={handleUseItem} />
+                <QuickItem key={item.id} item={item} onUse={handleUseItem} readOnly={isInspecting} />
               ))}
               <View style={styles.itemsDivider} />
             </>
@@ -230,13 +242,15 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
             onPress={() => setModalOpen(true)}
             style={({ pressed }) => [styles.bagBtn, { opacity: pressed ? 0.8 : 1 }]}
           >
-            <View style={styles.bagBtnInner}>
-              <Feather name="briefcase" size={20} color={COLORS.dark.accent} />
-              <View style={styles.coinBadge}>
-                <Text style={styles.coinText}>{userProfile.coins}</Text>
+            <View style={[styles.bagBtnInner, isInspecting && styles.bagBtnInnerInspecting]}>
+              <Feather name="briefcase" size={20} color={isInspecting ? COLORS.dark.warning : COLORS.dark.accent} />
+              <View style={[styles.coinBadge, isInspecting && styles.coinBadgeInspecting]}>
+                <Text style={[styles.coinText, isInspecting && styles.coinTextInspecting]}>
+                  {displayCoins}
+                </Text>
               </View>
             </View>
-            <Text style={styles.bagLabel}>BAG</Text>
+            <Text style={[styles.bagLabel, isInspecting && styles.bagLabelInspecting]}>BAG</Text>
           </Pressable>
         </View>
 
@@ -279,31 +293,43 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
           <View style={[styles.bagModal, { paddingBottom: insets.bottom + 16 }]}>
             <View style={styles.handle} />
             <View style={styles.bagHeader}>
-              <Text style={styles.bagTitle}>Bag</Text>
+              <View style={styles.bagTitleRow}>
+                <Text style={styles.bagTitle}>
+                  {isInspecting ? `Bag de ${selectedUser.name}` : "Bag"}
+                </Text>
+                {isInspecting && (
+                  <View style={styles.readOnlyBadge}>
+                    <Feather name="eye" size={10} color={COLORS.dark.warning} />
+                    <Text style={styles.readOnlyText}>somente leitura</Text>
+                  </View>
+                )}
+              </View>
               <View style={styles.statsRow}>
                 <View style={styles.statChip}>
                   <Feather name="dollar-sign" size={12} color={COLORS.dark.spotMoney} />
                   <Text style={[styles.statText, { color: COLORS.dark.spotMoney }]}>
-                    {userProfile.coins}
+                    {displayCoins}
                   </Text>
                 </View>
-                <View style={styles.statChip}>
-                  <Feather name="star" size={12} color={COLORS.dark.spotCoupon} />
-                  <Text style={[styles.statText, { color: COLORS.dark.spotCoupon }]}>
-                    Lv {userProfile.level}
-                  </Text>
-                </View>
+                {!isInspecting && (
+                  <View style={styles.statChip}>
+                    <Feather name="star" size={12} color={COLORS.dark.spotCoupon} />
+                    <Text style={[styles.statText, { color: COLORS.dark.spotCoupon }]}>
+                      Lv {userProfile.level}
+                    </Text>
+                  </View>
+                )}
               </View>
               <Pressable onPress={() => setModalOpen(false)} style={styles.closeBtn}>
                 <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
               </Pressable>
             </View>
 
-            {userProfile.immunities.length > 0 && (
+            {displayImmunities.length > 0 && (
               <View style={styles.activeImmunities}>
                 <Text style={styles.sectionLabel}>IMUNIDADES ATIVAS</Text>
                 <View style={styles.immunitiesRow}>
-                  {userProfile.immunities.map((imm) => (
+                  {displayImmunities.map((imm) => (
                     <View key={imm} style={styles.immunityBadge}>
                       <Feather name="shield" size={11} color={COLORS.dark.purple} />
                       <Text style={styles.immunityText}>{imm.replace("_", " ")}</Text>
@@ -315,12 +341,12 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
 
             <ScrollView showsVerticalScrollIndicator={false} style={styles.bagList}>
               <Text style={[styles.sectionLabel, { marginBottom: 10 }]}>INVENTÁRIO</Text>
-              {userProfile.bag
+              {displayBag
                 .filter((i) => i.quantity > 0)
                 .map((item) => (
-                  <FullItem key={item.id} item={item} onUse={handleUseItem} />
+                  <FullItem key={item.id} item={item} onUse={handleUseItem} readOnly={isInspecting} />
                 ))}
-              {userProfile.bag.filter((i) => i.quantity > 0).length === 0 && (
+              {displayBag.filter((i) => i.quantity > 0).length === 0 && (
                 <View style={styles.emptyBag}>
                   <Feather name="inbox" size={32} color={COLORS.dark.textMuted} />
                   <Text style={styles.emptyText}>Bag vazia</Text>
@@ -357,6 +383,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 10,
     elevation: 8,
+  },
+  bagSectionInspecting: {
+    borderColor: COLORS.dark.warning + "44",
   },
   itemsDivider: {
     width: 28,
@@ -414,6 +443,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  bagBtnInnerInspecting: {
+    backgroundColor: COLORS.dark.warning + "18",
+    borderColor: COLORS.dark.warning + "55",
+  },
   coinBadge: {
     position: "absolute",
     bottom: -5,
@@ -425,16 +458,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingVertical: 1,
   },
+  coinBadgeInspecting: {
+    borderColor: COLORS.dark.warning,
+  },
   coinText: {
     fontSize: 8,
     fontFamily: "Inter_700Bold",
     color: COLORS.dark.spotMoney,
+  },
+  coinTextInspecting: {
+    color: COLORS.dark.warning,
   },
   bagLabel: {
     fontSize: 9,
     fontFamily: "Inter_700Bold",
     color: COLORS.dark.accent,
     letterSpacing: 1.5,
+  },
+  bagLabelInspecting: {
+    color: COLORS.dark.warning,
   },
   modalOverlay: {
     flex: 1,
@@ -469,11 +511,32 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     gap: 8,
   },
+  bagTitleRow: {
+    flex: 1,
+    gap: 4,
+  },
   bagTitle: {
     fontSize: 22,
     fontFamily: "Inter_700Bold",
     color: COLORS.dark.text,
-    flex: 1,
+  },
+  readOnlyBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    alignSelf: "flex-start",
+    backgroundColor: COLORS.dark.warning + "18",
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: COLORS.dark.warning + "44",
+  },
+  readOnlyText: {
+    fontSize: 9,
+    fontFamily: "Inter_600SemiBold",
+    color: COLORS.dark.warning,
+    letterSpacing: 0.3,
   },
   statsRow: {
     flexDirection: "row",

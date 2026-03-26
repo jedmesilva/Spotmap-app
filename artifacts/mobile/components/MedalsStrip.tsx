@@ -64,12 +64,17 @@ function MedalBadge({ medal, onPress }: { medal: Medal; onPress: () => void }) {
 }
 
 export function MedalsStrip({ insets }: MedalsStripProps) {
-  const { userProfile } = useGame();
+  const { userProfile, selectedUser } = useGame();
   const [selected, setSelected] = useState<Medal | null>(null);
 
   const top = Math.max(insets.top + 10, 50) + 50;
+  const isInspecting = selectedUser !== null;
 
-  const unlockedFirst = [...userProfile.medals].sort((a, b) => {
+  const medals = isInspecting
+    ? (selectedUser.medals ?? [])
+    : userProfile.medals;
+
+  const unlockedFirst = [...medals].sort((a, b) => {
     if (!!a.unlockedAt === !!b.unlockedAt) return 0;
     return a.unlockedAt ? -1 : 1;
   });
@@ -82,9 +87,20 @@ export function MedalsStrip({ insets }: MedalsStripProps) {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.scroll}
         >
-          {unlockedFirst.map((medal) => (
-            <MedalBadge key={medal.id} medal={medal} onPress={() => setSelected(medal)} />
-          ))}
+          {isInspecting && (
+            <View style={styles.inspectLabel}>
+              <Text style={styles.inspectLabelText}>MEDALHAS</Text>
+            </View>
+          )}
+          {unlockedFirst.length > 0 ? (
+            unlockedFirst.map((medal) => (
+              <MedalBadge key={medal.id} medal={medal} onPress={() => setSelected(medal)} />
+            ))
+          ) : (
+            <View style={styles.emptyMedals}>
+              <Text style={styles.emptyMedalsText}>Sem medalhas</Text>
+            </View>
+          )}
         </ScrollView>
       </View>
 
@@ -173,6 +189,28 @@ const styles = StyleSheet.create({
     gap: 10,
     flexDirection: "row",
     alignItems: "flex-start",
+  },
+  inspectLabel: {
+    justifyContent: "center",
+    paddingRight: 4,
+    paddingTop: 2,
+  },
+  inspectLabelText: {
+    fontSize: 8,
+    fontFamily: "Inter_700Bold",
+    color: COLORS.dark.warning,
+    letterSpacing: 1.5,
+  },
+  emptyMedals: {
+    justifyContent: "center",
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  emptyMedalsText: {
+    fontSize: 12,
+    color: COLORS.dark.textMuted,
+    fontFamily: "Inter_400Regular",
+    fontStyle: "italic",
   },
   badgeContainer: {
     alignItems: "center",
