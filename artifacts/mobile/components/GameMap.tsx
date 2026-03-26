@@ -209,7 +209,7 @@ function showEmojiReaction(userId,emoji,fromUserId){
 
 function applySpotVisibility(){
   Object.keys(spotMarkers).forEach(function(id){
-    var hide=selUser!==null;
+    var hide=selUser!==null||(selSpot!==null&&selSpot!==id);
     var m=spotMarkers[id];
     var c=spotCircles[id];
     if(m){
