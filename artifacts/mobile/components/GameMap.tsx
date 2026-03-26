@@ -23,6 +23,7 @@ html,body,#map{width:100%;height:100%;background:#050A14;overflow:hidden}
 .leaflet-container{background:#050A14}
 .leaflet-control-attribution{display:none}
 .leaflet-pane,.leaflet-top,.leaflet-bottom{z-index:1}
+.leaflet-tile-pane{filter:sepia(0.6) hue-rotate(185deg) saturate(2.2) brightness(0.72)}
 @keyframes badgePop{0%{transform:translateX(-50%) scale(0.5);opacity:0}60%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1);opacity:1}}
 @keyframes emojiFloat{0%{transform:translateX(-50%) translateY(0);opacity:1}100%{transform:translateX(-50%) translateY(-60px);opacity:0}}
 </style>
