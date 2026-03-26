@@ -17,15 +17,9 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
   return (
     <View style={[styles.row, { top }]}>
       <View style={styles.card}>
-        <View style={styles.avatarRing}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{userProfile.avatar}</Text>
-          </View>
-          <View style={styles.levelBadge}>
-            <Text style={styles.levelText}>{userProfile.level}</Text>
-          </View>
+        <View style={styles.avatar}>
+          <Text style={styles.avatarText}>{userProfile.avatar}</Text>
         </View>
-        <Text style={styles.name}>{userProfile.name}</Text>
       </View>
 
       <View style={styles.card}>
@@ -61,9 +55,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 4,
   },
-  avatarRing: {
-    position: "relative",
-  },
   avatar: {
     width: 40,
     height: 40,
@@ -78,29 +69,6 @@ const styles = StyleSheet.create({
     color: COLORS.dark.text,
     fontSize: 16,
     fontFamily: "Inter_700Bold",
-  },
-  levelBadge: {
-    position: "absolute",
-    bottom: -4,
-    right: -4,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: COLORS.dark.accent,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1.5,
-    borderColor: COLORS.dark.bg,
-  },
-  levelText: {
-    fontSize: 9,
-    fontFamily: "Inter_700Bold",
-    color: COLORS.dark.bg,
-  },
-  name: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
-    color: COLORS.dark.text,
   },
   healthText: {
     fontSize: 14,
