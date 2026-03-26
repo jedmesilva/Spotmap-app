@@ -1,14 +1,7 @@
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  ActivityIndicator,
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -17,42 +10,28 @@ import COLORS from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
 export default function OnboardingScreen() {
-  const { mockCompleteOnboarding } = useAuth();
+  const { completeOnboarding } = useAuth();
   const [name, setName] = useState("");
   const [nickname, setNickname] = useState("");
-  const [birthdate, setBirthdate] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const formatBirthdate = (text: string) => {
-    const digits = text.replace(/\D/g, "");
-    let formatted = digits;
-    if (digits.length > 2) formatted = digits.slice(0, 2) + "/" + digits.slice(2);
-    if (digits.length > 4) formatted = formatted.slice(0, 5) + "/" + digits.slice(4, 8);
-    setBirthdate(formatted.slice(0, 10));
-  };
+  const isValid = name.trim().length >= 2 && nickname.trim().length >= 2;
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    if (!isValid) return;
     setLoading(true);
-    setTimeout(() => { setLoading(false); mockCompleteOnboarding(); }, 1000);
+    setError(null);
+    const err = await completeOnboarding(name, nickname);
+    if (err) setError(err);
+    setLoading(false);
   };
-
-  const isValid = name.trim().length > 0 && nickname.trim().length > 0 && birthdate.length === 10;
 
   return (
-    <LinearGradient
-      colors={[COLORS.dark.bg, COLORS.dark.bgSecondary, COLORS.dark.surface]}
-      style={styles.container}
-    >
+    <LinearGradient colors={[COLORS.dark.bg, COLORS.dark.bgSecondary, COLORS.dark.surface]} style={styles.container}>
       <SafeAreaView style={styles.safe}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.flex}
-        >
-          <ScrollView
-            contentContainerStyle={styles.scroll}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.flex}>
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={styles.top}>
               <Text style={styles.step}>Quase lá</Text>
               <Text style={styles.title}>Como você quer{"\n"}ser chamado?</Text>
@@ -91,22 +70,9 @@ export default function OnboardingScreen() {
                 </View>
                 <Text style={styles.hint}>Não poderá ser alterado depois</Text>
               </View>
-
-              <View style={styles.fieldGroup}>
-                <Text style={styles.label}>Data de nascimento</Text>
-                <View style={styles.inputWrapper}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="DD/MM/AAAA"
-                    placeholderTextColor={COLORS.dark.textMuted}
-                    value={birthdate}
-                    onChangeText={formatBirthdate}
-                    keyboardType="numeric"
-                    maxLength={10}
-                  />
-                </View>
-              </View>
             </View>
+
+            {error && <Text style={styles.errorText}>{error}</Text>}
 
             <TouchableOpacity
               style={[styles.primaryButton, (!isValid || loading) && styles.buttonDisabled]}
@@ -131,87 +97,27 @@ export default function OnboardingScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.dark.bg },
+  container: { flex: 1 },
   safe: { flex: 1 },
   flex: { flex: 1 },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: 28,
-    paddingVertical: 48,
-    justifyContent: "center",
-  },
-  top: {
-    marginBottom: 40,
-  },
-  step: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: COLORS.dark.accent,
-    marginBottom: 8,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 28,
-    color: COLORS.dark.text,
-    lineHeight: 36,
-  },
-  form: {
-    gap: 24,
-    marginBottom: 40,
-  },
-  fieldGroup: {
-    gap: 8,
-  },
-  label: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-    color: COLORS.dark.textSecondary,
-  },
+  scroll: { flexGrow: 1, paddingHorizontal: 28, paddingVertical: 48, justifyContent: "center" },
+  top: { marginBottom: 40 },
+  step: { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.dark.accent, marginBottom: 8, textTransform: "uppercase", letterSpacing: 1 },
+  title: { fontFamily: "Inter_700Bold", fontSize: 28, color: COLORS.dark.text, lineHeight: 36 },
+  form: { gap: 24, marginBottom: 32 },
+  fieldGroup: { gap: 8 },
+  label: { fontFamily: "Inter_500Medium", fontSize: 13, color: COLORS.dark.textSecondary },
   inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.dark.surface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: COLORS.dark.border,
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: COLORS.dark.surface, borderRadius: 12,
+    paddingHorizontal: 16, borderWidth: 1, borderColor: COLORS.dark.border,
   },
-  at: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: COLORS.dark.accent,
-    marginRight: 4,
-  },
-  input: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    color: COLORS.dark.text,
-    paddingVertical: 15,
-    flex: 1,
-  },
-  hint: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: COLORS.dark.textMuted,
-  },
-  primaryButton: {
-    backgroundColor: COLORS.dark.accent,
-    borderRadius: 12,
-    paddingVertical: 15,
-    alignItems: "center",
-  },
-  buttonDisabled: {
-    backgroundColor: COLORS.dark.surface,
-  },
-  buttonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  primaryButtonText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: "#fff",
-  },
+  at: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: COLORS.dark.accent, marginRight: 4 },
+  input: { fontFamily: "Inter_400Regular", fontSize: 15, color: COLORS.dark.text, paddingVertical: 15, flex: 1 },
+  hint: { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.dark.textMuted },
+  errorText: { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.dark.danger, marginBottom: 12 },
+  primaryButton: { backgroundColor: COLORS.dark.accent, borderRadius: 12, paddingVertical: 15, alignItems: "center" },
+  buttonDisabled: { backgroundColor: COLORS.dark.surface },
+  buttonContent: { flexDirection: "row", alignItems: "center" },
+  primaryButtonText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
 });

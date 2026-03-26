@@ -1,53 +1,48 @@
 import React, { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  ActivityIndicator,
+  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons, AntDesign } from "@expo/vector-icons";
+import { Ionicons } from "@expo/vector-icons";
 import COLORS from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
 export default function RegisterScreen() {
-  const { mockRegister, setScreen } = useAuth();
+  const { register, setScreen } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
+    if (!email.trim() || !password) {
+      setError("Preencha todos os campos.");
+      return;
+    }
+    if (password.length < 6) {
+      setError("A senha deve ter pelo menos 6 caracteres.");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("As senhas não coincidem.");
+      return;
+    }
     setLoading(true);
-    setTimeout(() => { setLoading(false); mockRegister(); }, 1000);
-  };
-
-  const handleGoogle = () => {
-    setLoading(true);
-    setTimeout(() => { setLoading(false); mockRegister(); }, 1000);
+    setError(null);
+    const err = await register(email.trim(), password);
+    if (err) setError(translateError(err));
+    setLoading(false);
   };
 
   return (
-    <LinearGradient
-      colors={[COLORS.dark.bg, COLORS.dark.bgSecondary, COLORS.dark.surface]}
-      style={styles.container}
-    >
+    <LinearGradient colors={[COLORS.dark.bg, COLORS.dark.bgSecondary, COLORS.dark.surface]} style={styles.container}>
       <SafeAreaView style={styles.safe}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.flex}
-        >
-          <ScrollView
-            contentContainerStyle={styles.scroll}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.flex}>
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <TouchableOpacity style={styles.backButton} onPress={() => setScreen("login")}>
               <Ionicons name="arrow-back" size={20} color={COLORS.dark.textSecondary} />
             </TouchableOpacity>
@@ -58,21 +53,6 @@ export default function RegisterScreen() {
             </View>
 
             <View style={styles.form}>
-              <TouchableOpacity
-                style={styles.googleButton}
-                onPress={handleGoogle}
-                activeOpacity={0.8}
-              >
-                <AntDesign name="google" size={18} color="#fff" style={{ marginRight: 10 }} />
-                <Text style={styles.googleText}>Cadastrar com Google</Text>
-              </TouchableOpacity>
-
-              <View style={styles.dividerRow}>
-                <View style={styles.divider} />
-                <Text style={styles.dividerText}>ou com e-mail</Text>
-                <View style={styles.divider} />
-              </View>
-
               <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.input}
@@ -97,13 +77,23 @@ export default function RegisterScreen() {
                   autoCapitalize="none"
                 />
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eye}>
-                  <Ionicons
-                    name={showPassword ? "eye-outline" : "eye-off-outline"}
-                    size={18}
-                    color={COLORS.dark.textMuted}
-                  />
+                  <Ionicons name={showPassword ? "eye-outline" : "eye-off-outline"} size={18} color={COLORS.dark.textMuted} />
                 </TouchableOpacity>
               </View>
+
+              <View style={styles.inputWrapper}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirmar senha"
+                  placeholderTextColor={COLORS.dark.textMuted}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                />
+              </View>
+
+              {error && <Text style={styles.errorText}>{error}</Text>}
 
               <TouchableOpacity
                 style={[styles.primaryButton, loading && { opacity: 0.7 }]}
@@ -111,11 +101,7 @@ export default function RegisterScreen() {
                 activeOpacity={0.85}
                 disabled={loading}
               >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text style={styles.primaryButtonText}>Criar conta</Text>
-                )}
+                {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Criar conta</Text>}
               </TouchableOpacity>
             </View>
 
@@ -138,121 +124,37 @@ export default function RegisterScreen() {
   );
 }
 
+function translateError(msg: string): string {
+  if (msg.includes("already registered") || msg.includes("already been registered")) return "Este e-mail já está cadastrado.";
+  if (msg.includes("invalid email")) return "E-mail inválido.";
+  if (msg.includes("Password should be")) return "A senha deve ter pelo menos 6 caracteres.";
+  if (msg.includes("rate limit")) return "Muitas tentativas. Aguarde um momento.";
+  return msg;
+}
+
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.dark.bg },
+  container: { flex: 1 },
   safe: { flex: 1 },
   flex: { flex: 1 },
-  scroll: {
-    flexGrow: 1,
-    paddingHorizontal: 28,
-    paddingVertical: 24,
-    justifyContent: "center",
-  },
-  backButton: {
-    alignSelf: "flex-start",
-    padding: 4,
-    marginBottom: 32,
-  },
-  top: {
-    marginBottom: 36,
-  },
-  title: {
-    fontFamily: "Inter_700Bold",
-    fontSize: 28,
-    color: COLORS.dark.text,
-    marginBottom: 6,
-  },
-  subtitle: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    color: COLORS.dark.textSecondary,
-  },
-  form: {
-    gap: 12,
-  },
-  googleButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.dark.surface,
-    borderWidth: 1,
-    borderColor: COLORS.dark.border,
-    borderRadius: 12,
-    paddingVertical: 14,
-  },
-  googleText: {
-    fontFamily: "Inter_500Medium",
-    fontSize: 14,
-    color: COLORS.dark.text,
-  },
-  dividerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: COLORS.dark.border,
-  },
-  dividerText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: COLORS.dark.textMuted,
-    marginHorizontal: 12,
-  },
+  scroll: { flexGrow: 1, paddingHorizontal: 28, paddingVertical: 24, justifyContent: "center" },
+  backButton: { alignSelf: "flex-start", padding: 4, marginBottom: 32 },
+  top: { marginBottom: 36 },
+  title: { fontFamily: "Inter_700Bold", fontSize: 28, color: COLORS.dark.text, marginBottom: 6 },
+  subtitle: { fontFamily: "Inter_400Regular", fontSize: 15, color: COLORS.dark.textSecondary },
+  form: { gap: 12 },
   inputWrapper: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: COLORS.dark.surface,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    borderWidth: 1,
-    borderColor: COLORS.dark.border,
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: COLORS.dark.surface, borderRadius: 12,
+    paddingHorizontal: 16, borderWidth: 1, borderColor: COLORS.dark.border,
   },
-  input: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 15,
-    color: COLORS.dark.text,
-    paddingVertical: 15,
-    flex: 1,
-  },
+  input: { fontFamily: "Inter_400Regular", fontSize: 15, color: COLORS.dark.text, paddingVertical: 15, flex: 1 },
   eye: { padding: 4 },
-  primaryButton: {
-    backgroundColor: COLORS.dark.accent,
-    borderRadius: 12,
-    paddingVertical: 15,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  primaryButtonText: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-    color: "#fff",
-  },
-  termsText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 12,
-    color: COLORS.dark.textMuted,
-    lineHeight: 18,
-    marginTop: 24,
-    textAlign: "center",
-  },
-  termsLink: {
-    color: COLORS.dark.textSecondary,
-  },
-  footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    marginTop: 32,
-  },
-  footerText: {
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    color: COLORS.dark.textSecondary,
-  },
-  footerLink: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 14,
-    color: COLORS.dark.accent,
-  },
+  errorText: { fontFamily: "Inter_400Regular", fontSize: 13, color: COLORS.dark.danger, marginTop: -4 },
+  primaryButton: { backgroundColor: COLORS.dark.accent, borderRadius: 12, paddingVertical: 15, alignItems: "center", marginTop: 4 },
+  primaryButtonText: { fontFamily: "Inter_600SemiBold", fontSize: 15, color: "#fff" },
+  termsText: { fontFamily: "Inter_400Regular", fontSize: 12, color: COLORS.dark.textMuted, lineHeight: 18, marginTop: 24, textAlign: "center" },
+  termsLink: { color: COLORS.dark.textSecondary },
+  footer: { flexDirection: "row", justifyContent: "center", marginTop: 32 },
+  footerText: { fontFamily: "Inter_400Regular", fontSize: 14, color: COLORS.dark.textSecondary },
+  footerLink: { fontFamily: "Inter_600SemiBold", fontSize: 14, color: COLORS.dark.accent },
 });

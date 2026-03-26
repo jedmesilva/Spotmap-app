@@ -13,12 +13,15 @@ import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
+import { ActivityIndicator, View } from "react-native";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GameProvider } from "@/context/GameContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import LoginScreen from "@/app/login";
 import RegisterScreen from "@/app/register";
 import OnboardingScreen from "@/app/onboarding";
+import ForgotPasswordScreen from "@/app/forgot-password";
+import COLORS from "@/constants/colors";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -27,8 +30,14 @@ const queryClient = new QueryClient();
 function RootLayoutNav() {
   const { screen } = useAuth();
 
+  if (screen === "loading") return (
+    <View style={{ flex: 1, backgroundColor: COLORS.dark.bg, justifyContent: "center", alignItems: "center" }}>
+      <ActivityIndicator size="large" color={COLORS.dark.accent} />
+    </View>
+  );
   if (screen === "login") return <LoginScreen />;
   if (screen === "register") return <RegisterScreen />;
+  if (screen === "forgot-password") return <ForgotPasswordScreen />;
   if (screen === "onboarding") return <OnboardingScreen />;
 
   return (
