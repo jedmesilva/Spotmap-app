@@ -28,6 +28,7 @@ interface AuthContextType {
   forgotPassword: (email: string) => Promise<string | null>;
   logout: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  updateProfile: (fields: { name?: string; nickname?: string; email?: string; avatar?: string; password?: string }) => Promise<string | null>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -131,10 +132,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) await loadProfile(user);
   };
 
+  const updateProfile = async (fields: { name?: string; nickname?: string; email?: string; avatar?: string; password?: string }): Promise<string | null> => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return "Sessão expirada. Faça login novamente.";
+
+    const { password, email, ...profileFields } = fields;
+
+    if (Object.keys(profileFields).length > 0) {
+      const { error } = await supabase.from("users").update(profileFields).eq("id", user.id);
+      if (error) {
+        if (error.code === "23505") return "Esse nickname já está em uso. Escolha outro.";
+        return error.message;
+      }
+    }
+
+    if (email && email !== user.email) {
+      const { error } = await supabase.auth.updateUser({ email });
+      if (error) return error.message;
+    }
+
+    if (password) {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) return error.message;
+    }
+
+    await loadProfile(user);
+    return null;
+  };
+
   return (
     <AuthContext.Provider value={{
       screen, setScreen, session, userProfile,
-      login, register, completeOnboarding, forgotPassword, logout, refreshProfile,
+      login, register, completeOnboarding, forgotPassword, logout, refreshProfile, updateProfile,
     }}>
       {children}
     </AuthContext.Provider>

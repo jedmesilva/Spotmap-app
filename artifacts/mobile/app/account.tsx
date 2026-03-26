@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  ActivityIndicator,
   Modal,
   Pressable,
   ScrollView,
@@ -15,7 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
-import { useGame } from "@/context/GameContext";
+import { useAuth } from "@/context/AuthContext";
 
 const AVATAR_OPTIONS = [
   "😎", "🦊", "🐺", "🦁", "🐯", "🐻", "🦝", "🐼",
@@ -60,17 +61,18 @@ function Field({
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
-  const { userProfile, updateProfile } = useGame();
+  const { userProfile, updateProfile, logout } = useAuth();
 
-  const [name, setName] = useState(userProfile.name);
-  const [nickname, setNickname] = useState(userProfile.nickname);
-  const [email, setEmail] = useState(userProfile.email);
+  const [name, setName] = useState(userProfile?.name ?? "");
+  const [nickname, setNickname] = useState(userProfile?.nickname ?? "");
+  const [email, setEmail] = useState(userProfile?.email ?? "");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
-  const [selectedAvatar, setSelectedAvatar] = useState(userProfile.avatar);
+  const [selectedAvatar, setSelectedAvatar] = useState(userProfile?.avatar ?? "😎");
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (password && password !== confirmPassword) {
       Alert.alert("Erro", "As senhas não coincidem.");
       return;
@@ -79,7 +81,22 @@ export default function AccountScreen() {
       Alert.alert("Erro", "Preencha todos os campos obrigatórios.");
       return;
     }
-    updateProfile({ name: name.trim(), nickname: nickname.trim(), email: email.trim(), avatar: selectedAvatar });
+
+    setSaving(true);
+    const error = await updateProfile({
+      name: name.trim(),
+      nickname: nickname.trim(),
+      email: email.trim(),
+      avatar: selectedAvatar,
+      ...(password ? { password } : {}),
+    });
+    setSaving(false);
+
+    if (error) {
+      Alert.alert("Erro", error);
+      return;
+    }
+
     Alert.alert("Salvo!", "Suas informações foram atualizadas.", [
       { text: "OK", onPress: () => router.back() },
     ]);
@@ -91,8 +108,8 @@ export default function AccountScreen() {
       {
         text: "Sair",
         style: "destructive",
-        onPress: () => {
-          router.replace("/");
+        onPress: async () => {
+          await logout();
         },
       },
     ]);
@@ -105,8 +122,12 @@ export default function AccountScreen() {
           <Ionicons name="chevron-back" size={22} color={COLORS.dark.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Minha Conta</Text>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveText}>Salvar</Text>
+        <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
+          {saving ? (
+            <ActivityIndicator size="small" color={COLORS.dark.text} />
+          ) : (
+            <Text style={styles.saveText}>Salvar</Text>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -219,6 +240,9 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     backgroundColor: COLORS.dark.accent,
     borderRadius: 10,
+    minWidth: 64,
+    alignItems: "center",
+    justifyContent: "center",
   },
   saveText: {
     fontSize: 13,
