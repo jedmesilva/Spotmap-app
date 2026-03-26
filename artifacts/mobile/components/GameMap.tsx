@@ -36,11 +36,13 @@ html,body,#map{width:100%;height:100%;background:#050A14;overflow:hidden}
 <div id="map"></div>
 <script>
 var C={
-  accent:'#FF3D00',bg:'#050A14',bgSec:'#0D1B2E',
-  surface:'#1E3A5F',border:'#1E3A5F',border33:'#1E3A5F33',
-  coupon:'#00BFFF',money:'#FF3D00',product:'#FF8C00',rare:'#BF5FFF',
-  warning:'#FFB800',danger:'#FF4444',text:'#E8F4FD',textMuted:'#5A7A9A'
+  accent:'#7B68EE',bg:'#08081A',bgSec:'#0D0D24',
+  surface:'#13132E',border:'#242450',border33:'#24245033',
+  coupon:'#F0A050',money:'#60C878',product:'#50A8F0',rare:'#B87CF0',
+  warning:'#F0A050',danger:'#F06565',info:'#50A8F0',spotMoney:'#60C878',
+  text:'#EEEEF8',textMuted:'#484870'
 };
+function getHColor(health,maxHealth){var r=maxHealth>0?health/maxHealth:1;return r>0.6?C.spotMoney:r>0.3?C.warning:C.danger;}
 var SPOT_COLOR={coupon:C.coupon,money:C.money,product:C.product,rare:C.rare};
 var ICONS={
   money:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
@@ -101,8 +103,7 @@ function spotIcon(spot,selected){
 
 function userIcon(user,selected){
   if(selected){
-    var healthPct=user.health/user.maxHealth;
-    var hColor=healthPct>0.6?C.accent:healthPct>0.3?C.warning:C.danger;
+    var hColor=getHColor(user.health,user.maxHealth);
     var bc=user.collectingSpotId?C.warning:C.accent;
     var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
 
@@ -128,7 +129,8 @@ function userIcon(user,selected){
     return L.divIcon({html:html,className:'',iconSize:[170,totalH],iconAnchor:[85,avatarOffsetY+27]});
   }
 
-  var bc=user.collectingSpotId?C.warning:C.border33;
+  var hColorDim=getHColor(user.health,user.maxHealth);
+  var bc=user.collectingSpotId?C.warning:hColorDim;
   if(user.collectingSpotId){
     var badge=collectBadge(user.collectProgress);
     var html='<div style="position:relative;display:flex;flex-direction:column;align-items:center;width:64px;padding-top:20px;">'
@@ -284,8 +286,7 @@ function updateUsers(users){
 
 function playerIcon(profile){
   var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
-  var healthPct=profile.health/profile.maxHealth;
-  var hColor=healthPct>0.6?C.accent:healthPct>0.3?C.warning:C.danger;
+  var hColor=getHColor(profile.health,profile.maxHealth);
   var html=''
     +'<div style="width:170px;display:flex;flex-direction:column;align-items:center;">'
       +'<div style="width:46px;height:46px;border-radius:50%;border:2.5px solid '+C.accent+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 14px '+C.accent+'88;">'+profile.avatar+'</div>'

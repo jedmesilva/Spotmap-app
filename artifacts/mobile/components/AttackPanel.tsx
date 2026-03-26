@@ -21,10 +21,10 @@ const ARTIFACTS: {
   damage: number;
   color: string;
 }[] = [
-  { type: "fire", icon: "zap", name: "Fogo", damage: 25, color: "#FF6B35" },
-  { type: "ice", icon: "wind", name: "Gelo", damage: 15, color: "#00AAFF" },
-  { type: "lightning", icon: "zap", name: "Raio", damage: 35, color: "#FFD700" },
-  { type: "poison", icon: "activity", name: "Veneno", damage: 20, color: "#A0FF00" },
+  { type: "fire", icon: "zap", name: "Fogo", damage: 25, color: COLORS.dark.danger },
+  { type: "ice", icon: "wind", name: "Gelo", damage: 15, color: COLORS.dark.info },
+  { type: "lightning", icon: "zap", name: "Raio", damage: 35, color: COLORS.dark.warning },
+  { type: "poison", icon: "activity", name: "Veneno", damage: 20, color: COLORS.dark.spotMoney },
 ];
 
 interface AttackFeedback {
@@ -83,7 +83,7 @@ export function AttackPanel({ user, onClose }: AttackPanelProps) {
   const healthPercent = targetHealth / user.maxHealth;
   const healthColor =
     healthPercent > 0.6
-      ? COLORS.dark.accent
+      ? COLORS.dark.spotMoney
       : healthPercent > 0.3
       ? COLORS.dark.warning
       : COLORS.dark.danger;
@@ -103,7 +103,7 @@ export function AttackPanel({ user, onClose }: AttackPanelProps) {
         <View style={styles.header}>
           <View style={styles.targetSection}>
             <RNAnimated.View
-              style={[styles.targetAvatar, { transform: [{ translateX: shakeAnim }] }]}
+              style={[styles.targetAvatar, { transform: [{ translateX: shakeAnim }], borderColor: healthColor }]}
             >
               <Text style={styles.avatarText}>{user.avatar}</Text>
             </RNAnimated.View>
@@ -277,6 +277,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.dark.border,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   avatarText: {
     color: COLORS.dark.text,
