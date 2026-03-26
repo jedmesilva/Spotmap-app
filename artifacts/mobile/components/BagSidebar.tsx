@@ -24,7 +24,7 @@ const ITEM_COLORS: Record<string, string> = {
   flame_shield: COLORS.dark.purple,
   cryo_armor: "#00CCFF",
   volt_ward: "#FFD700",
-  antidote: "#00FF88",
+  antidote: "#FF3D00",
   barrier: "#FF44AA",
   coupon: COLORS.dark.spotCoupon,
   money: COLORS.dark.spotMoney,

@@ -31,9 +31,9 @@ html,body,#map{width:100%;height:100%;background:#050A14;overflow:hidden}
 <div id="map"></div>
 <script>
 var C={
-  accent:'#00FF88',bg:'#050A14',bgSec:'#0D1B2E',
+  accent:'#FF3D00',bg:'#050A14',bgSec:'#0D1B2E',
   surface:'#1E3A5F',border:'#1E3A5F',border33:'#1E3A5F33',
-  coupon:'#00BFFF',money:'#00FF88',product:'#FF8C00',rare:'#BF5FFF',
+  coupon:'#00BFFF',money:'#FF3D00',product:'#FF8C00',rare:'#BF5FFF',
   warning:'#FFB800',danger:'#FF4444',text:'#E8F4FD',textMuted:'#5A7A9A'
 };
 var SPOT_COLOR={coupon:C.coupon,money:C.money,product:C.product,rare:C.rare};
