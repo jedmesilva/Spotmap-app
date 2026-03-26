@@ -23,7 +23,8 @@ html,body,#map{width:100%;height:100%;background:#050A14;overflow:hidden}
 .leaflet-container{background:#050A14}
 .leaflet-control-attribution{display:none}
 .leaflet-pane,.leaflet-top,.leaflet-bottom{z-index:1}
-.leaflet-tile-pane{filter:sepia(0.6) hue-rotate(185deg) saturate(2.2) brightness(0.72)}
+.leaflet-tile-pane{filter:sepia(1) hue-rotate(185deg) saturate(3) brightness(0.55)}
+.leaflet-tile{filter:sepia(1) hue-rotate(185deg) saturate(3) brightness(0.55)}
 @keyframes badgePop{0%{transform:translateX(-50%) scale(0.5);opacity:0}60%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1);opacity:1}}
 @keyframes emojiFloat{0%{transform:translateX(-50%) translateY(0);opacity:1}100%{transform:translateX(-50%) translateY(-60px);opacity:0}}
 </style>
@@ -52,6 +53,10 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
 }).addTo(map);
 
 map.on('click',function(){send({type:'MAP_PRESS'})});
+
+var navyOverlay=document.createElement('div');
+navyOverlay.style.cssText='position:absolute;inset:0;background:#0B1829;opacity:0.45;z-index:250;pointer-events:none;';
+map.getContainer().querySelector('.leaflet-map-pane').appendChild(navyOverlay);
 
 var spotMarkers={},spotCircles={},userMarkers={};
 var playerDot=null,playerCircle=null;
