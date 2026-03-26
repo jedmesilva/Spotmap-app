@@ -12,6 +12,7 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
   const { userProfile } = useGame();
 
   const top = Math.max(insets.top + 10, 50);
+  const healthPct = Math.max(0, Math.min(1, userProfile.health / userProfile.maxHealth));
 
   return (
     <View style={[styles.container, { top }]}>
@@ -23,7 +24,16 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
           <Text style={styles.levelText}>{userProfile.level}</Text>
         </View>
       </View>
-      <Text style={styles.name}>{userProfile.name}</Text>
+      <View style={styles.info}>
+        <Text style={styles.name}>{userProfile.name}</Text>
+        <View style={styles.healthRow}>
+          <Text style={styles.heartIcon}>❤</Text>
+          <View style={styles.healthBarBg}>
+            <View style={[styles.healthBarFill, { width: `${healthPct * 100}%` as any }]} />
+          </View>
+          <Text style={styles.healthText}>{userProfile.health}</Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -84,9 +94,39 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: COLORS.dark.bg,
   },
+  info: {
+    flexDirection: "column",
+    gap: 3,
+  },
   name: {
     fontSize: 13,
     fontFamily: "Inter_700Bold",
     color: COLORS.dark.text,
+  },
+  healthRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  heartIcon: {
+    fontSize: 10,
+    color: "#FF3D00",
+  },
+  healthBarBg: {
+    width: 60,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: COLORS.dark.surface,
+    overflow: "hidden",
+  },
+  healthBarFill: {
+    height: "100%",
+    borderRadius: 3,
+    backgroundColor: "#FF3D00",
+  },
+  healthText: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    color: COLORS.dark.textSecondary,
   },
 });
