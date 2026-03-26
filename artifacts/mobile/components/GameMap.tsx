@@ -104,7 +104,7 @@ function spotIcon(spot,selected){
 function userIcon(user,selected){
   if(selected){
     var hColor=getHColor(user.health,user.maxHealth);
-    var bc=user.collectingSpotId?C.warning:C.accent;
+    var bc=C.accent;
     var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
 
     var statusRow=user.collectingSpotId
