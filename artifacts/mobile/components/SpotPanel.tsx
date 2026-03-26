@@ -117,30 +117,21 @@ export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
           </View>
         )}
 
-        <View style={[
-          styles.mineHint,
-          {
-            borderColor: isInRange ? color + "55" : COLORS.dark.border,
-            backgroundColor: isInRange ? color + "10" : COLORS.dark.surface,
-          }
-        ]}>
-          <Text style={styles.mineHintIcon}>⛏️</Text>
-          <View style={styles.mineHintBody}>
-            <Text style={[styles.mineHintTitle, { color: isInRange ? color : COLORS.dark.textMuted }]}>
-              {isInRange
-                ? isCollecting
+        {isInRange && (
+          <View style={[styles.mineHint, { borderColor: color + "55", backgroundColor: color + "10" }]}>
+            <Text style={styles.mineHintIcon}>⛏️</Text>
+            <View style={styles.mineHintBody}>
+              <Text style={[styles.mineHintTitle, { color }]}>
+                {isCollecting
                   ? `${hitsRemaining} picaretada${hitsRemaining !== 1 ? "s" : ""} restante${hitsRemaining !== 1 ? "s" : ""}`
-                  : "Use o botão ⛏️ para minerar"
-                : "Fora do alcance"}
-            </Text>
-            <Text style={styles.mineHintSub}>
-              {hitsRequired} picaretada{hitsRequired !== 1 ? "s" : ""} necessária{hitsRequired !== 1 ? "s" : ""}
-            </Text>
+                  : "Use o botão ⛏️ para minerar"}
+              </Text>
+              <Text style={styles.mineHintSub}>
+                {hitsRequired} picaretada{hitsRequired !== 1 ? "s" : ""} necessária{hitsRequired !== 1 ? "s" : ""}
+              </Text>
+            </View>
           </View>
-          {!isInRange && (
-            <Feather name="map-pin" size={16} color={COLORS.dark.textMuted} />
-          )}
-        </View>
+        )}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
