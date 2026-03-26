@@ -49,26 +49,22 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
       >
         <Text style={styles.avatarText}>{displayAvatar}</Text>
         {monsterMode && !isInspecting && (
-          <View style={styles.monsterBadge}>
-            <Text style={styles.monsterBadgeText}>!</Text>
-          </View>
+          <View style={styles.monsterBadge} />
         )}
       </TouchableOpacity>
 
-      <View style={styles.statsColumn}>
-        <View style={styles.card}>
-          <Ionicons name="heart" size={14} color={healthColor} />
-          <Text style={[styles.statText, { color: healthColor }]}>
-            {displayHealth}
-          </Text>
-        </View>
-        <View style={styles.card}>
-          <Text style={[styles.strengthIcon, { color: strengthColor }]}>⚡</Text>
-          <Text style={[styles.statText, { color: strengthColor }]}>
-            {Math.round(displayStrength)}
-            {monsterMode ? " 👹" : ""}
-          </Text>
-        </View>
+      <View style={styles.card}>
+        <Ionicons name="heart" size={14} color={healthColor} />
+        <Text style={[styles.statText, { color: healthColor }]}>
+          {displayHealth}
+        </Text>
+
+        <View style={styles.divider} />
+
+        <Ionicons name="flash" size={14} color={strengthColor} />
+        <Text style={[styles.statText, { color: strengthColor }]}>
+          {Math.round(displayStrength)}
+        </Text>
       </View>
 
       {isInspecting && (
@@ -109,46 +105,38 @@ const styles = StyleSheet.create({
   },
   monsterBadge: {
     position: "absolute",
-    top: -4,
-    right: -4,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
+    top: -3,
+    right: -3,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: "#ff6b00",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  monsterBadgeText: {
-    color: "#fff",
-    fontSize: 9,
-    fontFamily: "Inter_700Bold",
   },
   avatarText: {
     color: COLORS.dark.text,
     fontSize: 16,
     fontFamily: "Inter_700Bold",
   },
-  statsColumn: {
-    flexDirection: "column",
-    gap: 4,
-  },
   card: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
     backgroundColor: COLORS.dark.card,
-    borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     borderWidth: 1,
     borderColor: COLORS.dark.border,
   },
-  statText: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
+  divider: {
+    width: 1,
+    height: 14,
+    backgroundColor: COLORS.dark.border,
+    marginHorizontal: 2,
   },
-  strengthIcon: {
-    fontSize: 12,
+  statText: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
   },
   inspectName: {
     color: COLORS.dark.textSecondary,

@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef, useState } from "react";
@@ -12,7 +12,15 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
-import { ArtifactType, NearbyUser, useGame } from "@/context/GameContext";
+import { ArtifactType, NearbyUser, useGame, STRENGTH_MONSTER_THRESHOLD } from "@/context/GameContext";
+
+function getStrengthColor(strength: number): string {
+  if (strength >= STRENGTH_MONSTER_THRESHOLD) return "#ff6b00";
+  if (strength >= 150) return "#c084fc";
+  if (strength >= 100) return "#60a5fa";
+  if (strength >= 50) return "#94a3b8";
+  return COLORS.dark.danger;
+}
 
 const ARTIFACTS: {
   type: ArtifactType;
@@ -44,6 +52,7 @@ export function AttackPanel({ user, onClose }: AttackPanelProps) {
   const sheetRef = useRef<BottomSheetModal>(null);
   const [feedback, setFeedback] = useState<AttackFeedback | null>(null);
   const [targetHealth, setTargetHealth] = useState(user.health);
+  const [targetStrength, setTargetStrength] = useState(user.strength);
   const shakeAnim = useRef(new RNAnimated.Value(0)).current;
   const feedbackOpacity = useRef(new RNAnimated.Value(0)).current;
 
@@ -60,6 +69,7 @@ export function AttackPanel({ user, onClose }: AttackPanelProps) {
     const result = attackUser(user.id, type);
 
     setTargetHealth((prev) => Math.max(0, prev - result.damage));
+    if (!result.blocked) setTargetStrength((prev) => Math.max(0, prev - 15));
     setFeedback({ damage: result.damage, blocked: result.blocked, artifact: artifactName });
 
     RNAnimated.sequence([
@@ -127,6 +137,12 @@ export function AttackPanel({ user, onClose }: AttackPanelProps) {
                 <Text style={[styles.healthText, { color: healthColor }]}>
                   {targetHealth}/{user.maxHealth}
                 </Text>
+                <View style={styles.strengthPill}>
+                  <Ionicons name="flash" size={10} color={getStrengthColor(targetStrength)} />
+                  <Text style={[styles.strengthText, { color: getStrengthColor(targetStrength) }]}>
+                    {Math.round(targetStrength)}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
@@ -323,6 +339,21 @@ const styles = StyleSheet.create({
   healthText: {
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
+  },
+  strengthPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    backgroundColor: COLORS.dark.surface,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.dark.border,
+  },
+  strengthText: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
   },
   closeBtn: {
     width: 32,

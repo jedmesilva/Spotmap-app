@@ -87,6 +87,10 @@ function spotColorForPos(lat,lng){
 function heartSvg(color){
   return '<svg width="13" height="13" viewBox="0 0 24 24" fill="'+color+'" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
 }
+function flashSvg(color){
+  return '<svg width="11" height="11" viewBox="0 0 24 24" fill="'+color+'" stroke="'+color+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+}
+function getStrColor(s){return s>=200?'#ff6b00':s>=150?'#c084fc':s>=100?'#60a5fa':s>=50?'#94a3b8':C.danger;}
 
 function collectBadge(progress){
   return '<div style="'
@@ -134,6 +138,9 @@ function userIcon(user,selected,spotColor){
           +heartSvg(hColor)
           +'<span style="color:'+hColor+';font-size:11px;font-weight:700;'+shadow+';">'+user.health+'</span>'
           +'<span style="color:'+C.textMuted+';font-size:10px;'+shadow+';">/'+user.maxHealth+'</span>'
+          +'<span style="color:'+C.border+';font-size:10px;margin:0 1px;">|</span>'
+          +flashSvg(getStrColor(user.strength||0))
+          +'<span style="color:'+getStrColor(user.strength||0)+';font-size:11px;font-weight:700;'+shadow+';">'+(user.strength!=null?Math.round(user.strength):100)+'</span>'
         +'</div>'
       +'</div>';
 
@@ -318,6 +325,9 @@ function playerIcon(profile){
         +heartSvg(hColor)
         +'<span style="color:'+hColor+';font-size:11px;font-weight:700;'+shadow+';">'+profile.health+'</span>'
         +'<span style="color:'+C.textMuted+';font-size:10px;'+shadow+';">/'+profile.maxHealth+'</span>'
+        +'<span style="color:'+C.border+';font-size:10px;margin:0 1px;">|</span>'
+        +flashSvg(getStrColor(profile.strength||0))
+        +'<span style="color:'+getStrColor(profile.strength||0)+';font-size:11px;font-weight:700;'+shadow+';">'+(profile.strength!=null?Math.round(profile.strength):100)+'</span>'
       +'</div>'
     +'</div>';
   return L.divIcon({html:html,className:'',iconSize:[170,110],iconAnchor:[85,27]});
