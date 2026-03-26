@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   avatarInspecting: {
-    borderColor: COLORS.dark.warning,
+    borderColor: COLORS.dark.accent,
   },
   avatarText: {
     color: COLORS.dark.text,
