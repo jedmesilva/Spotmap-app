@@ -75,7 +75,6 @@ export default function AccountScreen() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
-  const [avatarActionVisible, setAvatarActionVisible] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(userProfile?.avatar ?? "😎");
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -167,7 +166,7 @@ export default function AccountScreen() {
   };
 
   const handleAvatarPress = () => {
-    setAvatarActionVisible(true);
+    setAvatarPickerVisible(true);
   };
 
   const handleSave = async () => {
@@ -286,50 +285,16 @@ export default function AccountScreen() {
         </View>
       </ScrollView>
 
-      {/* Avatar action sheet */}
-      <Modal
-        visible={avatarActionVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setAvatarActionVisible(false)}
-      >
-        <Pressable style={styles.actionBackdrop} onPress={() => setAvatarActionVisible(false)}>
-          <View style={styles.actionSheet}>
-            <Text style={styles.actionTitle}>Alterar avatar</Text>
-            <TouchableOpacity
-              style={styles.actionOption}
-              onPress={() => { setAvatarActionVisible(false); handlePickImage(false); }}
-            >
-              <Ionicons name="images-outline" size={20} color={COLORS.dark.text} />
-              <Text style={styles.actionOptionText}>Escolher da galeria</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.actionOption}
-              onPress={() => { setAvatarActionVisible(false); setAvatarPickerVisible(true); }}
-            >
-              <Ionicons name="happy-outline" size={20} color={COLORS.dark.text} />
-              <Text style={styles.actionOptionText}>Escolher emoji</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionOption, styles.actionCancel]}
-              onPress={() => setAvatarActionVisible(false)}
-            >
-              <Text style={styles.actionCancelText}>Cancelar</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
-
-      {/* Emoji picker */}
+      {/* Avatar picker modal */}
       <Modal
         visible={avatarPickerVisible}
         transparent
-        animationType="fade"
+        animationType="slide"
         onRequestClose={() => setAvatarPickerVisible(false)}
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setAvatarPickerVisible(false)}>
           <Pressable style={styles.modalCard} onPress={() => {}}>
-            <Text style={styles.modalTitle}>Escolha um emoji</Text>
+            <Text style={styles.modalTitle}>Escolha seu avatar</Text>
             <View style={styles.emojiGrid}>
               {AVATAR_OPTIONS.map((emoji) => (
                 <TouchableOpacity
@@ -347,6 +312,16 @@ export default function AccountScreen() {
                 </TouchableOpacity>
               ))}
             </View>
+            <TouchableOpacity
+              style={styles.galleryButton}
+              onPress={() => {
+                setAvatarPickerVisible(false);
+                handlePickImage(false);
+              }}
+            >
+              <Ionicons name="images-outline" size={18} color={COLORS.dark.accent} />
+              <Text style={styles.galleryButtonText}>Usar imagem da galeria</Text>
+            </TouchableOpacity>
           </Pressable>
         </Pressable>
       </Modal>
@@ -500,53 +475,21 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: COLORS.dark.danger,
   },
-  actionBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    justifyContent: "flex-end",
-  },
-  actionSheet: {
-    backgroundColor: COLORS.dark.bgSecondary,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 16,
-    paddingBottom: 32,
-    borderTopWidth: 1,
-    borderColor: COLORS.dark.border,
-    gap: 4,
-  },
-  actionTitle: {
-    fontSize: 13,
-    fontFamily: "Inter_500Medium",
-    color: COLORS.dark.textMuted,
-    textAlign: "center",
-    paddingBottom: 8,
-  },
-  actionOption: {
+  galleryButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: COLORS.dark.surface,
-    marginBottom: 2,
-  },
-  actionOptionText: {
-    fontSize: 15,
-    fontFamily: "Inter_500Medium",
-    color: COLORS.dark.text,
-  },
-  actionCancel: {
-    marginTop: 6,
     justifyContent: "center",
+    gap: 8,
+    marginTop: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.dark.accent,
   },
-  actionCancelText: {
-    fontSize: 15,
+  galleryButtonText: {
+    fontSize: 14,
     fontFamily: "Inter_600SemiBold",
-    color: COLORS.dark.textMuted,
-    textAlign: "center",
-    width: "100%",
+    color: COLORS.dark.accent,
   },
   modalBackdrop: {
     flex: 1,
