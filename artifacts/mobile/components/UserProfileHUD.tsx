@@ -26,49 +26,56 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
   const displayHealth = isInspecting ? selectedUser.health : userProfile.health;
   const displayMaxHealth = isInspecting ? selectedUser.maxHealth : userProfile.maxHealth;
   const displayAvatar = isInspecting ? selectedUser.avatar : userProfile.avatar;
-  const displayName = isInspecting ? selectedUser.name : null;
 
   const healthColor = getHealthColor(displayHealth, displayMaxHealth);
+  const healthRatio = displayMaxHealth > 0 ? displayHealth / displayMaxHealth : 1;
 
   return (
-    <View style={[styles.wrapper, { top }]}>
-      <View style={styles.row}>
-        <TouchableOpacity
-          style={[
-            styles.avatar,
-            isInspecting && styles.avatarInspecting,
-          ]}
-          onPress={() => {
-            if (!isInspecting) router.push("/account");
-          }}
-          activeOpacity={isInspecting ? 1 : 0.8}
-        >
-          <Text style={styles.avatarText}>{displayAvatar}</Text>
-        </TouchableOpacity>
+    <View style={[styles.row, { top }]}>
+      <TouchableOpacity
+        style={[styles.avatar, isInspecting && styles.avatarInspecting]}
+        onPress={() => { if (!isInspecting) router.push("/account"); }}
+        activeOpacity={isInspecting ? 1 : 0.8}
+      >
+        <Text style={styles.avatarText}>{displayAvatar}</Text>
+      </TouchableOpacity>
 
-        <View style={[styles.card, isInspecting && styles.cardInspecting]}>
+      {isInspecting ? (
+        <View style={styles.inspectCard}>
+          <View style={styles.inspectCardTop}>
+            <Text style={styles.inspectName} numberOfLines={1}>
+              {selectedUser.name}
+            </Text>
+            <TouchableOpacity
+              style={styles.closeBtn}
+              onPress={() => selectUser(null)}
+              activeOpacity={0.75}
+              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+            >
+              <Feather name="x" size={12} color={COLORS.dark.textMuted} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.inspectCardBottom}>
+            <Ionicons name="heart" size={12} color={healthColor} />
+            <Text style={[styles.healthText, styles.healthTextSmall, { color: healthColor }]}>
+              {displayHealth}
+            </Text>
+            <View style={styles.healthBarTrack}>
+              <View
+                style={[
+                  styles.healthBarFill,
+                  { width: `${Math.round(healthRatio * 100)}%` as any, backgroundColor: healthColor },
+                ]}
+              />
+            </View>
+          </View>
+        </View>
+      ) : (
+        <View style={styles.card}>
           <Ionicons name="heart" size={16} color={healthColor} />
           <Text style={[styles.healthText, { color: healthColor }]}>
             {displayHealth}
-          </Text>
-        </View>
-
-        {isInspecting && (
-          <TouchableOpacity
-            style={styles.closeBtn}
-            onPress={() => selectUser(null)}
-            activeOpacity={0.75}
-          >
-            <Feather name="x" size={14} color={COLORS.dark.textSecondary} />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {isInspecting && displayName && (
-        <View style={styles.inspectingBanner}>
-          <Feather name="eye" size={9} color={COLORS.dark.warning} />
-          <Text style={styles.inspectingText} numberOfLines={1}>
-            {displayName}
           </Text>
         </View>
       )}
@@ -77,30 +84,13 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
+  row: {
     position: "absolute",
     left: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     zIndex: 10,
-    gap: 4,
-  },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: COLORS.dark.card,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderWidth: 1,
-    borderColor: COLORS.dark.border,
-  },
-  cardInspecting: {
-    borderColor: COLORS.dark.warning + "55",
   },
   avatar: {
     width: 40,
@@ -120,37 +110,69 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inter_700Bold",
   },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: COLORS.dark.card,
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: COLORS.dark.border,
+  },
+  inspectCard: {
+    backgroundColor: COLORS.dark.card,
+    borderRadius: 14,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: COLORS.dark.warning + "55",
+    gap: 4,
+    minWidth: 110,
+    maxWidth: 160,
+  },
+  inspectCardTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 6,
+  },
+  inspectName: {
+    color: COLORS.dark.text,
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    flex: 1,
+  },
+  closeBtn: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: COLORS.dark.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  inspectCardBottom: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
   healthText: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
   },
-  closeBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: COLORS.dark.card,
-    borderWidth: 1,
-    borderColor: COLORS.dark.border,
-    alignItems: "center",
-    justifyContent: "center",
+  healthTextSmall: {
+    fontSize: 12,
   },
-  inspectingBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: COLORS.dark.warning + "18",
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: COLORS.dark.warning + "44",
-    alignSelf: "flex-start",
+  healthBarTrack: {
+    flex: 1,
+    height: 4,
+    backgroundColor: COLORS.dark.border,
+    borderRadius: 2,
+    overflow: "hidden",
   },
-  inspectingText: {
-    color: COLORS.dark.warning,
-    fontSize: 10,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 0.3,
-    maxWidth: 120,
+  healthBarFill: {
+    height: 4,
+    borderRadius: 2,
   },
 });
