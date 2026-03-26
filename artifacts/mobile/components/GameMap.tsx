@@ -7,6 +7,7 @@ import { NearbyUser, Spot } from "@/context/GameContext";
 export interface GameMapHandle {
   centerOnUser: () => void;
   sendEmojiReaction: (userId: string, emoji: string, fromUserId?: string) => void;
+  mineHit: (spotId: string, clickCount: number) => void;
 }
 
 const USER_RADIUS = 60;
@@ -27,6 +28,8 @@ html,body,#map{width:100%;height:100%;background:#050A14;overflow:hidden}
 .leaflet-tile{filter:sepia(1) hue-rotate(185deg) saturate(3) brightness(0.55)}
 @keyframes badgePop{0%{transform:translateX(-50%) scale(0.5);opacity:0}60%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1);opacity:1}}
 @keyframes emojiBurst{0%{transform:translate(-50%,-50%) scale(1.6);opacity:1}100%{transform:translate(-50%,-50%) scale(3);opacity:0}}
+@keyframes mineFloat{0%{transform:translateX(-50%) translateY(0) scale(1);opacity:1}60%{transform:translateX(-50%) translateY(-28px) scale(1.15);opacity:1}100%{transform:translateX(-50%) translateY(-50px) scale(0.9);opacity:0}}
+@keyframes minePulse{0%{transform:scale(1)}30%{transform:scale(1.28)}70%{transform:scale(0.95)}100%{transform:scale(1)}}
 </style>
 </head>
 <body>
@@ -345,9 +348,45 @@ window.receiveFromRN=function(jsonStr){
       map.setView([d.lat,d.lng],d.zoom||17);
     } else if(d.type==='EMOJI_REACTION'){
       showEmojiReaction(d.userId,d.emoji,d.fromUserId||null);
+    } else if(d.type==='MINE_HIT'){
+      showMineHit(d.spotId,d.clicks);
     }
   }catch(e){}
 };
+
+function showMineHit(spotId,clicks){
+  var marker=spotMarkers[spotId];
+  if(!marker)return;
+  var pt=map.latLngToContainerPoint(marker.getLatLng());
+  var mapEl=document.getElementById('map');
+  var label=document.createElement('div');
+  label.style.cssText=[
+    'position:absolute',
+    'left:'+pt.x+'px',
+    'top:'+(pt.y-24)+'px',
+    'color:#F5C518',
+    'font-size:14px',
+    'font-weight:700',
+    'z-index:999',
+    'pointer-events:none',
+    'letter-spacing:0.5px',
+    'text-shadow:0 1px 4px rgba(0,0,0,0.8)',
+    'animation:mineFloat 0.75s ease-out forwards'
+  ].join(';');
+  label.textContent='⛏ '+clicks+'x';
+  mapEl.appendChild(label);
+  setTimeout(function(){label.parentNode&&label.parentNode.removeChild(label)},800);
+  var mEl=marker.getElement();
+  if(mEl){
+    var inner=mEl.querySelector('div');
+    if(inner){
+      inner.style.animation='none';
+      void inner.offsetWidth;
+      inner.style.animation='minePulse 0.35s ease-out';
+      setTimeout(function(){if(inner)inner.style.animation='';},380);
+    }
+  }
+}
 
 function send(data){
   try{window.ReactNativeWebView.postMessage(JSON.stringify(data))}catch(e){}
@@ -404,6 +443,9 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
     },
     sendEmojiReaction: (userId: string, emoji: string, fromUserId?: string) => {
       inject({ type: "EMOJI_REACTION", userId, emoji, fromUserId: fromUserId ?? null });
+    },
+    mineHit: (spotId: string, clickCount: number) => {
+      inject({ type: "MINE_HIT", spotId, clicks: clickCount });
     },
   }), [inject]);
 

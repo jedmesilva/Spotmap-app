@@ -110,6 +110,7 @@ export default function MapScreen() {
     ?? (spotsInRange.length > 0 ? spotsInRange[0].id : null);
   const canMine = mineableSpotId !== null;
   const miningProgress = activeCollection?.progress ?? 0;
+  const miningClicks = activeCollection?.clicks ?? 0;
 
   return (
     <View style={styles.container}>
@@ -139,9 +140,14 @@ export default function MapScreen() {
 
       <BagSidebar
         insets={{ top: topInset, bottom: bottomInset }}
-        onMine={() => mineableSpotId && mineSpot(mineableSpotId)}
+        onMine={() => {
+          if (!mineableSpotId) return;
+          mineSpot(mineableSpotId);
+          mapRef.current?.mineHit(mineableSpotId, miningClicks + 1);
+        }}
         canMine={canMine}
         miningProgress={miningProgress}
+        miningClicks={miningClicks}
         extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
       />
 

@@ -133,10 +133,11 @@ interface BagSidebarProps {
   onMine?: () => void;
   canMine?: boolean;
   miningProgress?: number;
+  miningClicks?: number;
   extraBottomOffset?: number;
 }
 
-export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0, extraBottomOffset = 0 }: BagSidebarProps) {
+export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0, miningClicks = 0, extraBottomOffset = 0 }: BagSidebarProps) {
   const { userProfile, useSubstance } = useGame();
   const [expanded, setExpanded] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -229,9 +230,9 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
               color={canMine ? "#F5C518" : COLORS.dark.textMuted}
             />
           </RNAnimated.View>
-          {canMine && miningProgress > 0 && (
+          {canMine && miningClicks > 0 && (
             <View style={styles.mineProgressBadge}>
-              <Text style={styles.mineProgressText}>{Math.round(miningProgress)}%</Text>
+              <Text style={styles.mineProgressText}>{miningClicks}x</Text>
             </View>
           )}
           <Text style={[styles.pickaxeLabel, canMine && { color: "#F5C518" }]}>MINE</Text>

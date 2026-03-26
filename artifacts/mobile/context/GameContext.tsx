@@ -86,6 +86,7 @@ interface GameState {
   activeCollection: {
     spotId: string;
     progress: number;
+    clicks: number;
     startedAt: number;
   } | null;
   selectedSpot: Spot | null;
@@ -340,12 +341,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (!prev || prev.spotId !== spotId) {
-      setActiveCollection({ spotId, progress: newProgress, startedAt: Date.now() });
+      setActiveCollection({ spotId, progress: newProgress, clicks: 1, startedAt: Date.now() });
       setSpots((prevSpots) =>
         prevSpots.map((s) => (s.id === spotId ? { ...s, isCollecting: true } : s))
       );
     } else {
-      setActiveCollection({ ...prev, progress: newProgress });
+      setActiveCollection({ ...prev, progress: newProgress, clicks: prev.clicks + 1 });
     }
   }, [spots]);
 
