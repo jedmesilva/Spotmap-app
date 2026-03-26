@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, AntDesign } from "@expo/vector-icons";
 import COLORS from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
 
@@ -110,9 +110,7 @@ export default function LoginScreen() {
                 onPress={handleGoogle}
                 activeOpacity={0.8}
               >
-                <View style={styles.googleIconBox}>
-                  <Text style={styles.googleLetter}>G</Text>
-                </View>
+                <AntDesign name="google" size={18} color="#fff" style={{ marginRight: 10 }} />
                 <Text style={styles.googleText}>Continuar com Google</Text>
               </TouchableOpacity>
             </View>
@@ -221,20 +219,6 @@ const styles = StyleSheet.create({
     borderColor: COLORS.dark.border,
     borderRadius: 12,
     paddingVertical: 14,
-  },
-  googleIconBox: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 10,
-  },
-  googleLetter: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#4285F4",
   },
   googleText: {
     fontFamily: "Inter_500Medium",
