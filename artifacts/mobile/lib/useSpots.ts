@@ -11,6 +11,7 @@ interface SupabaseSpot {
   value: string;
   radius: number;
   expires_at: string | null;
+  owner_id: string | null;
 }
 
 function mapSpot(raw: SupabaseSpot): Spot {
@@ -26,7 +27,8 @@ function mapSpot(raw: SupabaseSpot): Spot {
   };
 }
 
-function isActive(raw: SupabaseSpot): boolean {
+function isOnMap(raw: SupabaseSpot): boolean {
+  if (raw.owner_id !== null) return false;
   if (!raw.expires_at) return true;
   return new Date(raw.expires_at).getTime() > Date.now();
 }
@@ -40,11 +42,12 @@ export function useSpots(): Spot[] {
     const fetchSpots = async () => {
       const { data, error } = await supabase
         .from("spots")
-        .select("id, type, latitude, longitude, title, value, radius, expires_at")
+        .select("id, type, latitude, longitude, title, value, radius, expires_at, owner_id")
+        .is("owner_id", null)
         .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
 
       if (!cancelled && !error && data) {
-        setSpots((data as SupabaseSpot[]).filter(isActive).map(mapSpot));
+        setSpots((data as SupabaseSpot[]).map(mapSpot));
       }
     };
 
@@ -57,12 +60,11 @@ export function useSpots(): Spot[] {
         { event: "INSERT", schema: "public", table: "spots" },
         (payload) => {
           const raw = payload.new as SupabaseSpot;
-          if (isActive(raw)) {
-            setSpots((prev) => {
-              if (prev.some((s) => s.id === raw.id)) return prev;
-              return [...prev, mapSpot(raw)];
-            });
-          }
+          if (!isOnMap(raw)) return;
+          setSpots((prev) => {
+            if (prev.some((s) => s.id === raw.id)) return prev;
+            return [...prev, mapSpot(raw)];
+          });
         }
       )
       .on(
@@ -70,10 +72,21 @@ export function useSpots(): Spot[] {
         { event: "UPDATE", schema: "public", table: "spots" },
         (payload) => {
           const raw = payload.new as SupabaseSpot;
-          setSpots((prev) => {
-            if (!isActive(raw)) return prev.filter((s) => s.id !== raw.id);
-            return prev.map((s) => (s.id === raw.id ? { ...mapSpot(raw), isCollecting: s.isCollecting } : s));
-          });
+          if (!isOnMap(raw)) {
+            // Spot foi coletado (owner_id preenchido) ou expirou → sai do mapa
+            setSpots((prev) => prev.filter((s) => s.id !== raw.id));
+          } else {
+            // Spot voltou ao mapa (owner_id = null, ex: jogador morreu)
+            setSpots((prev) => {
+              const exists = prev.some((s) => s.id === raw.id);
+              if (exists) {
+                return prev.map((s) =>
+                  s.id === raw.id ? { ...mapSpot(raw), isCollecting: s.isCollecting } : s
+                );
+              }
+              return [...prev, mapSpot(raw)];
+            });
+          }
         }
       )
       .on(

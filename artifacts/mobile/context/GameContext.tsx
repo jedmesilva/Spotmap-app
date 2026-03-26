@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSpots } from "@/lib/useSpots";
+import { useAuth } from "@/context/AuthContext";
 
 export type SpotType = "coupon" | "money" | "product" | "rare";
 export type ArtifactType = "fire" | "ice" | "lightning" | "poison" | "shield";
@@ -350,6 +351,7 @@ const DEFAULT_PROFILE: UserProfile = {
 const GameContext = createContext<(GameState & GameActions) | null>(null);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
+  const { session } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const supabaseSpots = useSpots();
   const [collectingIds, setCollectingIds] = useState<Record<string, boolean>>({});
@@ -426,7 +428,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         xp: prevProfile.xp + 100,
         coins: prevProfile.coins + (spot.type === "money" ? 50 : 10),
       }));
-      supabase.from("spots").delete().eq("id", spotId);
+      if (session?.user?.id) {
+        supabase.from("spots").update({ owner_id: session.user.id }).eq("id", spotId);
+      }
       return;
     }
 
@@ -436,7 +440,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     } else {
       setActiveCollection({ ...prev, progress: newProgress, clicks: prev.clicks + 1 });
     }
-  }, [spots]);
+  }, [spots, session]);
 
   const selectSpot = useCallback((spot: Spot | null) => {
     setSelectedSpot(spot);
@@ -542,8 +546,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       coins: prev.coins + (spot.type === "money" ? 50 : 10),
     }));
 
-    supabase.from("spots").delete().eq("id", spotId);
-  }, [spots]);
+    if (session?.user?.id) {
+      supabase.from("spots").update({ owner_id: session.user.id }).eq("id", spotId);
+    }
+  }, [spots, session]);
 
   const value: GameState & GameActions = {
     userProfile,
