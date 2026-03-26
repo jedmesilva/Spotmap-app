@@ -73,7 +73,7 @@ export default function RegisterScreen() {
                   <Ionicons name="location" size={32} color="#fff" />
                 </LinearGradient>
               </View>
-              <Text style={styles.appName}>SPOTQUEST</Text>
+              <Text style={styles.appName}>SpotMap</Text>
               <Text style={styles.tagline}>Explore. Compete. Conquer.</Text>
             </View>
 
