@@ -10,15 +10,26 @@ interface UserProfileHUDProps {
   insets: { top: number };
 }
 
+function getHealthColor(health: number, maxHealth: number): string {
+  const ratio = maxHealth > 0 ? health / maxHealth : 1;
+  if (ratio > 0.6) return COLORS.dark.spotMoney;
+  if (ratio > 0.3) return COLORS.dark.warning;
+  return COLORS.dark.danger;
+}
+
 export function UserProfileHUD({ insets }: UserProfileHUDProps) {
   const { userProfile } = useGame();
 
   const top = Math.max(insets.top + 10, 50);
+  const healthRatio = userProfile.maxHealth > 0
+    ? userProfile.health / userProfile.maxHealth
+    : 1;
+  const healthColor = getHealthColor(userProfile.health, userProfile.maxHealth);
 
   return (
     <View style={[styles.row, { top }]}>
       <TouchableOpacity
-        style={styles.avatar}
+        style={[styles.avatar, { borderColor: healthColor }]}
         onPress={() => router.push("/account")}
         activeOpacity={0.8}
       >
@@ -26,8 +37,24 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
       </TouchableOpacity>
 
       <View style={styles.card}>
-        <Ionicons name="heart" size={16} color={COLORS.dark.danger} />
-        <Text style={styles.healthText}>{userProfile.health}</Text>
+        <Ionicons name="heart" size={14} color={healthColor} />
+        <View style={styles.healthInfo}>
+          <Text style={[styles.healthText, { color: healthColor }]}>
+            {userProfile.health}
+            <Text style={styles.healthMax}>/{userProfile.maxHealth}</Text>
+          </Text>
+          <View style={styles.healthBar}>
+            <View
+              style={[
+                styles.healthFill,
+                {
+                  width: `${Math.max(0, Math.min(100, healthRatio * 100))}%` as any,
+                  backgroundColor: healthColor,
+                },
+              ]}
+            />
+          </View>
+        </View>
       </View>
     </View>
   );
@@ -52,19 +79,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderWidth: 1,
     borderColor: COLORS.dark.border,
-    shadowColor: COLORS.dark.accent,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 4,
   },
   avatar: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: COLORS.dark.bgSecondary,
-    borderWidth: 2,
-    borderColor: COLORS.dark.accent,
+    borderWidth: 2.5,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -73,9 +94,28 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inter_700Bold",
   },
+  healthInfo: {
+    gap: 3,
+  },
   healthText: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_700Bold",
-    color: COLORS.dark.danger,
+    lineHeight: 14,
+  },
+  healthMax: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: COLORS.dark.textMuted,
+  },
+  healthBar: {
+    width: 64,
+    height: 3,
+    backgroundColor: COLORS.dark.surface,
+    borderRadius: 2,
+    overflow: "hidden",
+  },
+  healthFill: {
+    height: "100%",
+    borderRadius: 2,
   },
 });

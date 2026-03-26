@@ -11,14 +11,22 @@ interface UserMarkerProps {
   onPress: () => void;
 }
 
+function getHealthColor(health: number, maxHealth: number): string {
+  const ratio = maxHealth > 0 ? health / maxHealth : 1;
+  if (ratio > 0.6) return COLORS.dark.spotMoney;
+  if (ratio > 0.3) return COLORS.dark.warning;
+  return COLORS.dark.danger;
+}
+
 export function UserMarker({ user, isSelected, onPress }: UserMarkerProps) {
   const isCollecting = !!user.collectingSpotId;
+  const healthColor = getHealthColor(user.health, user.maxHealth);
 
   const borderColor = isSelected
     ? COLORS.dark.accent
     : isCollecting
     ? COLORS.dark.warning
-    : COLORS.dark.border;
+    : healthColor;
 
   return (
     <Marker
@@ -28,33 +36,37 @@ export function UserMarker({ user, isSelected, onPress }: UserMarkerProps) {
       anchor={{ x: 0.5, y: 0.5 }}
       tracksViewChanges={false}
     >
-      {/*
-        Padding buffer: prevents Android bitmap snapshot from clipping views.
-        No shadow/elevation inside — those cause clipping on Android.
-      */}
       <View style={styles.padding}>
         <View style={[styles.avatar, { borderColor }]}>
           <Text style={styles.avatarText}>{user.avatar}</Text>
         </View>
 
+        <View style={styles.healthBar}>
+          <View
+            style={[
+              styles.healthFill,
+              {
+                width: `${Math.max(0, Math.min(100, (user.health / user.maxHealth) * 100))}%` as any,
+                backgroundColor: healthColor,
+              },
+            ]}
+          />
+        </View>
+
         {isCollecting && (
-          <View style={styles.bar}>
+          <View style={styles.collectBar}>
             <View
               style={[
-                styles.barFill,
+                styles.collectFill,
                 {
                   width: `${user.collectProgress}%` as any,
-                  backgroundColor:
-                    user.collectProgress > 60
-                      ? COLORS.dark.danger
-                      : COLORS.dark.warning,
+                  backgroundColor: COLORS.dark.info,
                 },
               ]}
             />
           </View>
         )}
       </View>
-      {/* Suppress the default Google Maps navigation callout */}
       <Callout tooltip>
         <View />
       </Callout>
@@ -66,7 +78,6 @@ const styles = StyleSheet.create({
   padding: {
     padding: 10,
     alignItems: "center",
-    /* NO shadow/elevation */
   },
   avatar: {
     width: 40,
@@ -76,22 +87,33 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.dark.bgSecondary,
     alignItems: "center",
     justifyContent: "center",
-    /* NO elevation */
   },
   avatarText: {
     color: COLORS.dark.text,
     fontSize: 14,
     fontFamily: "Inter_700Bold",
   },
-  bar: {
+  healthBar: {
     width: 40,
-    height: 4,
+    height: 3,
     backgroundColor: COLORS.dark.surface,
     borderRadius: 2,
-    marginTop: 3,
+    marginTop: 4,
     overflow: "hidden",
   },
-  barFill: {
+  healthFill: {
+    height: "100%",
+    borderRadius: 2,
+  },
+  collectBar: {
+    width: 40,
+    height: 3,
+    backgroundColor: COLORS.dark.surface,
+    borderRadius: 2,
+    marginTop: 2,
+    overflow: "hidden",
+  },
+  collectFill: {
     height: "100%",
     borderRadius: 2,
   },
