@@ -57,7 +57,7 @@ interface SpotPanelProps {
 
 export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
   const insets = useSafeAreaInsets();
-  const { activeCollection, nearbyUsers, userProfile } = useGame();
+  const { activeCollection } = useGame();
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
   const isCollecting = activeCollection?.spotId === spot.id;
   const progress = isCollecting ? activeCollection?.progress ?? 0 : 0;
@@ -69,17 +69,6 @@ export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
   useEffect(() => {
     sheetRef.current?.present();
   }, []);
-
-  const othersCollecting = nearbyUsers
-    .filter((u) => u.collectingSpotId === spot.id)
-    .sort((a, b) => b.collectProgress - a.collectProgress);
-
-  const allCollecting = [
-    ...(isCollecting
-      ? [{ id: "me", name: "Você", avatar: userProfile.avatar, collectProgress: progress, isMe: true }]
-      : []),
-    ...othersCollecting.map((u) => ({ ...u, isMe: false })),
-  ];
 
   return (
     <BottomSheetModal
@@ -118,53 +107,6 @@ export function SpotPanel({ spot, onClose, isInRange }: SpotPanelProps) {
             </View>
           )}
         </View>
-
-        {allCollecting.length > 0 && (
-          <View style={styles.collectingSection}>
-            <Text style={styles.sectionLabel}>
-              COLETANDO AGORA · {allCollecting.length} {allCollecting.length === 1 ? "jogador" : "jogadores"}
-            </Text>
-            <View style={styles.badgesWrap}>
-              {allCollecting.map((u) => {
-                const badgeColor = u.isMe
-                  ? color
-                  : u.collectProgress > 60
-                  ? COLORS.dark.danger
-                  : COLORS.dark.warning;
-                return (
-                  <View
-                    key={u.id}
-                    style={[
-                      styles.userBadge,
-                      { borderColor: badgeColor + (u.isMe ? "88" : "44") },
-                    ]}
-                  >
-                    <View style={[styles.badgeAvatar, { borderColor: badgeColor + "66" }]}>
-                      <Text style={styles.badgeAvatarText}>{u.avatar}</Text>
-                    </View>
-                    <View style={styles.badgeBody}>
-                      <Text style={[styles.badgeName, u.isMe && { color }]} numberOfLines={1}>
-                        {u.name}
-                      </Text>
-                      <View style={[styles.fillBadge, { borderColor: badgeColor + "77" }]}>
-                        <View
-                          style={[
-                            styles.fillLayer,
-                            { width: `${u.collectProgress}%` as any, backgroundColor: badgeColor + "28" },
-                          ]}
-                        />
-                        <Text style={styles.fillIcon}>⛏️</Text>
-                        <Text style={[styles.fillText, { color: badgeColor }]}>
-                          {u.collectProgress}%
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          </View>
-        )}
 
         {isCollecting && (
           <View style={styles.progressSection}>
@@ -271,82 +213,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.dark.textMuted,
     fontFamily: "Inter_400Regular",
-  },
-  sectionLabel: {
-    fontSize: 10,
-    fontFamily: "Inter_700Bold",
-    color: COLORS.dark.textMuted,
-    letterSpacing: 1.5,
-    marginBottom: 8,
-  },
-  collectingSection: {
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: COLORS.dark.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.dark.border,
-  },
-  badgesWrap: {
-    gap: 8,
-  },
-  userBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: COLORS.dark.bgSecondary,
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-  },
-  badgeAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: COLORS.dark.surface,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  badgeAvatarText: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
-    color: COLORS.dark.text,
-  },
-  badgeBody: {
-    flex: 1,
-    gap: 4,
-  },
-  badgeName: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    color: COLORS.dark.textSecondary,
-  },
-  fillBadge: {
-    position: "relative",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    overflow: "hidden",
-    alignSelf: "flex-start",
-  },
-  fillLayer: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-  },
-  fillIcon: {
-    fontSize: 10,
-  },
-  fillText: {
-    fontSize: 10,
-    fontFamily: "Inter_700Bold",
   },
   progressSection: {
     marginBottom: 12,
