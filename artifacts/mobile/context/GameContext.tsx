@@ -12,6 +12,16 @@ import React, {
 export type SpotType = "coupon" | "money" | "product" | "rare";
 export type ArtifactType = "fire" | "ice" | "lightning" | "poison" | "shield";
 export type SubstanceType = "flame_shield" | "cryo_armor" | "volt_ward" | "antidote" | "barrier";
+export type MedalRarity = "common" | "rare" | "epic" | "legendary";
+
+export interface Medal {
+  id: string;
+  icon: string;
+  name: string;
+  description: string;
+  rarity: MedalRarity;
+  unlockedAt?: number;
+}
 
 export interface Spot {
   id: string;
@@ -59,6 +69,7 @@ export interface UserProfile {
   immunities: SubstanceType[];
   bag: InventoryItem[];
   coins: number;
+  medals: Medal[];
 }
 
 interface AttackEvent {
@@ -222,6 +233,15 @@ const DEFAULT_PROFILE: UserProfile = {
     { id: "i4", type: "flame_shield", name: "Escudo de Chama", quantity: 1, icon: "shield" },
     { id: "i5", type: "coupon", name: "Cupom 30%", quantity: 2, icon: "tag" },
     { id: "i6", type: "money", name: "R$ 50", quantity: 1, icon: "dollar-sign" },
+  ],
+  medals: [
+    { id: "m1", icon: "🎯", name: "Primeiro Passo", description: "Realizou sua primeira coleta.", rarity: "common", unlockedAt: Date.now() - 86400000 * 10 },
+    { id: "m2", icon: "🏹", name: "Caçador", description: "Completou 5 coletas no mapa.", rarity: "common", unlockedAt: Date.now() - 86400000 * 7 },
+    { id: "m3", icon: "⚔️", name: "Guerreiro", description: "Atacou 10 jogadores diferentes.", rarity: "rare", unlockedAt: Date.now() - 86400000 * 3 },
+    { id: "m4", icon: "💀", name: "Sobrevivente", description: "Sobreviveu com menos de 20% de vida.", rarity: "rare", unlockedAt: Date.now() - 86400000 },
+    { id: "m5", icon: "🗺️", name: "Explorador", description: "Visite 20 spots diferentes.", rarity: "epic" },
+    { id: "m6", icon: "🛡️", name: "Intocável", description: "Bloqueie 5 ataques seguidos.", rarity: "epic" },
+    { id: "m7", icon: "👑", name: "Lendário", description: "Alcance o nível 10.", rarity: "legendary" },
   ],
 };
 

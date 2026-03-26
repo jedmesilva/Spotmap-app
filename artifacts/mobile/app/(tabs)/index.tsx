@@ -8,6 +8,7 @@ import { GameMap, GameMapHandle } from "@/components/GameMap";
 import { SpotPanel } from "@/components/SpotPanel";
 import { BagSidebar } from "@/components/BagSidebar";
 import { UserProfileHUD } from "@/components/UserProfileHUD";
+import { MedalsStrip } from "@/components/MedalsStrip";
 import { EmojiBar, EMOJI_BAR_HEIGHT } from "@/components/EmojiBar";
 import COLORS from "@/constants/colors";
 
@@ -116,6 +117,7 @@ export default function MapScreen() {
       />
 
       <UserProfileHUD insets={{ top: topInset }} />
+      <MedalsStrip insets={{ top: topInset }} />
       <BagSidebar
         insets={{ top: topInset, bottom: bottomInset }}
         onLocate={() => mapRef.current?.centerOnUser()}
