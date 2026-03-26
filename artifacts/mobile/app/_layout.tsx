@@ -15,17 +15,32 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { GameProvider } from "@/context/GameContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+import LoginScreen from "@/app/login";
+import RegisterScreen from "@/app/register";
+import OnboardingScreen from "@/app/onboarding";
 
 SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
 function RootLayoutNav() {
+  const { screen } = useAuth();
+
+  if (screen === "login") return <LoginScreen />;
+  if (screen === "register") return <RegisterScreen />;
+  if (screen === "onboarding") return <OnboardingScreen />;
+
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="account" options={{ headerShown: false, presentation: "card" }} />
-    </Stack>
+    <GameProvider>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="account"
+          options={{ headerShown: false, presentation: "card" }}
+        />
+      </Stack>
+    </GameProvider>
   );
 }
 
@@ -51,9 +66,9 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <GestureHandlerRootView style={{ flex: 1 }}>
             <BottomSheetModalProvider>
-              <GameProvider>
+              <AuthProvider>
                 <RootLayoutNav />
-              </GameProvider>
+              </AuthProvider>
             </BottomSheetModalProvider>
           </GestureHandlerRootView>
         </QueryClientProvider>
