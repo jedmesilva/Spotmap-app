@@ -65,6 +65,12 @@ timeoutMs = 20000
 [nix]
 channel = "stable-25_05"
 
+[mcp]
+
+[[mcp.servers]]
+command = "npx"
+args = ["-y", "@supabase/mcp-server-supabase@latest", "--access-token", "sbp_8280ce06fb6ddc8470027b3ba85d829f2cb18d7f", "--project-ref", "xsfcilfrzhtxmwmegian"]
+
 [userenv]
 
 [userenv.shared]
