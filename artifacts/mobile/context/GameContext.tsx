@@ -58,6 +58,7 @@ export interface NearbyUser {
   collectProgress: number;
   health: number;
   maxHealth: number;
+  strength: number;
   immunities: SubstanceType[];
   medals?: Medal[];
   bag?: InventoryItem[];
@@ -74,6 +75,7 @@ export interface UserProfile {
   xp: number;
   health: number;
   maxHealth: number;
+  strength: number;
   immunities: SubstanceType[];
   bag: InventoryItem[];
   coins: number;
@@ -120,6 +122,7 @@ interface GameActions {
   addToInventory: (item: InventoryItem) => void;
   completeCollection: (spotId: string) => void;
   updateProfile: (fields: Partial<Pick<UserProfile, "name" | "nickname" | "email" | "avatar">>) => void;
+  restoreStrength: (amount: number) => void;
 }
 
 export const SPOT_HITS: Record<SpotType, number> = {
@@ -128,6 +131,20 @@ export const SPOT_HITS: Record<SpotType, number> = {
   product: 12,
   rare: 20,
 };
+
+export const STRENGTH_BASE = 100;
+export const STRENGTH_DRAIN_PER_HIT = 5;
+export const STRENGTH_MONSTER_THRESHOLD = 200;
+const STRENGTH_DECAY_INTERVAL_MS = 30_000;
+const STRENGTH_ATTACK_DRAIN = 15;
+
+export function getStrengthMultiplier(strength: number): number {
+  return Math.max(0.25, strength / STRENGTH_BASE);
+}
+
+export function isMonsterMode(strength: number): boolean {
+  return strength >= STRENGTH_MONSTER_THRESHOLD;
+}
 
 const ARTIFACT_DAMAGE: Record<ArtifactType, number> = {
   fire: 25,
@@ -256,6 +273,7 @@ const MOCK_USERS: NearbyUser[] = [
     collectProgress: 65,
     health: 75,
     maxHealth: 100,
+    strength: 130,
     immunities: ["flame_shield"],
     coins: 840,
     bag: [
@@ -280,6 +298,7 @@ const MOCK_USERS: NearbyUser[] = [
     collectProgress: 0,
     health: 100,
     maxHealth: 100,
+    strength: 240,
     immunities: ["cryo_armor", "antidote"],
     coins: 2100,
     bag: [
@@ -308,6 +327,7 @@ const MOCK_USERS: NearbyUser[] = [
     collectProgress: 30,
     health: 45,
     maxHealth: 100,
+    strength: 60,
     immunities: [],
     coins: 320,
     bag: [
@@ -332,6 +352,7 @@ const DEFAULT_PROFILE: UserProfile = {
   xp: 2350,
   health: 100,
   maxHealth: 100,
+  strength: 100,
   immunities: ["flame_shield"],
   coins: 1250,
   bag: [
@@ -379,10 +400,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const activeCollectionRef = useRef<ActiveCollection | null>(null);
   const userLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const sessionRef = useRef(session);
+  const userProfileRef = useRef<UserProfile>(DEFAULT_PROFILE);
 
   useEffect(() => { activeCollectionRef.current = activeCollection; }, [activeCollection]);
   useEffect(() => { userLocationRef.current = userLocation; }, [userLocation]);
   useEffect(() => { sessionRef.current = session; }, [session]);
+  useEffect(() => { userProfileRef.current = userProfile; }, [userProfile]);
 
   useEffect(() => {
     if (selectedUser) {
@@ -391,6 +414,46 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       else setSelectedUser(null);
     }
   }, [nearbyUsers]);
+
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+    supabase
+      .from("users")
+      .select("strength, health, max_health, coins, xp, level")
+      .eq("id", userId)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setUserProfile((prev) => ({
+            ...prev,
+            strength: data.strength ?? STRENGTH_BASE,
+            health: data.health ?? prev.health,
+            maxHealth: data.max_health ?? prev.maxHealth,
+            coins: data.coins ?? prev.coins,
+            xp: data.xp ?? prev.xp,
+            level: data.level ?? prev.level,
+          }));
+        }
+      });
+  }, [session]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setUserProfile((prev) => {
+        const s = prev.strength;
+        if (s <= 0) return prev;
+        const decay = s >= STRENGTH_MONSTER_THRESHOLD ? 3 : s > STRENGTH_BASE ? 2 : 1;
+        const newStrength = Math.max(0, s - decay);
+        const userId = sessionRef.current?.user?.id;
+        if (userId) {
+          supabase.from("users").update({ strength: newStrength }).eq("id", userId);
+        }
+        return { ...prev, strength: newStrength };
+      });
+    }, STRENGTH_DECAY_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, []);
 
   // Detecta quando um spot que estávamos minerando foi coletado por outro jogador
   useEffect(() => {
@@ -460,7 +523,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     const userId = sessionRef.current?.user?.id ?? null;
     const hitsRequired = SPOT_HITS[spot.type];
-    const progressPerHit = 100 / hitsRequired;
+
+    const currentStrength = userProfileRef.current.strength;
+    const strengthMultiplier = getStrengthMultiplier(currentStrength);
+    const progressPerHit = (100 / hitsRequired) * strengthMultiplier;
+
+    const newStrength = Math.max(0, currentStrength - STRENGTH_DRAIN_PER_HIT);
+    setUserProfile((prev) => ({ ...prev, strength: newStrength }));
+    if (userId) {
+      supabase.from("users").update({ strength: newStrength }).eq("id", userId);
+    }
 
     const prev = activeCollectionRef.current;
     const isNewCollection = !prev || prev.spotId !== spotId;
@@ -592,6 +664,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             ? {
                 ...u,
                 health: Math.max(0, u.health - actualDamage),
+                strength: isImmune
+                  ? u.strength
+                  : Math.max(0, u.strength - STRENGTH_ATTACK_DRAIN),
                 collectProgress: isImmune
                   ? u.collectProgress
                   : Math.max(0, u.collectProgress - 20),
@@ -654,6 +729,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = useCallback((fields: Partial<Pick<UserProfile, "name" | "nickname" | "email" | "avatar">>) => {
     setUserProfile((prev) => ({ ...prev, ...fields }));
+  }, []);
+
+  const restoreStrength = useCallback((amount: number) => {
+    setUserProfile((prev) => {
+      const newStrength = prev.strength + amount;
+      const userId = sessionRef.current?.user?.id;
+      if (userId) {
+        supabase.from("users").update({ strength: newStrength }).eq("id", userId);
+      }
+      return { ...prev, strength: newStrength };
+    });
   }, []);
 
   const completeCollection = useCallback(async (spotId: string) => {
@@ -723,6 +809,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     addToInventory,
     completeCollection,
     updateProfile,
+    restoreStrength,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

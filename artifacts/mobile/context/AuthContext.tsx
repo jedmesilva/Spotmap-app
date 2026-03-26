@@ -15,6 +15,7 @@ export interface UserProfile {
   health: number;
   max_health: number;
   coins: number;
+  strength: number;
 }
 
 interface AuthContextType {

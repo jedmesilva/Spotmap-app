@@ -4,7 +4,7 @@ import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import COLORS from "@/constants/colors";
-import { useGame } from "@/context/GameContext";
+import { useGame, isMonsterMode, STRENGTH_MONSTER_THRESHOLD } from "@/context/GameContext";
 
 interface UserProfileHUDProps {
   insets: { top: number };
@@ -17,6 +17,14 @@ function getHealthColor(health: number, maxHealth: number): string {
   return COLORS.dark.danger;
 }
 
+function getStrengthColor(strength: number): string {
+  if (strength >= STRENGTH_MONSTER_THRESHOLD) return "#ff6b00";
+  if (strength >= 150) return "#c084fc";
+  if (strength >= 100) return "#60a5fa";
+  if (strength >= 50) return "#94a3b8";
+  return COLORS.dark.danger;
+}
+
 export function UserProfileHUD({ insets }: UserProfileHUDProps) {
   const { userProfile, selectedUser } = useGame();
 
@@ -26,24 +34,41 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
   const displayHealth = isInspecting ? selectedUser.health : userProfile.health;
   const displayMaxHealth = isInspecting ? selectedUser.maxHealth : userProfile.maxHealth;
   const displayAvatar = isInspecting ? selectedUser.avatar : userProfile.avatar;
+  const displayStrength = isInspecting ? selectedUser.strength : userProfile.strength;
 
   const healthColor = getHealthColor(displayHealth, displayMaxHealth);
+  const strengthColor = getStrengthColor(displayStrength);
+  const monsterMode = isMonsterMode(displayStrength);
 
   return (
     <View style={[styles.row, { top }]}>
       <TouchableOpacity
-        style={[styles.avatar, isInspecting && styles.avatarInspecting]}
+        style={[styles.avatar, monsterMode && !isInspecting && styles.avatarMonster]}
         onPress={() => { if (!isInspecting) router.push("/account"); }}
         activeOpacity={isInspecting ? 1 : 0.8}
       >
         <Text style={styles.avatarText}>{displayAvatar}</Text>
+        {monsterMode && !isInspecting && (
+          <View style={styles.monsterBadge}>
+            <Text style={styles.monsterBadgeText}>!</Text>
+          </View>
+        )}
       </TouchableOpacity>
 
-      <View style={styles.card}>
-        <Ionicons name="heart" size={16} color={healthColor} />
-        <Text style={[styles.healthText, { color: healthColor }]}>
-          {displayHealth}
-        </Text>
+      <View style={styles.statsColumn}>
+        <View style={styles.card}>
+          <Ionicons name="heart" size={14} color={healthColor} />
+          <Text style={[styles.statText, { color: healthColor }]}>
+            {displayHealth}
+          </Text>
+        </View>
+        <View style={styles.card}>
+          <Text style={[styles.strengthIcon, { color: strengthColor }]}>⚡</Text>
+          <Text style={[styles.statText, { color: strengthColor }]}>
+            {Math.round(displayStrength)}
+            {monsterMode ? " 👹" : ""}
+          </Text>
+        </View>
       </View>
 
       {isInspecting && (
@@ -74,28 +99,56 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  avatarInspecting: {
-    borderColor: COLORS.dark.accent,
+  avatarMonster: {
+    borderColor: "#ff6b00",
+    shadowColor: "#ff6b00",
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  monsterBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#ff6b00",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  monsterBadgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
   },
   avatarText: {
     color: COLORS.dark.text,
     fontSize: 16,
     fontFamily: "Inter_700Bold",
   },
+  statsColumn: {
+    flexDirection: "column",
+    gap: 4,
+  },
   card: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 6,
     backgroundColor: COLORS.dark.card,
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderWidth: 1,
     borderColor: COLORS.dark.border,
   },
-  healthText: {
-    fontSize: 14,
+  statText: {
+    fontSize: 13,
     fontFamily: "Inter_700Bold",
+  },
+  strengthIcon: {
+    fontSize: 12,
   },
   inspectName: {
     color: COLORS.dark.textSecondary,
