@@ -143,6 +143,8 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
   const [modalOpen, setModalOpen] = useState(false);
   const pickaxeScale = useRef(new RNAnimated.Value(1)).current;
   const pickaxeY = useRef(new RNAnimated.Value(0)).current;
+  const floatY = useRef(new RNAnimated.Value(0)).current;
+  const floatOpacity = useRef(new RNAnimated.Value(0)).current;
 
   const bottomAnim = useRef(new RNAnimated.Value(extraBottomOffset)).current;
   useEffect(() => {
@@ -170,6 +172,7 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
 
   const handleMine = () => {
     if (!canMine) return;
+
     RNAnimated.parallel([
       RNAnimated.sequence([
         RNAnimated.timing(pickaxeScale, { toValue: 0.75, duration: 80, useNativeDriver: true }),
@@ -177,11 +180,22 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
         RNAnimated.timing(pickaxeScale, { toValue: 1, duration: 60, useNativeDriver: true }),
       ]),
       RNAnimated.sequence([
-        RNAnimated.timing(pickaxeY, { toValue: -10, duration: 80, useNativeDriver: true }),
-        RNAnimated.timing(pickaxeY, { toValue: 3, duration: 80, useNativeDriver: true }),
+        RNAnimated.timing(pickaxeY, { toValue: -8, duration: 80, useNativeDriver: true }),
+        RNAnimated.timing(pickaxeY, { toValue: 2, duration: 80, useNativeDriver: true }),
         RNAnimated.timing(pickaxeY, { toValue: 0, duration: 60, useNativeDriver: true }),
       ]),
     ]).start();
+
+    floatY.setValue(0);
+    floatOpacity.setValue(1);
+    RNAnimated.parallel([
+      RNAnimated.timing(floatY, { toValue: -90, duration: 750, useNativeDriver: true }),
+      RNAnimated.sequence([
+        RNAnimated.delay(300),
+        RNAnimated.timing(floatOpacity, { toValue: 0, duration: 450, useNativeDriver: true }),
+      ]),
+    ]).start();
+
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     onMine?.();
   };
@@ -245,6 +259,13 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
           )}
           <Text style={[styles.pickaxeLabel, canMine && { color: "#F5C518" }]}>MINE</Text>
         </TouchableOpacity>
+
+        <RNAnimated.View
+          pointerEvents="none"
+          style={[styles.floatIcon, { transform: [{ translateY: floatY }], opacity: floatOpacity }]}
+        >
+          <MaterialCommunityIcons name="pickaxe" size={22} color="#F5C518" />
+        </RNAnimated.View>
       </RNAnimated.View>
 
       <Modal
@@ -599,6 +620,14 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: COLORS.dark.textMuted,
     letterSpacing: 1.5,
+  },
+  floatIcon: {
+    position: "absolute",
+    bottom: 30,
+    left: 0,
+    right: 0,
+    alignItems: "center",
+    zIndex: 20,
   },
   mineProgressBadge: {
     position: "absolute",
