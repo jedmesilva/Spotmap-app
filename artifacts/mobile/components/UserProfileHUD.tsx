@@ -56,8 +56,8 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
           </View>
 
           <View style={styles.inspectCardBottom}>
-            <Ionicons name="heart" size={12} color={healthColor} />
-            <Text style={[styles.healthText, styles.healthTextSmall, { color: healthColor }]}>
+            <Ionicons name="heart" size={16} color={healthColor} />
+            <Text style={[styles.healthText, { color: healthColor }]}>
               {displayHealth}
             </Text>
           </View>
@@ -151,8 +151,5 @@ const styles = StyleSheet.create({
   healthText: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
-  },
-  healthTextSmall: {
-    fontSize: 12,
   },
 });
