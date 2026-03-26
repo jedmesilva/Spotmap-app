@@ -68,8 +68,9 @@ channel = "stable-25_05"
 [mcp]
 
 [[mcp.servers]]
+name = "supabase"
 command = "npx"
-args = ["-y", "@supabase/mcp-server-supabase@latest", "--access-token", "sbp_8280ce06fb6ddc8470027b3ba85d829f2cb18d7f", "--project-ref", "xsfcilfrzhtxmwmegian"]
+args = ["-y", "@supabase/mcp-server-supabase@latest", "--access-token", "$PERSONAL_ACESS_TOKEN"]
 
 [userenv]
 
