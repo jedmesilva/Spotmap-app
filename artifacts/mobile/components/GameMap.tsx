@@ -282,6 +282,10 @@ function updateSpots(spots){
     } else {
       spotCircles[spot.id]=L.circle(ll,circleOpts).addTo(map);
     }
+    var circleEl=spotCircles[spot.id]?spotCircles[spot.id].getElement():null;
+    if(circleEl){
+      circleEl.style.filter=playerInRange?'drop-shadow(0 0 6px '+color+') drop-shadow(0 0 12px '+color+'88)':'';
+    }
   });
   applySpotVisibility();
 }
