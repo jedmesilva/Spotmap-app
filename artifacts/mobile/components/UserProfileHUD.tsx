@@ -39,36 +39,26 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
         <Text style={styles.avatarText}>{displayAvatar}</Text>
       </TouchableOpacity>
 
-      {isInspecting ? (
-        <View style={styles.inspectCard}>
-          <View style={styles.inspectCardTop}>
-            <Text style={styles.inspectName} numberOfLines={1}>
-              {selectedUser.name}
-            </Text>
-            <TouchableOpacity
-              style={styles.closeBtn}
-              onPress={() => selectUser(null)}
-              activeOpacity={0.75}
-              hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-            >
-              <Feather name="x" size={12} color={COLORS.dark.textMuted} />
-            </TouchableOpacity>
-          </View>
+      <View style={styles.card}>
+        <Ionicons name="heart" size={16} color={healthColor} />
+        <Text style={[styles.healthText, { color: healthColor }]}>
+          {displayHealth}
+        </Text>
+      </View>
 
-          <View style={styles.inspectCardBottom}>
-            <Ionicons name="heart" size={16} color={healthColor} />
-            <Text style={[styles.healthText, { color: healthColor }]}>
-              {displayHealth}
-            </Text>
-          </View>
-        </View>
-      ) : (
-        <View style={styles.card}>
-          <Ionicons name="heart" size={16} color={healthColor} />
-          <Text style={[styles.healthText, { color: healthColor }]}>
-            {displayHealth}
+      {isInspecting && (
+        <>
+          <Text style={styles.inspectName} numberOfLines={1}>
+            {selectedUser.name}
           </Text>
-        </View>
+          <TouchableOpacity
+            onPress={() => selectUser(null)}
+            activeOpacity={0.6}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Feather name="x" size={16} color={COLORS.dark.textMuted} />
+          </TouchableOpacity>
+        </>
       )}
     </View>
   );
@@ -112,44 +102,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.dark.border,
   },
-  inspectCard: {
-    backgroundColor: COLORS.dark.card,
-    borderRadius: 14,
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderWidth: 1,
-    borderColor: COLORS.dark.warning + "55",
-    gap: 4,
-    minWidth: 110,
-    maxWidth: 160,
-  },
-  inspectCardTop: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 6,
-  },
-  inspectName: {
-    color: COLORS.dark.text,
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
-    flex: 1,
-  },
-  closeBtn: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    backgroundColor: COLORS.dark.surface,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  inspectCardBottom: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
   healthText: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
+  },
+  inspectName: {
+    color: COLORS.dark.textSecondary,
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    maxWidth: 100,
   },
 });

@@ -68,8 +68,7 @@ export function MedalsStrip({ insets }: MedalsStripProps) {
   const [selected, setSelected] = useState<Medal | null>(null);
 
   const isInspecting = selectedUser !== null;
-  const hudHeight = isInspecting ? 58 : 50;
-  const top = Math.max(insets.top + 10, 50) + hudHeight;
+  const top = Math.max(insets.top + 10, 50) + 50;
 
   const medals = isInspecting
     ? (selectedUser.medals ?? [])
