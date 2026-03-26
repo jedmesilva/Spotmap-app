@@ -137,7 +137,6 @@ function userIcon(user,selected,spotColor){
         +'<div style="margin-top:3px;display:flex;align-items:center;justify-content:center;gap:4px;">'
           +heartSvg(hColor)
           +'<span style="color:'+hColor+';font-size:11px;font-weight:700;'+shadow+';">'+user.health+'</span>'
-          +'<span style="color:'+C.textMuted+';font-size:10px;'+shadow+';">/'+user.maxHealth+'</span>'
           +'<span style="color:'+C.border+';font-size:10px;margin:0 1px;">|</span>'
           +flashSvg(getStrColor(user.strength||0))
           +'<span style="color:'+getStrColor(user.strength||0)+';font-size:11px;font-weight:700;'+shadow+';">'+(user.strength!=null?Math.round(user.strength):100)+'</span>'
@@ -324,7 +323,6 @@ function playerIcon(profile){
       +'<div style="margin-top:2px;display:flex;align-items:center;justify-content:center;gap:4px;">'
         +heartSvg(hColor)
         +'<span style="color:'+hColor+';font-size:11px;font-weight:700;'+shadow+';">'+profile.health+'</span>'
-        +'<span style="color:'+C.textMuted+';font-size:10px;'+shadow+';">/'+profile.maxHealth+'</span>'
         +'<span style="color:'+C.border+';font-size:10px;margin:0 1px;">|</span>'
         +flashSvg(getStrColor(profile.strength||0))
         +'<span style="color:'+getStrColor(profile.strength||0)+';font-size:11px;font-weight:700;'+shadow+';">'+(profile.strength!=null?Math.round(profile.strength):100)+'</span>'
