@@ -14,34 +14,46 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
   const top = Math.max(insets.top + 10, 50);
 
   return (
-    <View style={[styles.container, { top }]}>
-      <View style={styles.avatarRing}>
-        <View style={styles.avatar}>
-          <Text style={styles.avatarText}>{userProfile.avatar}</Text>
+    <View style={[styles.row, { top }]}>
+      <View style={styles.card}>
+        <View style={styles.avatarRing}>
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{userProfile.avatar}</Text>
+          </View>
+          <View style={styles.levelBadge}>
+            <Text style={styles.levelText}>{userProfile.level}</Text>
+          </View>
         </View>
-        <View style={styles.levelBadge}>
-          <Text style={styles.levelText}>{userProfile.level}</Text>
-        </View>
+        <Text style={styles.name}>{userProfile.name}</Text>
       </View>
-      <Text style={styles.name}>{userProfile.name}</Text>
+
+      <View style={styles.card}>
+        <Text style={styles.heartIcon}>❤️</Text>
+        <Text style={styles.healthText}>{userProfile.health}</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  row: {
     position: "absolute",
     left: 16,
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 8,
+    zIndex: 10,
+  },
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
     backgroundColor: COLORS.dark.card,
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
     borderColor: COLORS.dark.border,
-    zIndex: 10,
     shadowColor: COLORS.dark.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.15,
@@ -88,5 +100,13 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_700Bold",
     color: COLORS.dark.text,
+  },
+  heartIcon: {
+    fontSize: 16,
+  },
+  healthText: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: COLORS.dark.danger,
   },
 });
