@@ -10,6 +10,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import COLORS from "@/constants/colors";
@@ -38,7 +39,10 @@ export default function OnboardingScreen() {
   const isValid = name.trim().length > 0 && nickname.trim().length > 0 && birthdate.length === 10;
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={[COLORS.dark.bg, COLORS.dark.bgSecondary, COLORS.dark.surface]}
+      style={styles.container}
+    >
       <SafeAreaView style={styles.safe}>
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -122,7 +126,7 @@ export default function OnboardingScreen() {
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </View>
+    </LinearGradient>
   );
 }
 

@@ -17,15 +17,15 @@ import COLORS from "@/constants/colors";
 import { InventoryItem, SubstanceType, useGame } from "@/context/GameContext";
 
 const ITEM_COLORS: Record<string, string> = {
-  fire: "#FF6B35",
-  ice: "#00AAFF",
-  lightning: "#FFD700",
-  poison: "#A0FF00",
+  fire: COLORS.dark.danger,
+  ice: COLORS.dark.info,
+  lightning: COLORS.dark.warning,
+  poison: COLORS.dark.spotMoney,
   flame_shield: COLORS.dark.purple,
-  cryo_armor: "#00CCFF",
-  volt_ward: "#FFD700",
-  antidote: "#FF3D00",
-  barrier: "#FF44AA",
+  cryo_armor: COLORS.dark.info,
+  volt_ward: COLORS.dark.warning,
+  antidote: COLORS.dark.spotMoney,
+  barrier: COLORS.dark.accent,
   coupon: COLORS.dark.spotCoupon,
   money: COLORS.dark.spotMoney,
   product: COLORS.dark.spotProduct,
