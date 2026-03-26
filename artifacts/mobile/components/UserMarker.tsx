@@ -22,11 +22,7 @@ export function UserMarker({ user, isSelected, onPress }: UserMarkerProps) {
   const isCollecting = !!user.collectingSpotId;
   const healthColor = getHealthColor(user.health, user.maxHealth);
 
-  const borderColor = isSelected
-    ? COLORS.dark.accent
-    : isCollecting
-    ? COLORS.dark.warning
-    : healthColor;
+  const borderColor = isSelected ? COLORS.dark.accent : healthColor;
 
   return (
     <Marker

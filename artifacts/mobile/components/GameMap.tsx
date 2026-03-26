@@ -130,7 +130,7 @@ function userIcon(user,selected){
   }
 
   var hColorDim=getHColor(user.health,user.maxHealth);
-  var bc=user.collectingSpotId?C.warning:hColorDim;
+  var bc=hColorDim;
   if(user.collectingSpotId){
     var badge=collectBadge(user.collectProgress);
     var html='<div style="position:relative;display:flex;flex-direction:column;align-items:center;width:64px;padding-top:20px;">'
