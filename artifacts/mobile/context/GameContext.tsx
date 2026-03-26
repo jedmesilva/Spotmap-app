@@ -205,6 +205,35 @@ const MOCK_SPOTS: Spot[] = [
     radius: 70,
     expiresAt: Date.now() + 5400000,
   },
+  {
+    id: "spot8",
+    type: "coupon",
+    latitude: -19.9551152,
+    longitude: -43.9873407,
+    title: "Cupom de Teste",
+    value: "30% OFF",
+    radius: 80,
+    expiresAt: Date.now() + 3600000,
+  },
+  {
+    id: "spot9",
+    type: "money",
+    latitude: -19.9549,
+    longitude: -43.9876,
+    title: "Bônus de Teste",
+    value: "R$ 20,00",
+    radius: 60,
+  },
+  {
+    id: "spot10",
+    type: "rare",
+    latitude: -19.9553,
+    longitude: -43.9870,
+    title: "Item Raro de Teste",
+    value: "Item Lendário",
+    radius: 100,
+    expiresAt: Date.now() + 1800000,
+  },
 ];
 
 const MOCK_USERS: NearbyUser[] = [
