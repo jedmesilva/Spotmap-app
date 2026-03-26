@@ -5,9 +5,12 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
+import { supabase } from "@/lib/supabase";
+import { useSpots } from "@/lib/useSpots";
 
 export type SpotType = "coupon" | "money" | "product" | "rare";
 export type ArtifactType = "fire" | "ice" | "lightning" | "poison" | "shield";
@@ -348,7 +351,16 @@ const GameContext = createContext<(GameState & GameActions) | null>(null);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_PROFILE);
-  const [spots, setSpots] = useState<Spot[]>(MOCK_SPOTS);
+  const supabaseSpots = useSpots();
+  const [collectingIds, setCollectingIds] = useState<Record<string, boolean>>({});
+  const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
+  const spots = useMemo<Spot[]>(
+    () =>
+      supabaseSpots
+        .filter((s) => !removedIds.has(s.id))
+        .map((s) => ({ ...s, isCollecting: collectingIds[s.id] ?? false })),
+    [supabaseSpots, collectingIds, removedIds]
+  );
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>(MOCK_USERS);
   const [activeCollection, setActiveCollection] = useState<GameState["activeCollection"]>(null);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
@@ -375,18 +387,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const startCollecting = useCallback((spotId: string) => {
     setActiveCollection({ spotId, progress: 0, startedAt: Date.now() });
-    setSpots((prev) =>
-      prev.map((s) => (s.id === spotId ? { ...s, isCollecting: true } : s))
-    );
+    setCollectingIds((prev) => ({ ...prev, [spotId]: true }));
   }, []);
 
   const stopCollecting = useCallback(() => {
     if (activeCollection) {
-      setSpots((prev) =>
-        prev.map((s) =>
-          s.id === activeCollection.spotId ? { ...s, isCollecting: false } : s
-        )
-      );
+      setCollectingIds((prev) => {
+        const next = { ...prev };
+        delete next[activeCollection.spotId];
+        return next;
+      });
     }
     setActiveCollection(null);
   }, [activeCollection]);
@@ -407,7 +417,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const newProgress = Math.min(100, currentProgress + progressPerHit);
 
     if (newProgress >= 100) {
-      setSpots((prevSpots) => prevSpots.filter((s) => s.id !== spotId));
+      setRemovedIds((prev) => new Set([...prev, spotId]));
+      setCollectingIds((prev) => { const next = { ...prev }; delete next[spotId]; return next; });
       setActiveCollection(null);
       setSelectedSpot(null);
       setUserProfile((prevProfile) => ({
@@ -415,14 +426,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         xp: prevProfile.xp + 100,
         coins: prevProfile.coins + (spot.type === "money" ? 50 : 10),
       }));
+      supabase.from("spots").delete().eq("id", spotId);
       return;
     }
 
     if (!prev || prev.spotId !== spotId) {
       setActiveCollection({ spotId, progress: newProgress, clicks: 1, startedAt: Date.now() });
-      setSpots((prevSpots) =>
-        prevSpots.map((s) => (s.id === spotId ? { ...s, isCollecting: true } : s))
-      );
+      setCollectingIds((prev) => ({ ...prev, [spotId]: true }));
     } else {
       setActiveCollection({ ...prev, progress: newProgress, clicks: prev.clicks + 1 });
     }
@@ -521,7 +531,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const spot = spots.find((s) => s.id === spotId);
     if (!spot) return;
 
-    setSpots((prev) => prev.filter((s) => s.id !== spotId));
+    setRemovedIds((prev) => new Set([...prev, spotId]));
+    setCollectingIds((prev) => { const next = { ...prev }; delete next[spotId]; return next; });
     setActiveCollection(null);
     setSelectedSpot(null);
 
@@ -530,6 +541,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       xp: prev.xp + 100,
       coins: prev.coins + (spot.type === "money" ? 50 : 10),
     }));
+
+    supabase.from("spots").delete().eq("id", spotId);
   }, [spots]);
 
   const value: GameState & GameActions = {
