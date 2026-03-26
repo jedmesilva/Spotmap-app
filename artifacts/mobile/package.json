@@ -58,6 +58,7 @@
   "dependencies": {
     "@gorhom/bottom-sheet": "^5.2.8",
     "@nkzw/create-context-hook": "^1.1.0",
+    "@supabase/supabase-js": "^2.100.0",
     "react-native-maps": "1.18.0",
     "react-native-webview": "13.15.0"
   }

@@ -69,3 +69,4 @@ channel = "stable-25_05"
 
 [userenv.shared]
 SUPABASE_URL = "https://xsfcilfrzhtxmwmegian.supabase.co"
+EXPO_PUBLIC_SUPABASE_URL = "https://xsfcilfrzhtxmwmegian.supabase.co"
