@@ -87,19 +87,16 @@ function collectBadge(progress){
 
 function spotIcon(spot,selected){
   var color=SPOT_COLOR[spot.type]||C.accent;
-  var bo=selected?color:color+'99';
-  var bgo=selected?color+'30':color+'18';
-  var bgi=selected?color+'30':C.bgSec;
   var scale=selected?'transform:scale(1.15);':'';
+  var bg=selected?color+'30':color+'18';
   var dot=spot.isCollecting
-    ?'<div style="position:absolute;top:8px;right:8px;width:10px;height:10px;border-radius:50%;background:'+C.accent+';border:1.5px solid '+C.bg+'"></div>'
+    ?'<div style="position:absolute;top:4px;right:4px;width:9px;height:9px;border-radius:50%;background:'+C.accent+';border:1.5px solid '+C.bg+'"></div>'
     :'';
-  var html='<div style="position:relative;width:48px;height:48px;display:flex;align-items:center;justify-content:center;'+scale+'">'
-    +'<div style="width:48px;height:48px;border-radius:50%;border:1.5px solid '+bo+';background:'+bgo+';display:flex;align-items:center;justify-content:center;">'
-    +'<div style="width:34px;height:34px;border-radius:50%;border:2px solid '+color+';background:'+bgi+';display:flex;align-items:center;justify-content:center;color:'+color+'">'
+  var html='<div style="position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;'+scale+'">'
+    +'<div style="width:44px;height:44px;border-radius:50%;border:2px solid '+color+';background:'+bg+';display:flex;align-items:center;justify-content:center;color:'+color+'">'
     +(ICONS[spot.type]||ICONS.rare)
-    +'</div></div>'+dot+'</div>';
-  return L.divIcon({html:html,className:'',iconSize:[48,48],iconAnchor:[24,24]});
+    +'</div>'+dot+'</div>';
+  return L.divIcon({html:html,className:'',iconSize:[44,44],iconAnchor:[22,22]});
 }
 
 function userIcon(user,selected){
