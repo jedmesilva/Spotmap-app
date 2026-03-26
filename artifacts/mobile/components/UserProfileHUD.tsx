@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import COLORS from "@/constants/colors";
 import { useGame, isMonsterMode, STRENGTH_MONSTER_THRESHOLD } from "@/context/GameContext";
+
+const isImageUrl = (v: string) => v.startsWith("http://") || v.startsWith("https://");
 
 interface UserProfileHUDProps {
   insets: { top: number };
@@ -47,7 +49,11 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
         onPress={() => { if (!isInspecting) router.push("/account"); }}
         activeOpacity={isInspecting ? 1 : 0.8}
       >
-        <Text style={styles.avatarText}>{displayAvatar}</Text>
+        {isImageUrl(displayAvatar) ? (
+          <Image source={{ uri: displayAvatar }} style={styles.avatarImage} />
+        ) : (
+          <Text style={styles.avatarText}>{displayAvatar}</Text>
+        )}
         {monsterMode && !isInspecting && (
           <View style={styles.monsterBadge} />
         )}
@@ -111,6 +117,11 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     backgroundColor: "#ff6b00",
+  },
+  avatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   avatarText: {
     color: COLORS.dark.text,

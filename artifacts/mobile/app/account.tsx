@@ -1,10 +1,14 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
 import React, { useState } from "react";
 import {
   Alert,
+  ActionSheetIOS,
   ActivityIndicator,
+  Image,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -17,12 +21,16 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
 import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/lib/supabase";
 
 const AVATAR_OPTIONS = [
   "😎", "🦊", "🐺", "🦁", "🐯", "🐻", "🦝", "🐼",
   "🦄", "🐲", "👾", "🤖", "👻", "💀", "🎭", "🔥",
   "⚡", "❄️", "🌊", "🌙", "⭐", "💎", "🎯", "🗡️",
 ];
+
+const isImageUrl = (value: string) =>
+  value.startsWith("http://") || value.startsWith("https://");
 
 function Field({
   label,
@@ -71,6 +79,116 @@ export default function AccountScreen() {
   const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(userProfile?.avatar ?? "😎");
   const [saving, setSaving] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const uploadAvatarToBackend = async (uri: string, mimeType: string): Promise<string | null> => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return null;
+
+    const base64 = await fetch(uri)
+      .then((r) => r.blob())
+      .then(
+        (blob) =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+              const result = reader.result as string;
+              resolve(result.split(",")[1]);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          })
+      );
+
+    const domain = process.env.EXPO_PUBLIC_DOMAIN;
+    const apiUrl = domain ? `https://${domain}/api` : "http://localhost:8080/api";
+
+    const response = await fetch(`${apiUrl}/upload/avatar`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ base64, mimeType }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error ?? "Erro ao fazer upload da imagem");
+    }
+
+    const { url } = await response.json();
+    return url;
+  };
+
+  const handlePickImage = async (useCamera: boolean) => {
+    try {
+      let result: ImagePicker.ImagePickerResult;
+
+      if (useCamera) {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert("Permissão negada", "Precisamos de acesso à câmera para tirar sua foto.");
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: "images",
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.7,
+        });
+      } else {
+        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert("Permissão negada", "Precisamos de acesso à galeria para escolher sua foto.");
+          return;
+        }
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: "images",
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.7,
+        });
+      }
+
+      if (result.canceled) return;
+
+      const asset = result.assets[0];
+      setUploadingAvatar(true);
+      const url = await uploadAvatarToBackend(asset.uri, asset.mimeType ?? "image/jpeg");
+      if (url) {
+        setSelectedAvatar(url);
+        await updateProfile({ avatar: url });
+      }
+    } catch (err: any) {
+      Alert.alert("Erro", err.message ?? "Não foi possível fazer upload da imagem.");
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleAvatarPress = () => {
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options: ["Cancelar", "Tirar foto", "Escolher da galeria", "Escolher emoji"],
+          cancelButtonIndex: 0,
+        },
+        (index) => {
+          if (index === 1) handlePickImage(true);
+          else if (index === 2) handlePickImage(false);
+          else if (index === 3) setAvatarPickerVisible(true);
+        }
+      );
+    } else {
+      Alert.alert("Alterar foto", "Escolha uma opção", [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Tirar foto", onPress: () => handlePickImage(true) },
+        { text: "Escolher da galeria", onPress: () => handlePickImage(false) },
+        { text: "Escolher emoji", onPress: () => setAvatarPickerVisible(true) },
+      ]);
+    }
+  };
 
   const handleSave = async () => {
     if (password && password !== confirmPassword) {
@@ -140,17 +258,30 @@ export default function AccountScreen() {
         <View style={styles.avatarSection}>
           <TouchableOpacity
             style={styles.avatarWrapper}
-            onPress={() => setAvatarPickerVisible(true)}
+            onPress={handleAvatarPress}
             activeOpacity={0.8}
+            disabled={uploadingAvatar}
           >
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{selectedAvatar}</Text>
+              {uploadingAvatar ? (
+                <ActivityIndicator size="large" color={COLORS.dark.accent} />
+              ) : isImageUrl(selectedAvatar) ? (
+                <Image
+                  source={{ uri: selectedAvatar }}
+                  style={styles.avatarImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <Text style={styles.avatarText}>{selectedAvatar}</Text>
+              )}
             </View>
             <View style={styles.avatarEditBadge}>
               <Ionicons name="camera" size={12} color={COLORS.dark.bg} />
             </View>
           </TouchableOpacity>
-          <Text style={styles.avatarHint}>Toque para alterar</Text>
+          <Text style={styles.avatarHint}>
+            {uploadingAvatar ? "Enviando..." : "Toque para alterar"}
+          </Text>
         </View>
 
         <View style={styles.section}>
@@ -183,7 +314,7 @@ export default function AccountScreen() {
       >
         <Pressable style={styles.modalBackdrop} onPress={() => setAvatarPickerVisible(false)}>
           <Pressable style={styles.modalCard} onPress={() => {}}>
-            <Text style={styles.modalTitle}>Escolha um avatar</Text>
+            <Text style={styles.modalTitle}>Escolha um emoji</Text>
             <View style={styles.emojiGrid}>
               {AVATAR_OPTIONS.map((emoji) => (
                 <TouchableOpacity
@@ -273,6 +404,12 @@ const styles = StyleSheet.create({
     borderColor: COLORS.dark.accent,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  avatarImage: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
   },
   avatarText: {
     fontSize: 40,

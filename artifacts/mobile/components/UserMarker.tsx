@@ -1,9 +1,11 @@
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 import { Callout, Marker } from "react-native-maps";
 
 import COLORS from "@/constants/colors";
 import { NearbyUser } from "@/context/GameContext";
+
+const isImageUrl = (v: string) => v.startsWith("http://") || v.startsWith("https://");
 
 interface UserMarkerProps {
   user: NearbyUser;
@@ -34,7 +36,11 @@ export function UserMarker({ user, isSelected, onPress }: UserMarkerProps) {
     >
       <View style={styles.padding}>
         <View style={[styles.avatar, { borderColor }]}>
-          <Text style={styles.avatarText}>{user.avatar}</Text>
+          {isImageUrl(user.avatar) ? (
+            <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+          ) : (
+            <Text style={styles.avatarText}>{user.avatar}</Text>
+          )}
         </View>
 
         {isCollecting && (
@@ -71,6 +77,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.dark.bgSecondary,
     alignItems: "center",
     justifyContent: "center",
+  },
+  avatarImage: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
   avatarText: {
     color: COLORS.dark.text,
