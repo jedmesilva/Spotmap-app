@@ -13,8 +13,6 @@ import { MedalsStrip } from "@/components/MedalsStrip";
 import { EmojiBar, EMOJI_BAR_HEIGHT } from "@/components/EmojiBar";
 import COLORS from "@/constants/colors";
 
-const USER_RADIUS = 60;
-
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
   const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -97,7 +95,7 @@ export default function MapScreen() {
         userLocation.longitude,
         spot.latitude,
         spot.longitude
-      ) <= spot.radius + USER_RADIUS
+      ) <= spot.radius
     );
   };
 
