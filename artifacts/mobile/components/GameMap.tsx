@@ -6,7 +6,7 @@ import { NearbyUser, Spot } from "@/context/GameContext";
 
 export interface GameMapHandle {
   centerOnUser: () => void;
-  sendEmojiReaction: (userId: string, emoji: string) => void;
+  sendEmojiReaction: (userId: string, emoji: string, fromUserId?: string) => void;
 }
 
 const USER_RADIUS = 60;
@@ -26,7 +26,7 @@ html,body,#map{width:100%;height:100%;background:#050A14;overflow:hidden}
 .leaflet-tile-pane{filter:sepia(1) hue-rotate(185deg) saturate(3) brightness(0.55)}
 .leaflet-tile{filter:sepia(1) hue-rotate(185deg) saturate(3) brightness(0.55)}
 @keyframes badgePop{0%{transform:translateX(-50%) scale(0.5);opacity:0}60%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1);opacity:1}}
-@keyframes emojiFloat{0%{transform:translateX(-50%) translateY(0);opacity:1}100%{transform:translateX(-50%) translateY(-60px);opacity:0}}
+@keyframes emojiBurst{0%{transform:translate(-50%,-50%) scale(1.6);opacity:1}100%{transform:translate(-50%,-50%) scale(3);opacity:0}}
 </style>
 </head>
 <body>
@@ -141,24 +141,67 @@ function userIcon(user,selected){
   return L.divIcon({html:html,className:'',iconSize:[56,40],iconAnchor:[28,20]});
 }
 
-function showEmojiReaction(userId,emoji){
-  var m=userMarkers[userId];
-  if(!m)return;
-  var pt=map.latLngToContainerPoint(m.getLatLng());
+function showEmojiReaction(userId,emoji,fromUserId){
+  var targetMarker=userMarkers[userId];
+  if(!targetMarker)return;
+  var toPt=map.latLngToContainerPoint(targetMarker.getLatLng());
+  var fromPt;
+  if(fromUserId&&userMarkers[fromUserId]){
+    fromPt=map.latLngToContainerPoint(userMarkers[fromUserId].getLatLng());
+  } else if(playerDot){
+    fromPt=map.latLngToContainerPoint(playerDot.getLatLng());
+  } else {
+    fromPt={x:toPt.x,y:toPt.y+80};
+  }
   var el=document.createElement('div');
   el.style.cssText=[
     'position:absolute',
-    'left:'+pt.x+'px',
-    'top:'+(pt.y-70)+'px',
-    'transform:translateX(-50%) translateY(0)',
-    'font-size:30px',
+    'left:'+fromPt.x+'px',
+    'top:'+fromPt.y+'px',
+    'transform:translate(-50%,-50%)',
+    'font-size:26px',
     'z-index:999',
     'pointer-events:none',
-    'animation:emojiFloat 1.4s ease-out forwards'
+    'opacity:1',
+    'will-change:left,top'
   ].join(';');
   el.textContent=emoji;
-  document.getElementById('map').appendChild(el);
-  setTimeout(function(){el.parentNode&&el.parentNode.removeChild(el)},1500);
+  var mapEl=document.getElementById('map');
+  mapEl.appendChild(el);
+  var duration=700;
+  var startTs=null;
+  function easeInOut(t){return t<0.5?2*t*t:-1+(4-2*t)*t;}
+  function step(ts){
+    if(!startTs)startTs=ts;
+    var p=Math.min((ts-startTs)/duration,1);
+    var t=easeInOut(p);
+    var x=fromPt.x+(toPt.x-fromPt.x)*t;
+    var y=fromPt.y+(toPt.y-fromPt.y)*t;
+    var scale=0.7+0.6*t;
+    el.style.left=x+'px';
+    el.style.top=y+'px';
+    el.style.transform='translate(-50%,-50%) scale('+scale+')';
+    el.style.opacity=p>0.85?String(1-(p-0.85)/0.15):'1';
+    if(p<1){
+      requestAnimationFrame(step);
+    } else {
+      el.parentNode&&el.parentNode.removeChild(el);
+      var burst=document.createElement('div');
+      burst.style.cssText=[
+        'position:absolute',
+        'left:'+toPt.x+'px',
+        'top:'+toPt.y+'px',
+        'font-size:26px',
+        'z-index:999',
+        'pointer-events:none',
+        'animation:emojiBurst 0.4s ease-out forwards'
+      ].join(';');
+      burst.textContent=emoji;
+      mapEl.appendChild(burst);
+      setTimeout(function(){burst.parentNode&&burst.parentNode.removeChild(burst)},450);
+    }
+  }
+  requestAnimationFrame(step);
 }
 
 function applySpotVisibility(){
@@ -290,7 +333,7 @@ window.receiveFromRN=function(jsonStr){
     } else if(d.type==='CENTER'){
       map.setView([d.lat,d.lng],d.zoom||17);
     } else if(d.type==='EMOJI_REACTION'){
-      showEmojiReaction(d.userId,d.emoji);
+      showEmojiReaction(d.userId,d.emoji,d.fromUserId||null);
     }
   }catch(e){}
 };
@@ -348,8 +391,8 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
       if (!loc) return;
       inject({ type: "CENTER", lat: loc.latitude, lng: loc.longitude, zoom: 17 });
     },
-    sendEmojiReaction: (userId: string, emoji: string) => {
-      inject({ type: "EMOJI_REACTION", userId, emoji });
+    sendEmojiReaction: (userId: string, emoji: string, fromUserId?: string) => {
+      inject({ type: "EMOJI_REACTION", userId, emoji, fromUserId: fromUserId ?? null });
     },
   }), [inject]);
 
