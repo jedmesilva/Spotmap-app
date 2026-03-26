@@ -15,6 +15,44 @@ args = ["pnpm", "store", "prune"]
 env = { "CI" = "true" }
 
 [workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start Backend"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Start application"
+
+[[workflows.workflow]]
+name = "Start Backend"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=8080 pnpm --filter @workspace/api-server run dev"
+waitForPort = 8080
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "Start application"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "PORT=18115 pnpm --filter @workspace/mobile run dev"
+waitForPort = 18115
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [agent]
 stack = "PNPM_WORKSPACE"
@@ -34,3 +72,4 @@ SUPABASE_URL = "https://xsfcilfrzhtxmwmegian.supabase.co"
 EXPO_PUBLIC_SUPABASE_URL = "https://xsfcilfrzhtxmwmegian.supabase.co"
 EXPO_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzZmNpbGZyemh0eG13bWVnaWFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1Mzc4OTcsImV4cCI6MjA5MDExMzg5N30.XD_C4mZAEr9R9Dx5oM3ZNWV94hhztAAzEn8XaFFVmJQ"
 SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhzZmNpbGZyemh0eG13bWVnaWFuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1Mzc4OTcsImV4cCI6MjA5MDExMzg5N30.XD_C4mZAEr9R9Dx5oM3ZNWV94hhztAAzEn8XaFFVmJQ"
+PERSONAL_ACESS_TOKEN = "sbp_8280ce06fb6ddc8470027b3ba85d829f2cb18d7f"
