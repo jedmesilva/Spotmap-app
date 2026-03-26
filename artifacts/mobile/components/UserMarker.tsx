@@ -41,23 +41,11 @@ export function UserMarker({ user, isSelected, onPress }: UserMarkerProps) {
           <Text style={styles.avatarText}>{user.avatar}</Text>
         </View>
 
-        <View style={styles.healthBar}>
-          <View
-            style={[
-              styles.healthFill,
-              {
-                width: `${Math.max(0, Math.min(100, (user.health / user.maxHealth) * 100))}%` as any,
-                backgroundColor: healthColor,
-              },
-            ]}
-          />
-        </View>
-
         {isCollecting && (
-          <View style={styles.collectBar}>
+          <View style={styles.bar}>
             <View
               style={[
-                styles.collectFill,
+                styles.barFill,
                 {
                   width: `${user.collectProgress}%` as any,
                   backgroundColor: COLORS.dark.info,
@@ -93,27 +81,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_700Bold",
   },
-  healthBar: {
+  bar: {
     width: 40,
-    height: 3,
+    height: 4,
     backgroundColor: COLORS.dark.surface,
     borderRadius: 2,
-    marginTop: 4,
+    marginTop: 3,
     overflow: "hidden",
   },
-  healthFill: {
-    height: "100%",
-    borderRadius: 2,
-  },
-  collectBar: {
-    width: 40,
-    height: 3,
-    backgroundColor: COLORS.dark.surface,
-    borderRadius: 2,
-    marginTop: 2,
-    overflow: "hidden",
-  },
-  collectFill: {
+  barFill: {
     height: "100%",
     borderRadius: 2,
   },

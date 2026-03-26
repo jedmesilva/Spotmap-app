@@ -21,15 +21,12 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
   const { userProfile } = useGame();
 
   const top = Math.max(insets.top + 10, 50);
-  const healthRatio = userProfile.maxHealth > 0
-    ? userProfile.health / userProfile.maxHealth
-    : 1;
   const healthColor = getHealthColor(userProfile.health, userProfile.maxHealth);
 
   return (
     <View style={[styles.row, { top }]}>
       <TouchableOpacity
-        style={[styles.avatar, { borderColor: healthColor }]}
+        style={styles.avatar}
         onPress={() => router.push("/account")}
         activeOpacity={0.8}
       >
@@ -37,24 +34,10 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
       </TouchableOpacity>
 
       <View style={styles.card}>
-        <Ionicons name="heart" size={14} color={healthColor} />
-        <View style={styles.healthInfo}>
-          <Text style={[styles.healthText, { color: healthColor }]}>
-            {userProfile.health}
-            <Text style={styles.healthMax}>/{userProfile.maxHealth}</Text>
-          </Text>
-          <View style={styles.healthBar}>
-            <View
-              style={[
-                styles.healthFill,
-                {
-                  width: `${Math.max(0, Math.min(100, healthRatio * 100))}%` as any,
-                  backgroundColor: healthColor,
-                },
-              ]}
-            />
-          </View>
-        </View>
+        <Ionicons name="heart" size={16} color={healthColor} />
+        <Text style={[styles.healthText, { color: healthColor }]}>
+          {userProfile.health}
+        </Text>
       </View>
     </View>
   );
@@ -85,7 +68,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: 20,
     backgroundColor: COLORS.dark.bgSecondary,
-    borderWidth: 2.5,
+    borderWidth: 2,
+    borderColor: COLORS.dark.accent,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -94,28 +78,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: "Inter_700Bold",
   },
-  healthInfo: {
-    gap: 3,
-  },
   healthText: {
-    fontSize: 13,
+    fontSize: 14,
     fontFamily: "Inter_700Bold",
-    lineHeight: 14,
-  },
-  healthMax: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: COLORS.dark.textMuted,
-  },
-  healthBar: {
-    width: 64,
-    height: 3,
-    backgroundColor: COLORS.dark.surface,
-    borderRadius: 2,
-    overflow: "hidden",
-  },
-  healthFill: {
-    height: "100%",
-    borderRadius: 2,
   },
 });
