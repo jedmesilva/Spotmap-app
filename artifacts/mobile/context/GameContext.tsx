@@ -11,6 +11,7 @@ import React, {
 } from "react";
 import { supabase } from "@/lib/supabase";
 import { useSpots } from "@/lib/useSpots";
+import { useSpotCollections, CollectionProgress } from "@/lib/useSpotCollections";
 import { useAuth } from "@/context/AuthContext";
 
 export type SpotType = "coupon" | "money" | "product" | "rare";
@@ -86,20 +87,24 @@ interface AttackEvent {
   blocked: boolean;
 }
 
+interface ActiveCollection {
+  spotId: string;
+  collectionId: string | null;
+  progress: number;
+  clicks: number;
+  startedAt: number;
+}
+
 interface GameState {
   userProfile: UserProfile;
   spots: Spot[];
   nearbyUsers: NearbyUser[];
-  activeCollection: {
-    spotId: string;
-    progress: number;
-    clicks: number;
-    startedAt: number;
-  } | null;
+  activeCollection: ActiveCollection | null;
   selectedSpot: Spot | null;
   selectedUser: NearbyUser | null;
   attackEvents: AttackEvent[];
   userLocation: { latitude: number; longitude: number } | null;
+  spotCollections: Map<string, CollectionProgress[]>;
 }
 
 interface GameActions {
@@ -117,7 +122,7 @@ interface GameActions {
   updateProfile: (fields: Partial<Pick<UserProfile, "name" | "nickname" | "email" | "avatar">>) => void;
 }
 
-const SPOT_HITS: Record<SpotType, number> = {
+export const SPOT_HITS: Record<SpotType, number> = {
   coupon: 5,
   money: 8,
   product: 12,
@@ -354,6 +359,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const { session } = useAuth();
   const [userProfile, setUserProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const supabaseSpots = useSpots();
+  const spotCollections = useSpotCollections();
   const [collectingIds, setCollectingIds] = useState<Record<string, boolean>>({});
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const spots = useMemo<Spot[]>(
@@ -364,16 +370,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     [supabaseSpots, collectingIds, removedIds]
   );
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>(MOCK_USERS);
-  const [activeCollection, setActiveCollection] = useState<GameState["activeCollection"]>(null);
+  const [activeCollection, setActiveCollection] = useState<ActiveCollection | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
   const [attackEvents, setAttackEvents] = useState<AttackEvent[]>([]);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  const activeCollectionRef = useRef<GameState["activeCollection"]>(null);
-  useEffect(() => {
-    activeCollectionRef.current = activeCollection;
-  }, [activeCollection]);
+  const activeCollectionRef = useRef<ActiveCollection | null>(null);
+  const userLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const sessionRef = useRef(session);
+
+  useEffect(() => { activeCollectionRef.current = activeCollection; }, [activeCollection]);
+  useEffect(() => { userLocationRef.current = userLocation; }, [userLocation]);
+  useEffect(() => { sessionRef.current = session; }, [session]);
 
   useEffect(() => {
     if (selectedUser) {
@@ -383,44 +392,155 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [nearbyUsers]);
 
+  // Detecta quando um spot que estávamos minerando foi coletado por outro jogador
+  useEffect(() => {
+    const current = activeCollectionRef.current;
+    if (!current) return;
+    const stillAvailable = spots.find((s) => s.id === current.spotId);
+    if (!stillAvailable) {
+      // Outro jogador coletou primeiro — marcar nossa tentativa como falha
+      if (current.collectionId && sessionRef.current?.user?.id) {
+        supabase
+          .from("collections")
+          .update({
+            status: "failed",
+            completed_at: new Date().toISOString(),
+          })
+          .eq("id", current.collectionId)
+          .eq("status", "in_progress");
+      }
+      setCollectingIds((prev) => {
+        const next = { ...prev };
+        delete next[current.spotId];
+        return next;
+      });
+      setActiveCollection(null);
+    }
+  }, [spots]);
+
   const setUserLocationCb = useCallback((loc: { latitude: number; longitude: number }) => {
     setUserLocation(loc);
   }, []);
 
   const startCollecting = useCallback((spotId: string) => {
-    setActiveCollection({ spotId, progress: 0, startedAt: Date.now() });
+    setActiveCollection({ spotId, collectionId: null, progress: 0, clicks: 0, startedAt: Date.now() });
     setCollectingIds((prev) => ({ ...prev, [spotId]: true }));
   }, []);
 
   const stopCollecting = useCallback(() => {
-    if (activeCollection) {
-      setCollectingIds((prev) => {
-        const next = { ...prev };
-        delete next[activeCollection.spotId];
-        return next;
-      });
+    const current = activeCollectionRef.current;
+    if (!current) return;
+
+    if (current.collectionId && sessionRef.current?.user?.id) {
+      supabase
+        .from("collections")
+        .update({
+          status: "failed",
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", current.collectionId)
+        .eq("status", "in_progress");
     }
+
+    setCollectingIds((prev) => {
+      const next = { ...prev };
+      delete next[current.spotId];
+      return next;
+    });
     setActiveCollection(null);
-  }, [activeCollection]);
+  }, []);
 
   const updateCollectProgress = useCallback((progress: number) => {
     setActiveCollection((prev) => (prev ? { ...prev, progress } : null));
   }, []);
 
-  const mineSpot = useCallback((spotId: string) => {
+  const mineSpot = useCallback(async (spotId: string) => {
     const spot = spots.find((s) => s.id === spotId);
     if (!spot) return;
 
+    const userId = sessionRef.current?.user?.id ?? null;
     const hitsRequired = SPOT_HITS[spot.type];
     const progressPerHit = 100 / hitsRequired;
 
     const prev = activeCollectionRef.current;
-    const currentProgress = prev?.spotId === spotId ? prev.progress : 0;
+    const isNewCollection = !prev || prev.spotId !== spotId;
+    const currentProgress = isNewCollection ? 0 : prev!.progress;
+    const currentClicks = isNewCollection ? 0 : prev!.clicks;
+    const newClicks = currentClicks + 1;
     const newProgress = Math.min(100, currentProgress + progressPerHit);
+    const isComplete = newProgress >= 100;
+    const now = new Date().toISOString();
+    const loc = userLocationRef.current;
 
-    if (newProgress >= 100) {
+    if (isNewCollection) {
+      // Primeiro clique: atualiza UI imediatamente (otimista)
+      const startedAt = Date.now();
+      setActiveCollection({
+        spotId,
+        collectionId: null,
+        progress: newProgress,
+        clicks: newClicks,
+        startedAt,
+      });
+      setCollectingIds((prev) => ({ ...prev, [spotId]: true }));
+
+      if (userId) {
+        const { data, error } = await supabase
+          .from("collections")
+          .insert({
+            user_id: userId,
+            spot_id: spotId,
+            clicks: newClicks,
+            clicks_required: hitsRequired,
+            progress: Math.round(newProgress),
+            user_lat: loc?.latitude ?? null,
+            user_lng: loc?.longitude ?? null,
+            started_at: new Date(startedAt).toISOString(),
+            status: isComplete ? "completed" : "in_progress",
+            succeeded: isComplete,
+            completed_at: isComplete ? now : null,
+          })
+          .select("id")
+          .single();
+
+        if (!error && data) {
+          setActiveCollection((cur) =>
+            cur?.spotId === spotId ? { ...cur, collectionId: data.id } : cur
+          );
+        }
+      }
+    } else {
+      // Clique subsequente: atualizar state e DB
+      const collectionId = prev!.collectionId;
+      setActiveCollection({
+        ...prev!,
+        progress: newProgress,
+        clicks: newClicks,
+      });
+
+      if (userId && collectionId) {
+        await supabase
+          .from("collections")
+          .update({
+            clicks: newClicks,
+            progress: Math.round(newProgress),
+            ...(isComplete
+              ? { status: "completed", succeeded: true, completed_at: now }
+              : {}),
+          })
+          .eq("id", collectionId);
+      }
+    }
+
+    if (isComplete) {
+      const collectionId = isNewCollection ? null : prev!.collectionId;
+
       setRemovedIds((prev) => new Set([...prev, spotId]));
-      setCollectingIds((prev) => { const next = { ...prev }; delete next[spotId]; return next; });
+      setCollectingIds((prev) => {
+        const next = { ...prev };
+        delete next[spotId];
+        return next;
+      });
       setActiveCollection(null);
       setSelectedSpot(null);
       setUserProfile((prevProfile) => ({
@@ -428,19 +548,24 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         xp: prevProfile.xp + 100,
         coins: prevProfile.coins + (spot.type === "money" ? 50 : 10),
       }));
-      if (session?.user?.id) {
-        supabase.from("spots").update({ owner_id: session.user.id }).eq("id", spotId);
-      }
-      return;
-    }
 
-    if (!prev || prev.spotId !== spotId) {
-      setActiveCollection({ spotId, progress: newProgress, clicks: 1, startedAt: Date.now() });
-      setCollectingIds((prev) => ({ ...prev, [spotId]: true }));
-    } else {
-      setActiveCollection({ ...prev, progress: newProgress, clicks: prev.clicks + 1 });
+      if (userId) {
+        // Tomar posse do spot
+        await supabase
+          .from("spots")
+          .update({ owner_id: userId })
+          .eq("id", spotId);
+
+        // Marcar tentativas dos outros jogadores como falha
+        await supabase
+          .from("collections")
+          .update({ status: "failed", completed_at: now })
+          .eq("spot_id", spotId)
+          .eq("status", "in_progress")
+          .neq("user_id", userId);
+      }
     }
-  }, [spots, session]);
+  }, [spots]);
 
   const selectSpot = useCallback((spot: Spot | null) => {
     setSelectedSpot(spot);
@@ -531,12 +656,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setUserProfile((prev) => ({ ...prev, ...fields }));
   }, []);
 
-  const completeCollection = useCallback((spotId: string) => {
+  const completeCollection = useCallback(async (spotId: string) => {
     const spot = spots.find((s) => s.id === spotId);
     if (!spot) return;
 
+    const userId = sessionRef.current?.user?.id ?? null;
+    const current = activeCollectionRef.current;
+    const now = new Date().toISOString();
+
     setRemovedIds((prev) => new Set([...prev, spotId]));
-    setCollectingIds((prev) => { const next = { ...prev }; delete next[spotId]; return next; });
+    setCollectingIds((prev) => {
+      const next = { ...prev };
+      delete next[spotId];
+      return next;
+    });
     setActiveCollection(null);
     setSelectedSpot(null);
 
@@ -546,10 +679,27 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       coins: prev.coins + (spot.type === "money" ? 50 : 10),
     }));
 
-    if (session?.user?.id) {
-      supabase.from("spots").update({ owner_id: session.user.id }).eq("id", spotId);
+    if (userId) {
+      if (current?.collectionId) {
+        await supabase
+          .from("collections")
+          .update({ status: "completed", succeeded: true, completed_at: now })
+          .eq("id", current.collectionId);
+      }
+
+      await supabase
+        .from("spots")
+        .update({ owner_id: userId })
+        .eq("id", spotId);
+
+      await supabase
+        .from("collections")
+        .update({ status: "failed", completed_at: now })
+        .eq("spot_id", spotId)
+        .eq("status", "in_progress")
+        .neq("user_id", userId);
     }
-  }, [spots, session]);
+  }, [spots]);
 
   const value: GameState & GameActions = {
     userProfile,
@@ -560,6 +710,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     selectedUser,
     attackEvents,
     userLocation,
+    spotCollections,
     setUserLocation: setUserLocationCb,
     startCollecting,
     stopCollecting,
