@@ -67,6 +67,22 @@ map.getContainer().querySelector('.leaflet-map-pane').appendChild(navyOverlay);
 var spotMarkers={},spotCircles={},userMarkers={};
 var playerDot=null,playerCircle=null;
 var selSpot=null,selUser=null;
+var currentSpots=[];var playerLoc=null;
+
+function haversineM(lat1,lon1,lat2,lon2){
+  var R=6371000,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
+  var a=Math.sin(dLat/2)*Math.sin(dLat/2)+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)*Math.sin(dLon/2);
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function spotColorForPos(lat,lng){
+  var best=null,bestD=Infinity;
+  for(var i=0;i<currentSpots.length;i++){
+    var s=currentSpots[i];
+    var d=haversineM(lat,lng,s.latitude,s.longitude);
+    if(d<=s.radius&&d<bestD){best=s;bestD=d;}
+  }
+  return best?(SPOT_COLOR[best.type]||C.accent):null;
+}
 
 function heartSvg(color){
   return '<svg width="13" height="13" viewBox="0 0 24 24" fill="'+color+'" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
@@ -99,10 +115,10 @@ function spotIcon(spot,selected){
   return L.divIcon({html:html,className:'',iconSize:[44,44],iconAnchor:[22,22]});
 }
 
-function userIcon(user,selected){
+function userIcon(user,selected,spotColor){
   if(selected){
     var hColor=getHColor(user.health,user.maxHealth);
-    var bc=C.accent;
+    var bc=spotColor||C.accent;
     var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
 
     var statusRow=user.collectingSpotId
@@ -128,12 +144,12 @@ function userIcon(user,selected){
   }
 
   var hColorDim=getHColor(user.health,user.maxHealth);
-  var bc=hColorDim;
+  var bc=spotColor||hColorDim;
   if(user.collectingSpotId){
     var badge=collectBadge(user.collectProgress);
     var html='<div style="position:relative;display:flex;flex-direction:column;align-items:center;width:64px;padding-top:20px;">'
       +'<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);animation:badgePop 0.25s ease-out forwards;">'+badge+'</div>'
-      +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+C.warning+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;">'+user.avatar+'</div>'
+      +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;">'+user.avatar+'</div>'
       +'</div>';
     return L.divIcon({html:html,className:'',iconSize:[64,60],iconAnchor:[32,40]});
   }
@@ -238,6 +254,7 @@ function applyUserVisibility(){
 }
 
 function updateSpots(spots){
+  currentSpots=spots;
   var ids=spots.map(function(s){return s.id});
   Object.keys(spotMarkers).forEach(function(id){
     if(ids.indexOf(id)<0){
@@ -255,9 +272,15 @@ function updateSpots(spots){
       (function(sid){m.on('click',function(e){L.DomEvent.stopPropagation(e);send({type:'SPOT_PRESS',spotId:sid})})})(spot.id);
       m.addTo(map);spotMarkers[spot.id]=m;
     }
-    if(!spotCircles[spot.id]){
-      var color=SPOT_COLOR[spot.type]||C.accent;
-      spotCircles[spot.id]=L.circle(ll,{radius:spot.radius,color:color,fillColor:color,fillOpacity:0.07,weight:1.5,opacity:0.35}).addTo(map);
+    var color=SPOT_COLOR[spot.type]||C.accent;
+    var playerInRange=playerLoc?haversineM(playerLoc.latitude,playerLoc.longitude,spot.latitude,spot.longitude)<=spot.radius:false;
+    var circleOpts=playerInRange
+      ?{radius:spot.radius,color:color,fillColor:color,fillOpacity:0.15,weight:3,opacity:0.9}
+      :{radius:spot.radius,color:color,fillColor:color,fillOpacity:0.07,weight:1.5,opacity:0.35};
+    if(spotCircles[spot.id]){
+      spotCircles[spot.id].setStyle(circleOpts);
+    } else {
+      spotCircles[spot.id]=L.circle(ll,circleOpts).addTo(map);
     }
   });
   applySpotVisibility();
@@ -270,7 +293,8 @@ function updateUsers(users){
   });
   users.forEach(function(user){
     var ll=[user.latitude,user.longitude];
-    var icon=userIcon(user,selUser===user.id);
+    var sc=spotColorForPos(user.latitude,user.longitude);
+    var icon=userIcon(user,selUser===user.id,sc);
     if(userMarkers[user.id]){
       userMarkers[user.id].setLatLng(ll).setIcon(icon);
     } else {
@@ -335,6 +359,7 @@ window.receiveFromRN=function(jsonStr){
       var prevSelUser=selUser,prevSelSpot=selSpot;
       selSpot=d.selectedSpotId||null;
       selUser=d.selectedUserId||null;
+      playerLoc=d.userLocation||null;
       updateSpots(d.spots||[]);
       updateUsers(d.users||[]);
       updatePlayer(d.userLocation,d.userRadius,d.userProfile||null);
