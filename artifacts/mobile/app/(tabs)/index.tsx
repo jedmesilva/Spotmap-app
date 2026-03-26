@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   rightButtons: {
     position: "absolute",
     right: 16,
-    flexDirection: "column",
+    flexDirection: "row",
     gap: 8,
     zIndex: 10,
   },
