@@ -49,6 +49,8 @@ export interface InventoryItem {
 export interface UserProfile {
   id: string;
   name: string;
+  nickname: string;
+  email: string;
   avatar: string;
   level: number;
   xp: number;
@@ -92,6 +94,7 @@ interface GameActions {
   useSubstance: (substance: SubstanceType) => void;
   addToInventory: (item: InventoryItem) => void;
   completeCollection: (spotId: string) => void;
+  updateProfile: (fields: Partial<Pick<UserProfile, "name" | "nickname" | "email" | "avatar">>) => void;
 }
 
 const ARTIFACT_DAMAGE: Record<ArtifactType, number> = {
@@ -203,6 +206,8 @@ const MOCK_USERS: NearbyUser[] = [
 const DEFAULT_PROFILE: UserProfile = {
   id: "user1",
   name: "Você",
+  nickname: "você",
+  email: "voce@exemplo.com",
   avatar: "V",
   level: 7,
   xp: 2350,
@@ -343,6 +348,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const updateProfile = useCallback((fields: Partial<Pick<UserProfile, "name" | "nickname" | "email" | "avatar">>) => {
+    setUserProfile((prev) => ({ ...prev, ...fields }));
+  }, []);
+
   const completeCollection = useCallback((spotId: string) => {
     const spot = spots.find((s) => s.id === spotId);
     if (!spot) return;
@@ -377,6 +386,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     useSubstance,
     addToInventory,
     completeCollection,
+    updateProfile,
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

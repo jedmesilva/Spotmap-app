@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 import COLORS from "@/constants/colors";
 import { useGame } from "@/context/GameContext";
@@ -16,9 +17,13 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
 
   return (
     <View style={[styles.row, { top }]}>
-      <View style={styles.avatar}>
+      <TouchableOpacity
+        style={styles.avatar}
+        onPress={() => router.push("/account")}
+        activeOpacity={0.8}
+      >
         <Text style={styles.avatarText}>{userProfile.avatar}</Text>
-      </View>
+      </TouchableOpacity>
 
       <View style={styles.card}>
         <Ionicons name="heart" size={16} color={COLORS.dark.danger} />
