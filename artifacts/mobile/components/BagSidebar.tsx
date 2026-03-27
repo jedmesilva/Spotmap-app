@@ -96,8 +96,10 @@ function CollectedSpotItem({
 
   const holdProgress = useRef(new RNAnimated.Value(0)).current;
   const holdAnim = useRef<RNAnimated.CompositeAnimation | null>(null);
+  const longPressTriggered = useRef(false);
 
   const handlePressIn = () => {
+    longPressTriggered.current = false;
     holdProgress.setValue(0);
     holdAnim.current = RNAnimated.timing(holdProgress, {
       toValue: 1,
@@ -106,6 +108,7 @@ function CollectedSpotItem({
     });
     holdAnim.current.start(({ finished }) => {
       if (finished) {
+        longPressTriggered.current = true;
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         RNAnimated.timing(holdProgress, { toValue: 0, duration: 200, useNativeDriver: false }).start();
         onLongSelect(spot);
@@ -118,9 +121,17 @@ function CollectedSpotItem({
     RNAnimated.timing(holdProgress, { toValue: 0, duration: 150, useNativeDriver: false }).start();
   };
 
+  const handlePress = () => {
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false;
+      return;
+    }
+    onPress(spot);
+  };
+
   return (
     <Pressable
-      onPress={() => onPress(spot)}
+      onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       style={({ pressed }) => [
@@ -160,8 +171,13 @@ function QuickSpotItem({
   const scale = useRef(new RNAnimated.Value(1)).current;
   const holdProgress = useRef(new RNAnimated.Value(0)).current;
   const holdAnim = useRef<RNAnimated.CompositeAnimation | null>(null);
+  const longPressTriggered = useRef(false);
 
   const handlePress = () => {
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false;
+      return;
+    }
     RNAnimated.sequence([
       RNAnimated.timing(scale, { toValue: 0.85, duration: 80, useNativeDriver: true }),
       RNAnimated.timing(scale, { toValue: 1, duration: 80, useNativeDriver: true }),
@@ -171,6 +187,7 @@ function QuickSpotItem({
   };
 
   const handlePressIn = () => {
+    longPressTriggered.current = false;
     holdProgress.setValue(0);
     holdAnim.current = RNAnimated.timing(holdProgress, {
       toValue: 1,
@@ -179,6 +196,7 @@ function QuickSpotItem({
     });
     holdAnim.current.start(({ finished }) => {
       if (finished) {
+        longPressTriggered.current = true;
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         RNAnimated.timing(holdProgress, { toValue: 0, duration: 200, useNativeDriver: false }).start();
         onLongSelect(spot);
