@@ -330,11 +330,9 @@ function QuickItem({
         ]}
       >
         <Feather name={icon as any} size={16} color={color} />
-        {item.quantity > 1 && (
-          <View style={[styles.qtyDot, { backgroundColor: color }]}>
-            <Text style={styles.qtyDotText}>{item.quantity}</Text>
-          </View>
-        )}
+        <View style={[styles.qtyDot, { backgroundColor: color }]}>
+          <Text style={styles.qtyDotText}>{item.quantity}</Text>
+        </View>
       </RNAnimated.View>
     </Pressable>
   );
