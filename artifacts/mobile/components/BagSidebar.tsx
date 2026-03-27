@@ -389,24 +389,16 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
             </View>
           )}
 
-          {!isInspecting && collectedSpots.length > 0 && (
-            <>
-              <Text style={[styles.sectionLabel, { marginBottom: 10 }]}>SPOTS COLETADOS</Text>
-              {collectedSpots.map((spot) => (
-                <CollectedSpotItem key={spot.id} spot={spot} onPress={setSelectedBagSpot} />
-              ))}
-              <View style={{ height: 20 }} />
-            </>
-          )}
-
           <Text style={[styles.sectionLabel, { marginBottom: 10 }]}>INVENTÁRIO</Text>
+          {!isInspecting && collectedSpots.map((spot) => (
+            <CollectedSpotItem key={spot.id} spot={spot} onPress={setSelectedBagSpot} />
+          ))}
           {displayBag
             .filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))
             .map((item) => (
               <FullItem key={item.id} item={item} onUse={handleUseItem} readOnly={isInspecting} />
             ))}
-          {displayBag.filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type)).length === 0 &&
-            (isInspecting || collectedSpots.length === 0) && (
+          {(isInspecting ? displayBag.filter((i) => i.quantity > 0) : [...collectedSpots, ...displayBag.filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))]).length === 0 && (
             <View style={styles.emptyBag}>
               <Feather name="inbox" size={32} color={COLORS.dark.textMuted} />
               <Text style={styles.emptyText}>Bag vazia</Text>
