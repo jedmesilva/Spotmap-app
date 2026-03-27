@@ -141,28 +141,30 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
         {isBagView && (
           <View style={styles.actions}>
             <Pressable
-              style={({ pressed }) => [styles.actionBtn, styles.actionUse, { opacity: pressed ? 0.8 : 1 }]}
+              style={({ pressed }) => [styles.actionBtn, styles.actionUse, { opacity: pressed ? 0.85 : 1 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onUse?.(); }}
             >
-              <Feather name="check-circle" size={16} color="#fff" />
-              <Text style={styles.actionLabel}>Usar</Text>
+              <Feather name="check-circle" size={18} color="#fff" />
+              <Text style={styles.actionLabelPrimary}>Usar</Text>
             </Pressable>
 
-            <Pressable
-              style={({ pressed }) => [styles.actionBtn, styles.actionManipulate, { opacity: pressed ? 0.8 : 1 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onManipulate?.(); }}
-            >
-              <Feather name="tool" size={16} color="#fff" />
-              <Text style={styles.actionLabel}>Manipular</Text>
-            </Pressable>
+            <View style={styles.actionsRow}>
+              <Pressable
+                style={({ pressed }) => [styles.actionBtnSecondary, styles.actionManipulate, { opacity: pressed ? 0.8 : 1 }]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onManipulate?.(); }}
+              >
+                <Feather name="tool" size={15} color={COLORS.dark.spotMoney} />
+                <Text style={[styles.actionLabelSecondary, { color: COLORS.dark.spotMoney }]}>Manipular</Text>
+              </Pressable>
 
-            <Pressable
-              style={({ pressed }) => [styles.actionBtn, styles.actionAbandon, { opacity: pressed ? 0.8 : 1 }]}
-              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); onAbandon?.(); }}
-            >
-              <Feather name="trash-2" size={16} color="#fff" />
-              <Text style={styles.actionLabel}>Abandonar</Text>
-            </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.actionBtnSecondary, styles.actionAbandon, { opacity: pressed ? 0.8 : 1 }]}
+                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); onAbandon?.(); }}
+              >
+                <Feather name="trash-2" size={15} color={COLORS.dark.danger} />
+                <Text style={[styles.actionLabelSecondary, { color: COLORS.dark.danger }]}>Abandonar</Text>
+              </Pressable>
+            </View>
           </View>
         )}
       </BottomSheetScrollView>
@@ -283,31 +285,56 @@ const styles = StyleSheet.create({
     color: COLORS.dark.textMuted,
   },
   actions: {
-    flexDirection: "row",
+    flexDirection: "column",
     gap: 10,
     marginTop: 8,
   },
+  actionsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
   actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 15,
+    borderRadius: 14,
+  },
+  actionBtnSecondary: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
-    paddingVertical: 13,
+    gap: 7,
+    paddingVertical: 12,
     borderRadius: 14,
+    borderWidth: 1.5,
+    backgroundColor: "transparent",
   },
   actionUse: {
     backgroundColor: COLORS.dark.accent,
+    shadowColor: COLORS.dark.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
   actionManipulate: {
-    backgroundColor: COLORS.dark.info,
+    borderColor: COLORS.dark.spotMoney + "55",
+    backgroundColor: COLORS.dark.spotMoney + "10",
   },
   actionAbandon: {
-    backgroundColor: COLORS.dark.danger,
+    borderColor: COLORS.dark.danger + "55",
+    backgroundColor: COLORS.dark.danger + "10",
   },
-  actionLabel: {
+  actionLabelPrimary: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: "#fff",
+  },
+  actionLabelSecondary: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
-    color: "#fff",
   },
 });
