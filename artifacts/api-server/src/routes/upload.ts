@@ -37,6 +37,13 @@ router.post("/upload/avatar", async (req, res) => {
   const userId = userData.user.id;
 
   const buffer = Buffer.from(base64, "base64");
+
+  const MAX_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+  if (buffer.length > MAX_SIZE_BYTES) {
+    res.status(413).json({ error: "Imagem muito grande. O tamanho máximo é 10MB." });
+    return;
+  }
+
   const ext = mimeType.split("/")[1];
   const filePath = `${userId}/avatar.${ext}`;
 
