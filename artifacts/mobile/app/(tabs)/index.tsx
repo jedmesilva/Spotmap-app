@@ -121,6 +121,7 @@ export default function MapScreen() {
         mineableSpotId={mineableSpotId}
         userLocation={userLocation}
         userProfile={userProfile}
+        activeCollection={activeCollection ? { spotId: activeCollection.spotId, progress: activeCollection.progress } : null}
         onSpotPress={handleSpotPress}
         onUserPress={handleUserPress}
         onMapPress={handleMapPress}

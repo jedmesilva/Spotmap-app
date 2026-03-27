@@ -332,11 +332,17 @@ function updateUsers(users){
   applyUserVisibility();
 }
 
-function playerIcon(profile){
+function playerIcon(profile,collecting){
   var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
   var hColor=getHColor(profile.health,profile.maxHealth);
+  var badgeRow=collecting
+    ?'<div style="display:flex;justify-content:center;margin-bottom:5px;animation:badgePop 0.25s ease-out forwards;">'+collectBadge(Math.round(collecting.progress))+'</div>'
+    :'';
+  var totalH=collecting?136:110;
+  var anchorY=collecting?27+26:27;
   var html=''
     +'<div style="width:170px;display:flex;flex-direction:column;align-items:center;">'
+      +badgeRow
       +'<div style="width:46px;height:46px;border-radius:50%;border:2.5px solid '+C.accent+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 14px '+C.accent+'88;overflow:hidden;">'+avatarHtml(profile.avatar,42)+'</div>'
       +'<div style="margin-top:4px;color:'+C.text+';font-size:12px;font-weight:700;letter-spacing:0.3px;text-align:center;'+shadow+';">Você</div>'
       +'<div style="margin-top:2px;display:flex;align-items:center;justify-content:center;gap:4px;">'
@@ -347,12 +353,12 @@ function playerIcon(profile){
         +'<span style="color:'+getStrColor(profile.strength||0)+';font-size:11px;font-weight:700;'+shadow+';">'+(profile.strength!=null?Math.round(profile.strength):100)+'</span>'
       +'</div>'
     +'</div>';
-  return L.divIcon({html:html,className:'',iconSize:[170,110],iconAnchor:[85,27]});
+  return L.divIcon({html:html,className:'',iconSize:[170,totalH],iconAnchor:[85,anchorY]});
 }
 
 var lastPlayerLat=null,lastPlayerLng=null;
 
-function updatePlayer(loc,radius,profile){
+function updatePlayer(loc,radius,profile,collecting){
   if(!loc)return;
   var ll=[loc.latitude,loc.longitude];
   var isFirst=!playerDot&&!playerCircle;
@@ -364,7 +370,7 @@ function updatePlayer(loc,radius,profile){
     map.panTo(ll,{animate:true,duration:0.6,easeLinearity:0.5});
   }
   if(playerCircle){map.removeLayer(playerCircle);playerCircle=null;}
-  var icon=profile?playerIcon(profile):L.divIcon({
+  var icon=profile?playerIcon(profile,collecting||null):L.divIcon({
     html:'<div style="width:16px;height:16px;border-radius:50%;background:'+C.accent+';border:2.5px solid white;box-shadow:0 0 10px '+C.accent+'99;"></div>',
     className:'',iconSize:[16,16],iconAnchor:[8,8]
   });
@@ -391,7 +397,7 @@ window.receiveFromRN=function(jsonStr){
       mineableSpotId=d.mineableSpotId||null;
       updateSpots(d.spots||[]);
       updateUsers(d.users||[]);
-      updatePlayer(d.userLocation,d.userRadius,d.userProfile||null);
+      updatePlayer(d.userLocation,d.userRadius,d.userProfile||null,d.playerCollecting||null);
       if(selUser&&selUser!==prevSelUser&&userMarkers[selUser]){
         map.panTo(userMarkers[selUser].getLatLng(),{animate:true,duration:0.5,easeLinearity:0.5});
       } else if(selSpot&&selSpot!==prevSelSpot&&spotMarkers[selSpot]){
@@ -460,6 +466,7 @@ interface GameMapProps {
   mineableSpotId?: string | null;
   userLocation?: { latitude: number; longitude: number } | null;
   userProfile?: { name: string; avatar: string; health: number; maxHealth: number } | null;
+  activeCollection?: { spotId: string; progress: number } | null;
   onSpotPress: (spotId: string) => void;
   onUserPress: (userId: string) => void;
   onMapPress: () => void;
@@ -473,6 +480,7 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
   selectedUserId,
   userLocation,
   userProfile,
+  activeCollection,
   onSpotPress,
   onUserPress,
   onMapPress,
@@ -521,8 +529,11 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
       userProfile: userProfile
         ? { name: userProfile.name, avatar: userProfile.avatar, health: userProfile.health, maxHealth: userProfile.maxHealth }
         : null,
+      playerCollecting: activeCollection
+        ? { spotId: activeCollection.spotId, progress: activeCollection.progress }
+        : null,
     });
-  }, [mapReady, spots, nearbyUsers, userLocation, userProfile, selectedSpotId, selectedUserId, mineableSpotId, inject]);
+  }, [mapReady, spots, nearbyUsers, userLocation, userProfile, activeCollection, selectedSpotId, selectedUserId, mineableSpotId, inject]);
 
   const handleMessage = useCallback(
     (event: any) => {
