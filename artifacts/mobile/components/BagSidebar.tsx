@@ -457,12 +457,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
             </>
           )}
 
-          {selectedInventorySpot && (
-            <View style={[styles.selectedSpotIndicator, { borderColor: invSpotColor + "55", backgroundColor: invSpotColor + "12" }]}>
-              <Feather name={SPOT_ICONS[selectedInventorySpot.type] as any} size={14} color={invSpotColor} />
-            </View>
-          )}
-
           <Pressable
             onPress={() => sheetRef.current?.present()}
             style={({ pressed }) => [styles.bagBtn, { opacity: pressed ? 0.8 : 1 }]}
@@ -488,13 +482,23 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
             isFireReady && !isFireActive && { borderColor: invSpotColor + "44", backgroundColor: invSpotColor + "0D" },
           ]}
         >
-          <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
-            <Feather
-              name="zap"
-              size={22}
-              color={isFireReady ? invSpotColor : COLORS.dark.textMuted}
-            />
-          </RNAnimated.View>
+          {selectedInventorySpot ? (
+            <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
+              <Feather
+                name={SPOT_ICONS[selectedInventorySpot.type] as any}
+                size={22}
+                color={invSpotColor}
+              />
+            </RNAnimated.View>
+          ) : (
+            <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
+              <Feather
+                name="zap"
+                size={22}
+                color={COLORS.dark.textMuted}
+              />
+            </RNAnimated.View>
+          )}
           {isFireReady && miningClicks > 0 && (
             <View style={[styles.mineProgressBadge, { backgroundColor: invSpotColor }]}>
               <Text style={styles.mineProgressText}>{miningClicks}x</Text>
