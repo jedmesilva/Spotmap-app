@@ -131,8 +131,6 @@ export default function AccountScreen() {
         }
         result = await ImagePicker.launchCameraAsync({
           mediaTypes: "images",
-          allowsEditing: true,
-          aspect: [1, 1],
           quality: 0.7,
         });
       } else {
@@ -143,8 +141,6 @@ export default function AccountScreen() {
         }
         result = await ImagePicker.launchImageLibraryAsync({
           mediaTypes: "images",
-          allowsEditing: true,
-          aspect: [1, 1],
           quality: 0.7,
         });
       }
