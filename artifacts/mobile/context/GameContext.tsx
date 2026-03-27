@@ -399,13 +399,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
-  // Publica localização do jogador na tabela user_locations (throttle 5s)
+  // Publica localização do jogador na tabela user_locations (throttle 4s)
   const locationPublishTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId || !userLocation) return;
 
-    if (locationPublishTimer.current) return; // throttle
+    if (locationPublishTimer.current) return;
 
     locationPublishTimer.current = setTimeout(async () => {
       locationPublishTimer.current = null;
@@ -418,7 +418,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         },
         { onConflict: "user_id" }
       );
-    }, 5000);
+    }, 4000);
 
     return () => {
       if (locationPublishTimer.current) {
@@ -428,91 +428,168 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     };
   }, [userLocation, session]);
 
-  // Busca e atualiza usuários próximos a partir de user_locations
-  const fetchNearbyUsers = useCallback(async () => {
+  // Carrega perfil de um usuário e o insere/atualiza em nearbyUsers
+  const upsertNearbyUser = useCallback(async (
+    userId: string,
+    lat: number,
+    lon: number,
+  ) => {
+    const { data: p } = await supabase
+      .from("users")
+      .select("id, name, nickname, avatar, health, max_health, strength")
+      .eq("id", userId)
+      .single();
+    if (!p) return;
+
+    // Busca coleta ativa desse jogador
+    const { data: col } = await supabase
+      .from("collections")
+      .select("spot_id, progress")
+      .eq("user_id", userId)
+      .eq("status", "in_progress")
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    setNearbyUsers((prev) => {
+      const existing = prev.find((u) => u.id === userId);
+      const updated: NearbyUser = {
+        id: p.id,
+        name: p.nickname || p.name,
+        avatar: p.avatar ?? p.name?.[0] ?? "?",
+        latitude: lat,
+        longitude: lon,
+        collectingSpotId: col?.spot_id ?? undefined,
+        collectProgress: col?.progress ?? 0,
+        health: p.health ?? 100,
+        maxHealth: p.max_health ?? 100,
+        strength: p.strength ?? 100,
+        immunities: existing?.immunities ?? [],
+        medals: existing?.medals ?? [],
+        bag: existing?.bag ?? [],
+        coins: existing?.coins,
+      };
+      if (existing) {
+        return prev.map((u) => (u.id === userId ? updated : u));
+      }
+      return [...prev, updated];
+    });
+  }, []);
+
+  // Carga inicial de todos os jogadores com localização registrada
+  const loadAllLocations = useCallback(async () => {
     const userId = session?.user?.id;
     if (!userId) return;
 
-    const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString(); // 5 min
     const { data: locations } = await supabase
       .from("user_locations")
-      .select("user_id, latitude, longitude, updated_at")
-      .neq("user_id", userId)
-      .gte("updated_at", cutoff);
+      .select("user_id, latitude, longitude")
+      .neq("user_id", userId);
 
     if (!locations || locations.length === 0) {
       setNearbyUsers([]);
       return;
     }
 
-    const myLat = userLocationRef.current?.latitude;
-    const myLon = userLocationRef.current?.longitude;
-
-    const nearbyLocations = myLat != null && myLon != null
-      ? locations.filter((l) => haversineKm(myLat, myLon, l.latitude, l.longitude) <= NEARBY_RADIUS_KM)
-      : locations;
-
-    if (nearbyLocations.length === 0) {
-      setNearbyUsers([]);
-      return;
-    }
-
-    const ids = nearbyLocations.map((l) => l.user_id);
+    const ids = locations.map((l) => l.user_id);
     const { data: profiles } = await supabase
       .from("users")
       .select("id, name, nickname, avatar, health, max_health, strength")
       .in("id", ids);
 
-    if (!profiles) return;
+    const { data: activeCols } = await supabase
+      .from("collections")
+      .select("user_id, spot_id, progress")
+      .in("user_id", ids)
+      .eq("status", "in_progress");
 
-    const profileMap = new Map(profiles.map((p) => [p.id, p]));
+    const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+    const colMap = new Map((activeCols ?? []).map((c) => [c.user_id, c]));
 
-    setNearbyUsers((prev) => {
-      const next: NearbyUser[] = nearbyLocations.map((loc) => {
-        const p = profileMap.get(loc.user_id);
-        if (!p) return null;
-        const existing = prev.find((u) => u.id === loc.user_id);
-        return {
-          id: p.id,
-          name: p.nickname || p.name,
-          avatar: p.avatar ?? p.name?.[0] ?? "?",
-          latitude: loc.latitude,
-          longitude: loc.longitude,
-          collectingSpotId: existing?.collectingSpotId,
-          collectProgress: existing?.collectProgress ?? 0,
-          health: p.health ?? 100,
-          maxHealth: p.max_health ?? 100,
-          strength: p.strength ?? 100,
-          immunities: existing?.immunities ?? [],
-          medals: existing?.medals ?? [],
-          bag: existing?.bag ?? [],
-          coins: existing?.coins,
-        } as NearbyUser;
-      }).filter(Boolean) as NearbyUser[];
-      return next;
-    });
+    const users: NearbyUser[] = locations.map((loc) => {
+      const p = profileMap.get(loc.user_id);
+      if (!p) return null;
+      const col = colMap.get(loc.user_id);
+      return {
+        id: p.id,
+        name: p.nickname || p.name,
+        avatar: p.avatar ?? p.name?.[0] ?? "?",
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        collectingSpotId: col?.spot_id ?? undefined,
+        collectProgress: col?.progress ?? 0,
+        health: p.health ?? 100,
+        maxHealth: p.max_health ?? 100,
+        strength: p.strength ?? 100,
+        immunities: [],
+        medals: [],
+        bag: [],
+      } as NearbyUser;
+    }).filter(Boolean) as NearbyUser[];
+
+    setNearbyUsers(users);
   }, [session]);
 
-  // Assina realtime em user_locations e dispara fetchNearbyUsers
+  // Assina user_locations e collections em realtime
   useEffect(() => {
     const userId = session?.user?.id;
     if (!userId) return;
 
-    fetchNearbyUsers();
+    loadAllLocations();
 
     const channel = supabase
-      .channel("user_locations_presence")
+      .channel("presence_realtime")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "user_locations" },
-        () => { fetchNearbyUsers(); }
+        { event: "INSERT", schema: "public", table: "user_locations" },
+        (payload) => {
+          const r = payload.new as { user_id: string; latitude: number; longitude: number };
+          if (r.user_id !== userId) upsertNearbyUser(r.user_id, r.latitude, r.longitude);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "user_locations" },
+        (payload) => {
+          const r = payload.new as { user_id: string; latitude: number; longitude: number };
+          if (r.user_id !== userId) upsertNearbyUser(r.user_id, r.latitude, r.longitude);
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "user_locations" },
+        (payload) => {
+          const r = payload.old as { user_id: string };
+          if (r.user_id) {
+            setNearbyUsers((prev) => prev.filter((u) => u.id !== r.user_id));
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "collections" },
+        (payload) => {
+          const r = (payload.new ?? payload.old) as {
+            user_id: string; spot_id: string; progress: number; status: string;
+          };
+          if (!r.user_id || r.user_id === userId) return;
+          setNearbyUsers((prev) =>
+            prev.map((u) => {
+              if (u.id !== r.user_id) return u;
+              if (r.status === "in_progress") {
+                return { ...u, collectingSpotId: r.spot_id, collectProgress: r.progress ?? 0 };
+              }
+              return { ...u, collectingSpotId: undefined, collectProgress: 0 };
+            })
+          );
+        }
       )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [session, fetchNearbyUsers]);
+  }, [session, loadAllLocations, upsertNearbyUser]);
 
   // Detecta quando um spot que estávamos minerando foi coletado por outro jogador
   useEffect(() => {
