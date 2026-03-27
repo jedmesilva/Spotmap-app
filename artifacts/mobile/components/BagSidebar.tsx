@@ -123,30 +123,23 @@ const TYPE_RARITY: Record<string, string> = {
   barrier: "épico",
 };
 
-type SheetSelected =
-  | { kind: "spot"; data: Spot }
-  | { kind: "item"; data: InventoryItem }
-  | null;
 
 const CARD_RADIUS = 14;
 
 function GridSpotItem({
   spot,
-  isSelected,
   isFireSelected,
   onPress,
   onLongSelect,
   cardWidth,
 }: {
   spot: Spot;
-  isSelected: boolean;
   isFireSelected: boolean;
   onPress: (spot: Spot) => void;
   onLongSelect: (spot: Spot) => void;
   cardWidth: number;
 }) {
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
-  const rarity = RARITY_CONFIG[TYPE_RARITY[spot.type] ?? "comum"];
   const isManipulated = spot.badges?.includes("manipulated");
 
   const [cardSize, setCardSize] = useState({ width: 0, height: 0 });
@@ -194,7 +187,7 @@ function GridSpotItem({
     onPress(spot);
   };
 
-  const borderColor = isSelected ? rarity.color : isFireSelected ? color + "88" : "#ffffff14";
+  const borderColor = isFireSelected ? color + "88" : "#ffffff14";
 
   return (
     <Pressable
@@ -209,15 +202,13 @@ function GridSpotItem({
         styles.newGridCard,
         {
           width: cardWidth,
-          backgroundColor: isSelected ? "#1a1e2e" : "transparent",
+          backgroundColor: "transparent",
           borderColor,
           opacity: pressed ? 0.8 : 1,
-          shadowColor: isSelected ? rarity.color : "transparent",
-          shadowOpacity: isSelected ? 0.4 : 0,
         },
       ]}
     >
-      {!isSelected && cardSize.width > 0 && (
+      {cardSize.width > 0 && (
         <Svg
           style={StyleSheet.absoluteFill}
           width="100%"
@@ -276,34 +267,27 @@ function GridSpotItem({
 
 function GridFullItem({
   item,
-  isSelected,
-  onPress,
+  onUse,
   readOnly,
   cardWidth,
 }: {
   item: InventoryItem;
-  isSelected: boolean;
-  onPress: (item: InventoryItem) => void;
+  onUse: (item: InventoryItem) => void;
   readOnly?: boolean;
   cardWidth: number;
 }) {
   const color = ITEM_COLORS[item.type] ?? COLORS.dark.accent;
-  const rarity = RARITY_CONFIG[TYPE_RARITY[item.type] ?? "comum"];
-
-  const borderColor = isSelected ? rarity.color : "#ffffff14";
 
   return (
     <Pressable
-      onPress={() => { if (!readOnly) onPress(item); }}
+      onPress={() => { if (!readOnly) onUse(item); }}
       style={({ pressed }) => [
         styles.newGridCard,
         {
           width: cardWidth,
-          backgroundColor: isSelected ? "#1a1e2e" : "transparent",
-          borderColor,
+          backgroundColor: "transparent",
+          borderColor: "#ffffff14",
           opacity: pressed && !readOnly ? 0.8 : readOnly ? 0.6 : 1,
-          shadowColor: isSelected ? rarity.color : "transparent",
-          shadowOpacity: isSelected ? 0.4 : 0,
         },
       ]}
     >
@@ -485,7 +469,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
   const cardWidth = (screenWidth - SHEET_PADDING * 2 - GRID_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
   const [expanded, setExpanded] = useState(false);
   const [selectedBagSpot, setSelectedBagSpot] = useState<Spot | null>(null);
-  const [selectedSheetItem, setSelectedSheetItem] = useState<SheetSelected>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
 
   const renderBackdrop = useCallback(
@@ -579,28 +562,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
   const isFireActive = !!selectedInventorySpot && canFire;
   const isFireReady = !!selectedInventorySpot;
 
-  const handleSpotCardPress = (spot: Spot) => {
-    setSelectedSheetItem((prev) =>
-      prev?.kind === "spot" && prev.data.id === spot.id ? null : { kind: "spot", data: spot }
-    );
-  };
-
-  const handleItemCardPress = (item: InventoryItem) => {
-    setSelectedSheetItem((prev) =>
-      prev?.kind === "item" && prev.data.id === item.id ? null : { kind: "item", data: item }
-    );
-  };
-
-  const selectedColor = selectedSheetItem
-    ? selectedSheetItem.kind === "spot"
-      ? (SPOT_COLORS[selectedSheetItem.data.type] ?? COLORS.dark.accent)
-      : (ITEM_COLORS[selectedSheetItem.data.type] ?? COLORS.dark.accent)
-    : COLORS.dark.accent;
-
-  const selectedRarity = selectedSheetItem
-    ? RARITY_CONFIG[TYPE_RARITY[selectedSheetItem.data.type] ?? "comum"]
-    : null;
-
   const isEmpty = (isInspecting
     ? displayBag.filter((i) => i.quantity > 0)
     : [...collectedSpots, ...displayBag.filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))]
@@ -643,7 +604,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
 
           <Pressable
             onPress={() => {
-              setSelectedSheetItem(null);
               sheetRef.current?.present();
             }}
             style={({ pressed }) => [styles.bagBtn, { opacity: pressed ? 0.8 : 1 }]}
@@ -790,9 +750,8 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
               <GridSpotItem
                 key={spot.id}
                 spot={spot}
-                isSelected={selectedSheetItem?.kind === "spot" && selectedSheetItem.data.id === spot.id}
                 isFireSelected={selectedInventorySpot?.id === spot.id}
-                onPress={handleSpotCardPress}
+                onPress={setSelectedBagSpot}
                 onLongSelect={handleLongSelectSpot}
                 cardWidth={cardWidth}
               />
@@ -803,8 +762,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
                 <GridFullItem
                   key={item.id}
                   item={item}
-                  isSelected={selectedSheetItem?.kind === "item" && selectedSheetItem.data.id === item.id}
-                  onPress={handleItemCardPress}
+                  onUse={handleUseItem}
                   readOnly={isInspecting}
                   cardWidth={cardWidth}
                 />
@@ -818,67 +776,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
             </View>
           )}
 
-          {/* Detail panel */}
-          {selectedSheetItem && (
-            <View style={[styles.detailPanel, { borderColor: selectedColor + "44" }]}>
-              <View style={[styles.detailIcon, { backgroundColor: selectedColor + "18", borderColor: selectedColor + "44" }]}>
-                <Feather
-                  name={
-                    selectedSheetItem.kind === "spot"
-                      ? (SPOT_ICONS[selectedSheetItem.data.type] as any ?? "package")
-                      : (ITEM_ICONS[selectedSheetItem.data.type] as any ?? "package")
-                  }
-                  size={22}
-                  color={selectedColor}
-                />
-              </View>
-
-              <View style={{ flex: 1 }}>
-                <View style={styles.detailNameRow}>
-                  <Text style={styles.detailName} numberOfLines={1}>
-                    {selectedSheetItem.kind === "spot"
-                      ? selectedSheetItem.data.title
-                      : selectedSheetItem.data.name}
-                  </Text>
-                  {selectedSheetItem.kind === "spot" && selectedSheetItem.data.badges?.includes("manipulated") && (
-                    <View style={styles.manipulatedTag}>
-                      <Ionicons name="flask-outline" size={9} color="#7eefc4" />
-                      <Text style={styles.manipulatedTagText}>MANIPULADO</Text>
-                    </View>
-                  )}
-                </View>
-
-                <View style={styles.detailMeta}>
-                  <Text style={styles.detailType}>
-                    {selectedSheetItem.kind === "spot"
-                      ? (SPOT_LABELS[selectedSheetItem.data.type] ?? selectedSheetItem.data.type.toUpperCase())
-                      : (ITEM_TYPE_LABELS[selectedSheetItem.data.type] ?? selectedSheetItem.data.type.toUpperCase())}
-                  </Text>
-                  {selectedRarity && (
-                    <Text style={[styles.detailRarity, { color: selectedRarity.color }]}>
-                      {selectedRarity.label}
-                    </Text>
-                  )}
-                  {selectedSheetItem.kind === "item" && (
-                    <Text style={styles.detailQty}>×{selectedSheetItem.data.quantity} na bolsa</Text>
-                  )}
-                </View>
-              </View>
-
-              {selectedSheetItem.kind === "spot" && (
-                <TouchableOpacity
-                  style={[styles.detailOpenBtn, { borderColor: selectedColor + "55", backgroundColor: selectedColor + "12" }]}
-                  onPress={() => {
-                    if (selectedSheetItem.kind === "spot") {
-                      setSelectedBagSpot(selectedSheetItem.data);
-                    }
-                  }}
-                >
-                  <Feather name="arrow-right" size={14} color={selectedColor} />
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
         </BottomSheetScrollView>
       </BottomSheetModal>
 
@@ -1245,88 +1142,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.dark.textMuted,
     fontFamily: "Inter_400Regular",
-  },
-  detailPanel: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    backgroundColor: COLORS.dark.surface + "cc",
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 14,
-    marginTop: 4,
-  },
-  detailIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  detailNameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
-    flexWrap: "wrap",
-  },
-  detailName: {
-    color: COLORS.dark.text,
-    fontSize: 14,
-    fontFamily: "Inter_700Bold",
-    flexShrink: 1,
-  },
-  manipulatedTag: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    backgroundColor: "#0d2b21",
-    borderRadius: 4,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderWidth: 1,
-    borderColor: "#2aab6c44",
-  },
-  manipulatedTagText: {
-    color: "#7eefc4",
-    fontSize: 9,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 0.5,
-  },
-  detailMeta: {
-    flexDirection: "row",
-    gap: 10,
-    alignItems: "center",
-    flexWrap: "wrap",
-  },
-  detailType: {
-    color: COLORS.dark.textMuted,
-    fontSize: 10,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  detailRarity: {
-    fontSize: 10,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
-  detailQty: {
-    color: COLORS.dark.textSecondary,
-    fontSize: 10,
-    fontFamily: "Inter_400Regular",
-  },
-  detailOpenBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
   },
   fireBtn: {
     alignItems: "center",
