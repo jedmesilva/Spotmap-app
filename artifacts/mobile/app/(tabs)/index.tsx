@@ -33,12 +33,13 @@ export default function MapScreen() {
     nearbyUsers,
     selectedSpot,
     selectedUser,
+    selectedInventorySpot,
     selectSpot,
     selectUser,
     userLocation,
     setUserLocation,
     userProfile,
-    mineSpot,
+    fireInventorySpot,
     activeCollection,
   } = useGame();
 
@@ -162,12 +163,11 @@ export default function MapScreen() {
 
       <BagSidebar
         insets={{ top: topInset, bottom: bottomInset }}
-        onMine={() => {
-          if (!mineableSpotId) return;
-          mineSpot(mineableSpotId);
-          mapRef.current?.mineHit(mineableSpotId, miningClicks + 1);
+        onFire={() => {
+          fireInventorySpot(mineableSpotId);
+          if (mineableSpotId) mapRef.current?.mineHit(mineableSpotId, miningClicks + 1);
         }}
-        canMine={canMine}
+        canFire={!!selectedInventorySpot && (canMine || !!selectedUser)}
         miningProgress={miningProgress}
         miningClicks={miningClicks}
         extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}

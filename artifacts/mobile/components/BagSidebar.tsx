@@ -1,5 +1,4 @@
 import { Feather } from "@expo/vector-icons";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -80,22 +79,63 @@ const SPOT_LABELS: Record<string, string> = {
   rare: "RARO",
 };
 
-function CollectedSpotItem({ spot, onPress }: { spot: Spot; onPress: (spot: Spot) => void }) {
+function CollectedSpotItem({
+  spot,
+  isSelected,
+  onPress,
+  onLongSelect,
+}: {
+  spot: Spot;
+  isSelected: boolean;
+  onPress: (spot: Spot) => void;
+  onLongSelect: (spot: Spot) => void;
+}) {
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
   const icon = SPOT_ICONS[spot.type] ?? "package";
   const label = SPOT_LABELS[spot.type] ?? spot.type;
 
+  const holdProgress = useRef(new RNAnimated.Value(0)).current;
+  const holdAnim = useRef<RNAnimated.CompositeAnimation | null>(null);
+
+  const handlePressIn = () => {
+    holdProgress.setValue(0);
+    holdAnim.current = RNAnimated.timing(holdProgress, {
+      toValue: 1,
+      duration: 1200,
+      useNativeDriver: false,
+    });
+    holdAnim.current.start(({ finished }) => {
+      if (finished) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        RNAnimated.timing(holdProgress, { toValue: 0, duration: 200, useNativeDriver: false }).start();
+        onLongSelect(spot);
+      }
+    });
+  };
+
+  const handlePressOut = () => {
+    holdAnim.current?.stop();
+    RNAnimated.timing(holdProgress, { toValue: 0, duration: 150, useNativeDriver: false }).start();
+  };
+
   return (
     <Pressable
       onPress={() => onPress(spot)}
-      style={({ pressed }) => [styles.bagItem, { opacity: pressed ? 0.8 : 1 }]}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      style={({ pressed }) => [
+        styles.bagItem,
+        isSelected && { backgroundColor: color + "0D", borderRadius: 10 },
+        { opacity: pressed ? 0.8 : 1 },
+      ]}
     >
-      <View style={[styles.bagItemIcon, { backgroundColor: color + "20", borderColor: color + "44" }]}>
+      <View style={[styles.bagItemIcon, { backgroundColor: color + "20", borderColor: isSelected ? color : color + "44", position: "relative" }]}>
         <Feather name={icon as any} size={20} color={color} />
+        {isSelected && <View style={[styles.selectedDot, { backgroundColor: color }]} />}
       </View>
       <View style={styles.bagItemInfo}>
         <Text style={styles.bagItemName}>{spot.title}</Text>
-        <Text style={[styles.bagItemType, { color }]}>{label}</Text>
+        <Text style={[styles.bagItemType, { color }]}>{label}{isSelected ? " · SELECIONADO" : ""}</Text>
       </View>
       <View style={[styles.spotValue, { backgroundColor: color + "15", borderColor: color + "44" }]}>
         <Text style={[styles.spotValueText, { color }]}>{spot.value}</Text>
@@ -104,10 +144,22 @@ function CollectedSpotItem({ spot, onPress }: { spot: Spot; onPress: (spot: Spot
   );
 }
 
-function QuickSpotItem({ spot, onPress }: { spot: Spot; onPress: (spot: Spot) => void }) {
+function QuickSpotItem({
+  spot,
+  isSelected,
+  onPress,
+  onLongSelect,
+}: {
+  spot: Spot;
+  isSelected: boolean;
+  onPress: (spot: Spot) => void;
+  onLongSelect: (spot: Spot) => void;
+}) {
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
   const icon = SPOT_ICONS[spot.type] ?? "package";
   const scale = useRef(new RNAnimated.Value(1)).current;
+  const holdProgress = useRef(new RNAnimated.Value(0)).current;
+  const holdAnim = useRef<RNAnimated.CompositeAnimation | null>(null);
 
   const handlePress = () => {
     RNAnimated.sequence([
@@ -118,19 +170,49 @@ function QuickSpotItem({ spot, onPress }: { spot: Spot; onPress: (spot: Spot) =>
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
+  const handlePressIn = () => {
+    holdProgress.setValue(0);
+    holdAnim.current = RNAnimated.timing(holdProgress, {
+      toValue: 1,
+      duration: 1200,
+      useNativeDriver: false,
+    });
+    holdAnim.current.start(({ finished }) => {
+      if (finished) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        RNAnimated.timing(holdProgress, { toValue: 0, duration: 200, useNativeDriver: false }).start();
+        onLongSelect(spot);
+      }
+    });
+  };
+
+  const handlePressOut = () => {
+    holdAnim.current?.stop();
+    RNAnimated.timing(holdProgress, { toValue: 0, duration: 150, useNativeDriver: false }).start();
+  };
+
+  const borderColor = holdProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [isSelected ? color : color + "55", color],
+  });
+
   return (
-    <Pressable onPress={handlePress}>
+    <Pressable onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
       <RNAnimated.View
         style={[
           styles.quickItem,
           {
-            backgroundColor: color + "18",
-            borderColor: color + "55",
+            backgroundColor: isSelected ? color + "30" : color + "18",
+            borderColor: isSelected ? color : borderColor,
+            borderWidth: isSelected ? 2 : 1.5,
             transform: [{ scale }],
           },
         ]}
       >
         <Feather name={icon as any} size={16} color={color} />
+        {isSelected && (
+          <View style={[styles.selectedDot, { backgroundColor: color }]} />
+        )}
       </RNAnimated.View>
     </Pressable>
   );
@@ -216,15 +298,15 @@ function FullItem({
 
 interface BagSidebarProps {
   insets: { top: number; bottom: number };
-  onMine?: () => void;
-  canMine?: boolean;
+  onFire?: () => void;
+  canFire?: boolean;
   miningProgress?: number;
   miningClicks?: number;
   extraBottomOffset?: number;
 }
 
-export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0, miningClicks = 0, extraBottomOffset = 0 }: BagSidebarProps) {
-  const { userProfile, useSubstance, selectedUser, collectedSpots, abandonSpot, useSpot } = useGame();
+export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0, miningClicks = 0, extraBottomOffset = 0 }: BagSidebarProps) {
+  const { userProfile, useSubstance, selectedUser, collectedSpots, abandonSpot, useSpot, selectedInventorySpot, selectInventorySpot } = useGame();
   const sheetInsets = useSafeAreaInsets();
   const [expanded, setExpanded] = useState(false);
   const [selectedBagSpot, setSelectedBagSpot] = useState<Spot | null>(null);
@@ -237,8 +319,8 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
     []
   );
 
-  const pickaxeScale = useRef(new RNAnimated.Value(1)).current;
-  const pickaxeY = useRef(new RNAnimated.Value(0)).current;
+  const fireScale = useRef(new RNAnimated.Value(1)).current;
+  const fireY = useRef(new RNAnimated.Value(0)).current;
   const floatY = useRef(new RNAnimated.Value(0)).current;
   const floatOpacity = useRef(new RNAnimated.Value(0)).current;
 
@@ -255,10 +337,13 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
   const isInspecting = selectedUser !== null;
   const displayBag = isInspecting ? (selectedUser.bag ?? []) : userProfile.bag;
   const displayCoins = isInspecting ? (selectedUser.coins ?? 0) : userProfile.coins;
-  const quickSpots = !isInspecting ? collectedSpots.slice(0, 5) : [];
-  const quickItems = displayBag
-    .filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))
-    .slice(0, Math.max(0, 5 - quickSpots.length));
+  // When inspecting, show player's OWN spots (so they can select to attack)
+  const quickSpots = collectedSpots.slice(0, 5);
+  const quickItems = !isInspecting
+    ? displayBag
+        .filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))
+        .slice(0, Math.max(0, 5 - quickSpots.length))
+    : [];
   const hasQuickItems = quickSpots.length > 0 || quickItems.length > 0;
 
   const handleUseItem = (item: InventoryItem) => {
@@ -274,19 +359,27 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
     setExpanded((v) => !v);
   };
 
-  const handleMine = () => {
-    if (!canMine) return;
+  const handleLongSelectSpot = (spot: Spot) => {
+    if (selectedInventorySpot?.id === spot.id) {
+      selectInventorySpot(null);
+    } else {
+      selectInventorySpot(spot);
+    }
+  };
+
+  const handleFire = () => {
+    if (!canFire && !selectedInventorySpot) return;
 
     RNAnimated.parallel([
       RNAnimated.sequence([
-        RNAnimated.timing(pickaxeScale, { toValue: 0.75, duration: 80, useNativeDriver: true }),
-        RNAnimated.timing(pickaxeScale, { toValue: 1.1, duration: 80, useNativeDriver: true }),
-        RNAnimated.timing(pickaxeScale, { toValue: 1, duration: 60, useNativeDriver: true }),
+        RNAnimated.timing(fireScale, { toValue: 0.75, duration: 80, useNativeDriver: true }),
+        RNAnimated.timing(fireScale, { toValue: 1.1, duration: 80, useNativeDriver: true }),
+        RNAnimated.timing(fireScale, { toValue: 1, duration: 60, useNativeDriver: true }),
       ]),
       RNAnimated.sequence([
-        RNAnimated.timing(pickaxeY, { toValue: -8, duration: 80, useNativeDriver: true }),
-        RNAnimated.timing(pickaxeY, { toValue: 2, duration: 80, useNativeDriver: true }),
-        RNAnimated.timing(pickaxeY, { toValue: 0, duration: 60, useNativeDriver: true }),
+        RNAnimated.timing(fireY, { toValue: -8, duration: 80, useNativeDriver: true }),
+        RNAnimated.timing(fireY, { toValue: 2, duration: 80, useNativeDriver: true }),
+        RNAnimated.timing(fireY, { toValue: 0, duration: 60, useNativeDriver: true }),
       ]),
     ]).start();
 
@@ -301,8 +394,15 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
     ]).start();
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    onMine?.();
+    onFire?.();
   };
+
+  const invSpotColor = selectedInventorySpot
+    ? (SPOT_COLORS[selectedInventorySpot.type] ?? COLORS.dark.accent)
+    : COLORS.dark.textMuted;
+
+  const isFireActive = !!selectedInventorySpot && canFire;
+  const isFireReady = !!selectedInventorySpot;
 
   return (
     <>
@@ -324,13 +424,25 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
             <>
               <View style={styles.itemsDivider} />
               {quickSpots.map((spot) => (
-                <QuickSpotItem key={spot.id} spot={spot} onPress={setSelectedBagSpot} />
+                <QuickSpotItem
+                  key={spot.id}
+                  spot={spot}
+                  isSelected={selectedInventorySpot?.id === spot.id}
+                  onPress={setSelectedBagSpot}
+                  onLongSelect={handleLongSelectSpot}
+                />
               ))}
               {quickItems.map((item) => (
                 <QuickItem key={item.id} item={item} onUse={handleUseItem} readOnly={isInspecting} />
               ))}
               <View style={styles.itemsDivider} />
             </>
+          )}
+
+          {selectedInventorySpot && (
+            <View style={[styles.selectedSpotIndicator, { borderColor: invSpotColor + "55", backgroundColor: invSpotColor + "12" }]}>
+              <Feather name={SPOT_ICONS[selectedInventorySpot.type] as any} size={14} color={invSpotColor} />
+            </View>
           )}
 
           <Pressable
@@ -350,30 +462,36 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
         </View>
 
         <TouchableOpacity
-          onPress={handleMine}
-          activeOpacity={canMine ? 0.8 : 1}
-          style={[styles.pickaxeBtn, canMine && styles.pickaxeBtnActive]}
+          onPress={handleFire}
+          activeOpacity={isFireReady ? 0.8 : 1}
+          style={[
+            styles.fireBtn,
+            isFireActive && { borderColor: invSpotColor + "88", backgroundColor: invSpotColor + "18" },
+            isFireReady && !isFireActive && { borderColor: invSpotColor + "44", backgroundColor: invSpotColor + "0D" },
+          ]}
         >
-          <RNAnimated.View style={{ transform: [{ scale: pickaxeScale }, { translateY: pickaxeY }] }}>
-            <MaterialCommunityIcons
-              name="pickaxe"
-              size={24}
-              color={canMine ? "#F5C518" : COLORS.dark.textMuted}
+          <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
+            <Feather
+              name="zap"
+              size={22}
+              color={isFireReady ? invSpotColor : COLORS.dark.textMuted}
             />
           </RNAnimated.View>
-          {canMine && miningClicks > 0 && (
-            <View style={styles.mineProgressBadge}>
+          {isFireReady && miningClicks > 0 && (
+            <View style={[styles.mineProgressBadge, { backgroundColor: invSpotColor }]}>
               <Text style={styles.mineProgressText}>{miningClicks}x</Text>
             </View>
           )}
-          <Text style={[styles.pickaxeLabel, canMine && { color: "#F5C518" }]}>MINE</Text>
+          <Text style={[styles.fireLabel, isFireReady && { color: invSpotColor }]}>
+            {isInspecting ? "ATK" : "FIRE"}
+          </Text>
         </TouchableOpacity>
 
         <RNAnimated.View
           pointerEvents="none"
           style={[styles.floatIcon, { transform: [{ translateY: floatY }], opacity: floatOpacity }]}
         >
-          <MaterialCommunityIcons name="pickaxe" size={22} color="#F5C518" />
+          <Feather name="zap" size={22} color={invSpotColor} />
         </RNAnimated.View>
       </RNAnimated.View>
 
@@ -422,8 +540,14 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
           </View>
 
           <Text style={[styles.sectionLabel, { marginBottom: 10 }]}>MEUS SPOTS</Text>
-          {!isInspecting && collectedSpots.map((spot) => (
-            <CollectedSpotItem key={spot.id} spot={spot} onPress={setSelectedBagSpot} />
+          {collectedSpots.map((spot) => (
+            <CollectedSpotItem
+              key={spot.id}
+              spot={spot}
+              isSelected={selectedInventorySpot?.id === spot.id}
+              onPress={setSelectedBagSpot}
+              onLongSelect={handleLongSelectSpot}
+            />
           ))}
           {displayBag
             .filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))
@@ -749,7 +873,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     flexShrink: 1,
   },
-  pickaxeBtn: {
+  fireBtn: {
     alignItems: "center",
     gap: 4,
     width: 60,
@@ -766,17 +890,29 @@ const styles = StyleSheet.create({
     elevation: 8,
     position: "relative",
   },
-  pickaxeBtnActive: {
-    borderColor: "#F5C518" + "88",
-    backgroundColor: "#F5C518" + "14",
-    shadowColor: "#F5C518",
-    shadowOpacity: 0.3,
-  },
-  pickaxeLabel: {
+  fireLabel: {
     fontSize: 8,
     fontFamily: "Inter_700Bold",
     color: COLORS.dark.textMuted,
     letterSpacing: 1.5,
+  },
+  selectedSpotIndicator: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  selectedDot: {
+    position: "absolute",
+    bottom: -3,
+    right: -3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: COLORS.dark.bg,
   },
   floatIcon: {
     position: "absolute",

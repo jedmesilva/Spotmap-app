@@ -106,6 +106,7 @@ interface GameState {
   activeCollection: ActiveCollection | null;
   selectedSpot: Spot | null;
   selectedUser: NearbyUser | null;
+  selectedInventorySpot: Spot | null;
   attackEvents: AttackEvent[];
   userLocation: { latitude: number; longitude: number; accuracy?: number } | null;
   spotCollections: Map<string, CollectionProgress[]>;
@@ -119,6 +120,8 @@ interface GameActions {
   mineSpot: (spotId: string) => void;
   selectSpot: (spot: Spot | null) => void;
   selectUser: (user: NearbyUser | null) => void;
+  selectInventorySpot: (spot: Spot | null) => void;
+  fireInventorySpot: (mineableSpotId?: string | null) => void;
   attackUser: (targetUserId: string, artifactType: ArtifactType) => AttackEvent;
   useSubstance: (substance: SubstanceType) => void;
   addToInventory: (item: InventoryItem) => void;
@@ -164,6 +167,13 @@ const ARTIFACT_IMMUNITY: Record<ArtifactType, SubstanceType> = {
   lightning: "volt_ward",
   poison: "antidote",
   shield: "barrier",
+};
+
+export const SPOT_DAMAGE: Record<SpotType, number> = {
+  coupon: 10,
+  money: 20,
+  product: 30,
+  rare: 50,
 };
 
 const MOCK_SPOTS: Spot[] = [
@@ -346,6 +356,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [activeCollection, setActiveCollection] = useState<ActiveCollection | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
+  const [selectedInventorySpot, setSelectedInventorySpot] = useState<Spot | null>(null);
   const [attackEvents, setAttackEvents] = useState<AttackEvent[]>([]);
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number; accuracy?: number } | null>(null);
 
@@ -353,6 +364,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const userLocationRef = useRef<{ latitude: number; longitude: number; accuracy?: number } | null>(null);
   const sessionRef = useRef(session);
   const userProfileRef = useRef<UserProfile>(DEFAULT_PROFILE);
+  const selectedUserRef = useRef<NearbyUser | null>(null);
+  const selectedInventorySpotRef = useRef<Spot | null>(null);
   const lastLocationHistoryRef = useRef<{
     id: string;
     latitude: number;
@@ -364,6 +377,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { userLocationRef.current = userLocation; }, [userLocation]);
   useEffect(() => { sessionRef.current = session; }, [session]);
   useEffect(() => { userProfileRef.current = userProfile; }, [userProfile]);
+  useEffect(() => { selectedUserRef.current = selectedUser; }, [selectedUser]);
+  useEffect(() => { selectedInventorySpotRef.current = selectedInventorySpot; }, [selectedInventorySpot]);
 
   useEffect(() => {
     if (selectedUser) {
@@ -919,6 +934,61 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (user) setSelectedSpot(null);
   }, []);
 
+  const selectInventorySpot = useCallback((spot: Spot | null) => {
+    setSelectedInventorySpot(spot);
+  }, []);
+
+  const fireInventorySpot = useCallback((mineableSpotId?: string | null) => {
+    const invSpot = selectedInventorySpotRef.current;
+    if (!invSpot) return;
+
+    const userId = sessionRef.current?.user?.id ?? null;
+
+    supabase.from("spots").update({ owner_id: null }).eq("id", invSpot.id);
+    setSelectedInventorySpot(null);
+
+    const targetUser = selectedUserRef.current;
+    if (targetUser) {
+      const damage = SPOT_DAMAGE[invSpot.type];
+      setNearbyUsers((prev) =>
+        prev.map((u) =>
+          u.id === targetUser.id
+            ? {
+                ...u,
+                health: Math.max(0, u.health - damage),
+                strength: Math.max(0, u.strength - STRENGTH_ATTACK_DRAIN),
+                collectProgress: Math.max(0, u.collectProgress - 20),
+              }
+            : u
+        )
+      );
+
+      const event: AttackEvent = {
+        targetUserId: targetUser.id,
+        artifactType: "fire",
+        damage,
+        blocked: false,
+      };
+      setAttackEvents((prev) => [...prev.slice(-10), event]);
+
+      if (userId) {
+        ensureLocationRecorded().then((locationId) => {
+          if (locationId) {
+            supabase.from("location_events").insert({
+              user_id: userId,
+              location_id: locationId,
+              event_type: "attack",
+              event_ref_id: targetUser.id,
+              metadata: { spot_type: invSpot.type, damage },
+            });
+          }
+        });
+      }
+    } else if (mineableSpotId) {
+      mineSpot(mineableSpotId);
+    }
+  }, [mineSpot, ensureLocationRecorded]);
+
   const attackUser = useCallback(
     (targetUserId: string, artifactType: ArtifactType): AttackEvent => {
       const baseDamage = ARTIFACT_DAMAGE[artifactType];
@@ -1098,6 +1168,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     activeCollection,
     selectedSpot,
     selectedUser,
+    selectedInventorySpot,
     attackEvents,
     userLocation,
     spotCollections,
@@ -1108,6 +1179,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     mineSpot,
     selectSpot,
     selectUser,
+    selectInventorySpot,
+    fireInventorySpot,
     attackUser,
     useSubstance,
     addToInventory,
