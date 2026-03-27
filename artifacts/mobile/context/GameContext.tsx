@@ -100,6 +100,7 @@ interface ActiveCollection {
 interface GameState {
   userProfile: UserProfile;
   spots: Spot[];
+  collectedSpots: Spot[];
   nearbyUsers: NearbyUser[];
   activeCollection: ActiveCollection | null;
   selectedSpot: Spot | null;
@@ -337,6 +338,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         .map((s) => ({ ...s, isCollecting: collectingIds[s.id] ?? false })),
     [supabaseSpots, collectingIds, removedIds]
   );
+  const [collectedSpots, setCollectedSpots] = useState<Spot[]>([]);
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
   const [activeCollection, setActiveCollection] = useState<ActiveCollection | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
@@ -1040,6 +1042,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       delete next[spotId];
       return next;
     });
+    setCollectedSpots((prev) => {
+      if (prev.some((s) => s.id === spotId)) return prev;
+      return [...prev, { ...spot, isCollecting: false }];
+    });
     setActiveCollection(null);
     setSelectedSpot(null);
 
@@ -1074,6 +1080,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const value: GameState & GameActions = {
     userProfile,
     spots,
+    collectedSpots,
     nearbyUsers,
     activeCollection,
     selectedSpot,

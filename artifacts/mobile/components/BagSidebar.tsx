@@ -14,7 +14,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
-import { InventoryItem, SubstanceType, useGame } from "@/context/GameContext";
+import { InventoryItem, Spot, SubstanceType, useGame } from "@/context/GameContext";
+import { SpotPanel } from "@/components/SpotPanel";
 
 const ITEM_COLORS: Record<string, string> = {
   fire: COLORS.dark.danger,
@@ -55,6 +56,53 @@ const SUBSTANCE_TYPES: SubstanceType[] = [
   "antidote",
   "barrier",
 ];
+
+const SPOT_TYPES = ["coupon", "money", "product", "rare"];
+
+const SPOT_COLORS: Record<string, string> = {
+  coupon: COLORS.dark.spotCoupon,
+  money: COLORS.dark.spotMoney,
+  product: COLORS.dark.spotProduct,
+  rare: COLORS.dark.spotRare,
+};
+
+const SPOT_ICONS: Record<string, string> = {
+  coupon: "tag",
+  money: "dollar-sign",
+  product: "box",
+  rare: "star",
+};
+
+const SPOT_LABELS: Record<string, string> = {
+  coupon: "CUPOM",
+  money: "DINHEIRO",
+  product: "PRODUTO",
+  rare: "RARO",
+};
+
+function CollectedSpotItem({ spot, onPress }: { spot: Spot; onPress: (spot: Spot) => void }) {
+  const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
+  const icon = SPOT_ICONS[spot.type] ?? "package";
+  const label = SPOT_LABELS[spot.type] ?? spot.type;
+
+  return (
+    <Pressable
+      onPress={() => onPress(spot)}
+      style={({ pressed }) => [styles.bagItem, { opacity: pressed ? 0.8 : 1 }]}
+    >
+      <View style={[styles.bagItemIcon, { backgroundColor: color + "20", borderColor: color + "44" }]}>
+        <Feather name={icon as any} size={20} color={color} />
+      </View>
+      <View style={styles.bagItemInfo}>
+        <Text style={styles.bagItemName}>{spot.title}</Text>
+        <Text style={[styles.bagItemType, { color }]}>{label}</Text>
+      </View>
+      <View style={[styles.spotValue, { backgroundColor: color + "15", borderColor: color + "44" }]}>
+        <Text style={[styles.spotValueText, { color }]}>{spot.value}</Text>
+      </View>
+    </Pressable>
+  );
+}
 
 function QuickItem({
   item,
@@ -144,9 +192,10 @@ interface BagSidebarProps {
 }
 
 export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0, miningClicks = 0, extraBottomOffset = 0 }: BagSidebarProps) {
-  const { userProfile, useSubstance, selectedUser } = useGame();
+  const { userProfile, useSubstance, selectedUser, collectedSpots } = useGame();
   const sheetInsets = useSafeAreaInsets();
   const [expanded, setExpanded] = useState(false);
+  const [selectedBagSpot, setSelectedBagSpot] = useState<Spot | null>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
   const pickaxeScale = useRef(new RNAnimated.Value(1)).current;
   const pickaxeY = useRef(new RNAnimated.Value(0)).current;
@@ -340,13 +389,24 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
             </View>
           )}
 
+          {!isInspecting && collectedSpots.length > 0 && (
+            <>
+              <Text style={[styles.sectionLabel, { marginBottom: 10 }]}>SPOTS COLETADOS</Text>
+              {collectedSpots.map((spot) => (
+                <CollectedSpotItem key={spot.id} spot={spot} onPress={setSelectedBagSpot} />
+              ))}
+              <View style={{ height: 20 }} />
+            </>
+          )}
+
           <Text style={[styles.sectionLabel, { marginBottom: 10 }]}>INVENTÁRIO</Text>
           {displayBag
-            .filter((i) => i.quantity > 0)
+            .filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))
             .map((item) => (
               <FullItem key={item.id} item={item} onUse={handleUseItem} readOnly={isInspecting} />
             ))}
-          {displayBag.filter((i) => i.quantity > 0).length === 0 && (
+          {displayBag.filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type)).length === 0 &&
+            (isInspecting || collectedSpots.length === 0) && (
             <View style={styles.emptyBag}>
               <Feather name="inbox" size={32} color={COLORS.dark.textMuted} />
               <Text style={styles.emptyText}>Bag vazia</Text>
@@ -354,6 +414,15 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
           )}
         </BottomSheetScrollView>
       </BottomSheetModal>
+
+      {selectedBagSpot && (
+        <SpotPanel
+          spot={selectedBagSpot}
+          onClose={() => setSelectedBagSpot(null)}
+          isInRange={false}
+          isBagView={true}
+        />
+      )}
     </>
   );
 }
@@ -634,6 +703,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: COLORS.dark.textMuted,
     fontFamily: "Inter_400Regular",
+  },
+  spotValue: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    maxWidth: 120,
+  },
+  spotValueText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    flexShrink: 1,
   },
   pickaxeBtn: {
     alignItems: "center",
