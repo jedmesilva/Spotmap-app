@@ -157,7 +157,6 @@ function GridSpotItem({
         styles.gridCard,
         {
           backgroundColor: isSelected ? color + "22" : color + "10",
-          borderColor: "transparent",
           opacity: pressed ? 0.8 : 1,
         },
       ]}
@@ -915,7 +914,6 @@ const styles = StyleSheet.create({
     width: "30%",
     flexGrow: 1,
     borderRadius: 14,
-    borderWidth: 1.5,
     padding: 10,
     alignItems: "center",
     gap: 6,
