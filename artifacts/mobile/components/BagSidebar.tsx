@@ -504,8 +504,18 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
               <Text style={styles.mineProgressText}>{miningClicks}x</Text>
             </View>
           )}
-          <Text style={[styles.fireLabel, isFireReady && { color: invSpotColor }]}>
-            {isInspecting ? "ATK" : "FIRE"}
+          <Text
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            style={[
+              styles.fireLabel,
+              isFireReady && { color: invSpotColor },
+              selectedInventorySpot && { letterSpacing: 0 },
+            ]}
+          >
+            {selectedInventorySpot
+              ? SPOT_LABELS[selectedInventorySpot.type] ?? selectedInventorySpot.type.toUpperCase()
+              : isInspecting ? "ATK" : "FIRE"}
           </Text>
         </TouchableOpacity>
 
