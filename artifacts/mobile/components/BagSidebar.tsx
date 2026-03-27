@@ -389,7 +389,7 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
             </View>
           )}
 
-          <Text style={[styles.sectionLabel, { marginBottom: 10 }]}>INVENTÁRIO</Text>
+          <Text style={[styles.sectionLabel, { marginBottom: 10 }]}>MEUS SPOTS</Text>
           {!isInspecting && collectedSpots.map((spot) => (
             <CollectedSpotItem key={spot.id} spot={spot} onPress={setSelectedBagSpot} />
           ))}
