@@ -11,6 +11,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Rect } from "react-native-svg";
+
+const AnimatedRect = RNAnimated.createAnimatedComponent(Rect);
 
 import COLORS from "@/constants/colors";
 import { InventoryItem, Spot, SubstanceType, useGame } from "@/context/GameContext";
@@ -79,6 +82,8 @@ const SPOT_LABELS: Record<string, string> = {
   rare: "RARO",
 };
 
+const CARD_RADIUS = 14;
+
 function GridSpotItem({
   spot,
   isSelected,
@@ -94,9 +99,19 @@ function GridSpotItem({
   const icon = SPOT_ICONS[spot.type] ?? "package";
   const label = SPOT_LABELS[spot.type] ?? spot.type;
 
+  const [cardSize, setCardSize] = useState({ width: 0, height: 0 });
   const holdProgress = useRef(new RNAnimated.Value(0)).current;
   const holdAnim = useRef<RNAnimated.CompositeAnimation | null>(null);
   const longPressTriggered = useRef(false);
+
+  const perimeter = cardSize.width > 0
+    ? 2 * (cardSize.width + cardSize.height) - 8 * CARD_RADIUS + 2 * Math.PI * CARD_RADIUS
+    : 0;
+
+  const strokeDashoffset = holdProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [perimeter, 0],
+  });
 
   const handlePressIn = () => {
     longPressTriggered.current = false;
@@ -134,6 +149,10 @@ function GridSpotItem({
       onPress={handlePress}
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
+      onLayout={(e) => {
+        const { width, height } = e.nativeEvent.layout;
+        setCardSize({ width, height });
+      }}
       style={({ pressed }) => [
         styles.gridCard,
         {
@@ -144,6 +163,29 @@ function GridSpotItem({
         },
       ]}
     >
+      {cardSize.width > 0 && (
+        <Svg
+          style={StyleSheet.absoluteFill}
+          width={cardSize.width}
+          height={cardSize.height}
+          pointerEvents="none"
+        >
+          <AnimatedRect
+            x={1}
+            y={1}
+            width={cardSize.width - 2}
+            height={cardSize.height - 2}
+            rx={CARD_RADIUS - 1}
+            ry={CARD_RADIUS - 1}
+            fill="none"
+            stroke={color}
+            strokeWidth={2.5}
+            strokeDasharray={perimeter}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+          />
+        </Svg>
+      )}
       <View style={[styles.gridCardIcon, { backgroundColor: color + "25", borderColor: isSelected ? color : color + "44" }]}>
         <Feather name={icon as any} size={22} color={color} />
       </View>
