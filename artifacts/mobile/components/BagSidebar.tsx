@@ -270,21 +270,24 @@ function QuickSpotItem({
 
   return (
     <Pressable onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
-      <RNAnimated.View
-        style={[
-          styles.quickItem,
-          {
-            backgroundColor: isSelected ? color + "30" : color + "18",
-            borderColor: isSelected ? color : borderColor,
-            borderWidth: isSelected ? 2 : 1.5,
-            transform: [{ scale }],
-          },
-        ]}
-      >
-        <Feather name={icon as any} size={16} color={color} />
-        {isSelected && (
-          <View style={[styles.selectedDot, { backgroundColor: color }]} />
-        )}
+      {/* outer view: only native-driver scale */}
+      <RNAnimated.View style={{ transform: [{ scale }] }}>
+        {/* inner view: JS-driver borderColor — must NOT mix with native driver */}
+        <RNAnimated.View
+          style={[
+            styles.quickItem,
+            {
+              backgroundColor: isSelected ? color + "30" : color + "18",
+              borderColor: isSelected ? color : borderColor,
+              borderWidth: isSelected ? 2 : 1.5,
+            },
+          ]}
+        >
+          <Feather name={icon as any} size={16} color={color} />
+          {isSelected && (
+            <View style={[styles.selectedDot, { backgroundColor: color }]} />
+          )}
+        </RNAnimated.View>
       </RNAnimated.View>
     </Pressable>
   );
