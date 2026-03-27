@@ -90,7 +90,7 @@ export function AttackPanel({ user, onClose }: AttackPanelProps) {
     }
   };
 
-  const healthPercent = targetHealth / user.maxHealth;
+  const healthPercent = user.maxHealth > 0 ? targetHealth / user.maxHealth : 0;
   const healthColor =
     healthPercent > 0.6
       ? COLORS.dark.spotMoney
