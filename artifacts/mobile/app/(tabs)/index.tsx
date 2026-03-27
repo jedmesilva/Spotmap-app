@@ -57,6 +57,7 @@ export default function MapScreen() {
           setUserLocation({
             latitude: loc.coords.latitude,
             longitude: loc.coords.longitude,
+            accuracy: loc.coords.accuracy ?? undefined,
           });
         }
       );

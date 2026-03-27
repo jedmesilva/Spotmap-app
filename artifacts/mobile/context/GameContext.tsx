@@ -105,12 +105,12 @@ interface GameState {
   selectedSpot: Spot | null;
   selectedUser: NearbyUser | null;
   attackEvents: AttackEvent[];
-  userLocation: { latitude: number; longitude: number } | null;
+  userLocation: { latitude: number; longitude: number; accuracy?: number } | null;
   spotCollections: Map<string, CollectionProgress[]>;
 }
 
 interface GameActions {
-  setUserLocation: (loc: { latitude: number; longitude: number }) => void;
+  setUserLocation: (loc: { latitude: number; longitude: number; accuracy?: number }) => void;
   startCollecting: (spotId: string) => void;
   stopCollecting: () => void;
   updateCollectProgress: (progress: number) => void;
@@ -306,8 +306,8 @@ const DEFAULT_PROFILE: UserProfile = {
   ],
 };
 
-const LOCATION_HISTORY_MIN_INTERVAL_MS = 30_000;
-const LOCATION_HISTORY_MIN_DISTANCE_M  = 50;
+const LOCATION_HISTORY_MIN_INTERVAL_MS = 10_000;
+const LOCATION_HISTORY_MIN_DISTANCE_M  = 8;
 
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6_371_000;
@@ -342,10 +342,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
   const [attackEvents, setAttackEvents] = useState<AttackEvent[]>([]);
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number; accuracy?: number } | null>(null);
 
   const activeCollectionRef = useRef<ActiveCollection | null>(null);
-  const userLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
+  const userLocationRef = useRef<{ latitude: number; longitude: number; accuracy?: number } | null>(null);
   const sessionRef = useRef(session);
   const userProfileRef = useRef<UserProfile>(DEFAULT_PROFILE);
   const lastLocationHistoryRef = useRef<{
@@ -469,6 +469,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         user_id: userId,
         latitude: loc.latitude,
         longitude: loc.longitude,
+        accuracy: loc.accuracy ?? null,
         recorded_at: new Date().toISOString(),
       })
       .select("id")
@@ -500,6 +501,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         user_id: userId,
         latitude: loc.latitude,
         longitude: loc.longitude,
+        accuracy: loc.accuracy ?? null,
         recorded_at: new Date().toISOString(),
       })
       .select("id")
