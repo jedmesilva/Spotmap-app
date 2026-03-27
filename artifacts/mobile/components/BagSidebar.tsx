@@ -104,16 +104,11 @@ function GridSpotItem({
   const holdAnim = useRef<RNAnimated.CompositeAnimation | null>(null);
   const longPressTriggered = useRef(false);
 
-  const rectW = cardSize.width - 4;
-  const rectH = cardSize.height - 4;
-  const rectR = CARD_RADIUS - 2;
-  const perimeter = cardSize.width > 0
-    ? 2 * (rectW + rectH) - 8 * rectR + 2 * Math.PI * rectR
-    : 0;
+  const DASH_LENGTH = 2000;
 
   const strokeDashoffset = holdProgress.interpolate({
     inputRange: [0, 1],
-    outputRange: [perimeter, 0],
+    outputRange: [DASH_LENGTH, 0],
   });
 
   const handlePressIn = () => {
@@ -164,41 +159,40 @@ function GridSpotItem({
         },
       ]}
     >
-      {cardSize.width > 0 && (
+      {isSelected && (
+        <View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              borderRadius: CARD_RADIUS,
+              borderWidth: 2,
+              borderColor: color,
+            },
+          ]}
+        />
+      )}
+      {!isSelected && cardSize.width > 0 && (
         <Svg
           style={StyleSheet.absoluteFill}
           width="100%"
           height="100%"
           pointerEvents="none"
         >
-          {isSelected ? (
-            <Rect
-              x={2}
-              y={2}
-              width={cardSize.width - 4}
-              height={cardSize.height - 4}
-              rx={CARD_RADIUS - 2}
-              ry={CARD_RADIUS - 2}
-              fill="none"
-              stroke={color}
-              strokeWidth={2}
-            />
-          ) : (
-            <AnimatedRect
-              x={2}
-              y={2}
-              width={cardSize.width - 4}
-              height={cardSize.height - 4}
-              rx={CARD_RADIUS - 2}
-              ry={CARD_RADIUS - 2}
-              fill="none"
-              stroke={color}
-              strokeWidth={2}
-              strokeDasharray={perimeter}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-            />
-          )}
+          <AnimatedRect
+            x={2}
+            y={2}
+            width={cardSize.width - 4}
+            height={cardSize.height - 4}
+            rx={CARD_RADIUS - 2}
+            ry={CARD_RADIUS - 2}
+            fill="none"
+            stroke={color}
+            strokeWidth={2}
+            strokeDasharray={DASH_LENGTH}
+            strokeDashoffset={strokeDashoffset}
+            strokeLinecap="round"
+          />
         </Svg>
       )}
       <View style={[styles.gridCardIcon, { backgroundColor: color + "25", borderColor: isSelected ? color : color + "44" }]}>
