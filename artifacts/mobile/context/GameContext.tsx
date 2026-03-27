@@ -306,6 +306,21 @@ const DEFAULT_PROFILE: UserProfile = {
   ],
 };
 
+const LOCATION_HISTORY_MIN_INTERVAL_MS = 30_000;
+const LOCATION_HISTORY_MIN_DISTANCE_M  = 50;
+
+function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6_371_000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) *
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 const GameContext = createContext<(GameState & GameActions) | null>(null);
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
@@ -333,6 +348,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const userLocationRef = useRef<{ latitude: number; longitude: number } | null>(null);
   const sessionRef = useRef(session);
   const userProfileRef = useRef<UserProfile>(DEFAULT_PROFILE);
+  const lastLocationHistoryRef = useRef<{
+    id: string;
+    latitude: number;
+    longitude: number;
+    recordedAt: number;
+  } | null>(null);
 
   useEffect(() => { activeCollectionRef.current = activeCollection; }, [activeCollection]);
   useEffect(() => { userLocationRef.current = userLocation; }, [userLocation]);
@@ -427,6 +448,73 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
     };
   }, [userLocation, session]);
+
+  // Grava pontos de rastro em location_history (a cada 30s ou >50m de movimento)
+  useEffect(() => {
+    const userId = sessionRef.current?.user?.id;
+    const loc = userLocation;
+    if (!userId || !loc) return;
+
+    const last = lastLocationHistoryRef.current;
+    const elapsed = last ? Date.now() - last.recordedAt : Infinity;
+    const distance = last
+      ? haversineDistance(last.latitude, last.longitude, loc.latitude, loc.longitude)
+      : Infinity;
+
+    if (elapsed < LOCATION_HISTORY_MIN_INTERVAL_MS && distance < LOCATION_HISTORY_MIN_DISTANCE_M) return;
+
+    supabase
+      .from("location_history")
+      .insert({
+        user_id: userId,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        recorded_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single()
+      .then(({ data, error }) => {
+        if (!error && data) {
+          lastLocationHistoryRef.current = {
+            id: data.id,
+            latitude: loc.latitude,
+            longitude: loc.longitude,
+            recordedAt: Date.now(),
+          };
+        }
+      });
+  }, [userLocation]);
+
+  // Garante que existe um ponto de localização recente e retorna seu id (para vincular a eventos)
+  const ensureLocationRecorded = useCallback(async (): Promise<string | null> => {
+    const userId = sessionRef.current?.user?.id;
+    const loc = userLocationRef.current;
+    if (!userId || !loc) return null;
+
+    const last = lastLocationHistoryRef.current;
+    if (last && Date.now() - last.recordedAt < 60_000) return last.id;
+
+    const { data, error } = await supabase
+      .from("location_history")
+      .insert({
+        user_id: userId,
+        latitude: loc.latitude,
+        longitude: loc.longitude,
+        recorded_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+
+    if (error || !data) return null;
+
+    lastLocationHistoryRef.current = {
+      id: data.id,
+      latitude: loc.latitude,
+      longitude: loc.longitude,
+      recordedAt: Date.now(),
+    };
+    return data.id;
+  }, []);
 
   // Carrega perfil de um usuário e o insere/atualiza em nearbyUsers
   const upsertNearbyUser = useCallback(async (
@@ -598,7 +686,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const stillAvailable = spots.find((s) => s.id === current.spotId);
     if (!stillAvailable) {
       // Outro jogador coletou primeiro — marcar nossa tentativa como falha
-      if (current.collectionId && sessionRef.current?.user?.id) {
+      const failUserId = sessionRef.current?.user?.id;
+      if (current.collectionId && failUserId) {
         supabase
           .from("collections")
           .update({
@@ -607,6 +696,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           })
           .eq("id", current.collectionId)
           .eq("status", "in_progress");
+
+        ensureLocationRecorded().then((locationId) => {
+          if (locationId) {
+            supabase.from("location_events").insert({
+              user_id: failUserId,
+              location_id: locationId,
+              event_type: "collect_fail",
+              event_ref_id: current.collectionId,
+              metadata: { spot_id: current.spotId, reason: "stolen" },
+            });
+          }
+        });
       }
       setCollectingIds((prev) => {
         const next = { ...prev };
@@ -693,6 +794,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setCollectingIds((prev) => ({ ...prev, [spotId]: true }));
 
       if (userId) {
+        const locationId = await ensureLocationRecorded();
+
         const { data, error } = await supabase
           .from("collections")
           .insert({
@@ -715,6 +818,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           setActiveCollection((cur) =>
             cur?.spotId === spotId ? { ...cur, collectionId: data.id } : cur
           );
+
+          if (locationId) {
+            supabase.from("location_events").insert({
+              user_id: userId,
+              location_id: locationId,
+              event_type: isComplete ? "collect_complete" : "collect_start",
+              event_ref_id: data.id,
+              metadata: { spot_id: spotId, spot_type: spot.type },
+            });
+          }
         }
       }
     } else {
@@ -737,6 +850,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
               : {}),
           })
           .eq("id", collectionId);
+
+        if (isComplete) {
+          ensureLocationRecorded().then((locationId) => {
+            if (locationId && userId) {
+              supabase.from("location_events").insert({
+                user_id: userId,
+                location_id: locationId,
+                event_type: "collect_complete",
+                event_ref_id: collectionId,
+                metadata: { spot_id: spotId, spot_type: spot.type },
+              });
+            }
+          });
+        }
       }
     }
 
@@ -829,9 +956,28 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         ),
       }));
 
+      const attackerId = sessionRef.current?.user?.id;
+      if (attackerId) {
+        ensureLocationRecorded().then((locationId) => {
+          if (locationId) {
+            supabase.from("location_events").insert({
+              user_id: attackerId,
+              location_id: locationId,
+              event_type: "attack",
+              event_ref_id: targetUserId,
+              metadata: {
+                artifact_type: artifactType,
+                damage: actualDamage,
+                blocked: isImmune,
+              },
+            });
+          }
+        });
+      }
+
       return event;
     },
-    [nearbyUsers]
+    [nearbyUsers, ensureLocationRecorded]
   );
 
   const useSubstance = useCallback((substance: SubstanceType) => {
