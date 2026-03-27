@@ -5,7 +5,15 @@
   "type": "module",
   "scripts": {
     "hello": "tsx ./src/hello.ts",
+    "add-user-presence": "tsx ./src/add-user-presence.ts",
+    "list-tables": "tsx ./src/list-tables.ts",
+    "list-supabase-tables": "tsx ./src/list-supabase-tables.ts",
+    "inspect-schema": "tsx ./src/inspect-schema.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.4",
+    "@workspace/db": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

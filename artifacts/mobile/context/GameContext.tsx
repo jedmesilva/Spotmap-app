@@ -262,85 +262,17 @@ const MOCK_SPOTS: Spot[] = [
   },
 ];
 
-const MOCK_USERS: NearbyUser[] = [
-  {
-    id: "user2",
-    name: "FoxHunter",
-    avatar: "F",
-    latitude: -19.9490,
-    longitude: -43.9894,
-    collectingSpotId: "spot1",
-    collectProgress: 65,
-    health: 75,
-    maxHealth: 100,
-    strength: 130,
-    immunities: ["flame_shield"],
-    coins: 840,
-    bag: [
-      { id: "f1", type: "fire", name: "Bola de Fogo", quantity: 2, icon: "fire" },
-      { id: "f2", type: "cryo_armor", name: "Armadura de Gelo", quantity: 1, icon: "shield" },
-      { id: "f3", type: "coupon", name: "Cupom 15%", quantity: 3, icon: "tag" },
-    ],
-    medals: [
-      { id: "fm1", icon: "🎯", name: "Primeiro Passo", description: "Realizou sua primeira coleta.", rarity: "common", unlockedAt: Date.now() - 86400000 * 15 },
-      { id: "fm2", icon: "🦊", name: "Raposa Veloz", description: "Coletou 3 spots em menos de 1 hora.", rarity: "rare", unlockedAt: Date.now() - 86400000 * 5 },
-      { id: "fm3", icon: "🗺️", name: "Explorador", description: "Visite 20 spots diferentes.", rarity: "epic" },
-      { id: "fm4", icon: "👑", name: "Lendário", description: "Alcance o nível 10.", rarity: "legendary" },
-    ],
-  },
-  {
-    id: "user3",
-    name: "ShadowByte",
-    avatar: "S",
-    latitude: -19.9493,
-    longitude: -43.9889,
-    collectingSpotId: undefined,
-    collectProgress: 0,
-    health: 100,
-    maxHealth: 100,
-    strength: 240,
-    immunities: ["cryo_armor", "antidote"],
-    coins: 2100,
-    bag: [
-      { id: "s1", type: "lightning", name: "Raio", quantity: 4, icon: "zap" },
-      { id: "s2", type: "poison", name: "Veneno", quantity: 2, icon: "activity" },
-      { id: "s3", type: "barrier", name: "Barreira", quantity: 1, icon: "shield" },
-      { id: "s4", type: "money", name: "R$ 100", quantity: 2, icon: "dollar-sign" },
-    ],
-    medals: [
-      { id: "sm1", icon: "🎯", name: "Primeiro Passo", description: "Realizou sua primeira coleta.", rarity: "common", unlockedAt: Date.now() - 86400000 * 30 },
-      { id: "sm2", icon: "🏹", name: "Caçador", description: "Completou 5 coletas no mapa.", rarity: "common", unlockedAt: Date.now() - 86400000 * 20 },
-      { id: "sm3", icon: "⚔️", name: "Guerreiro", description: "Atacou 10 jogadores diferentes.", rarity: "rare", unlockedAt: Date.now() - 86400000 * 10 },
-      { id: "sm4", icon: "💀", name: "Sobrevivente", description: "Sobreviveu com menos de 20% de vida.", rarity: "rare", unlockedAt: Date.now() - 86400000 * 4 },
-      { id: "sm5", icon: "🛡️", name: "Intocável", description: "Bloqueie 5 ataques seguidos.", rarity: "epic", unlockedAt: Date.now() - 86400000 * 2 },
-      { id: "sm6", icon: "🗺️", name: "Explorador", description: "Visite 20 spots diferentes.", rarity: "epic" },
-      { id: "sm7", icon: "👑", name: "Lendário", description: "Alcance o nível 10.", rarity: "legendary" },
-    ],
-  },
-  {
-    id: "user4",
-    name: "NeonRaider",
-    avatar: "N",
-    latitude: -19.9488,
-    longitude: -43.9898,
-    collectingSpotId: "spot2",
-    collectProgress: 30,
-    health: 45,
-    maxHealth: 100,
-    strength: 60,
-    immunities: [],
-    coins: 320,
-    bag: [
-      { id: "n1", type: "ice", name: "Bomba de Gelo", quantity: 1, icon: "wind" },
-      { id: "n2", type: "product", name: "Item Raro", quantity: 1, icon: "box" },
-    ],
-    medals: [
-      { id: "nm1", icon: "🎯", name: "Primeiro Passo", description: "Realizou sua primeira coleta.", rarity: "common", unlockedAt: Date.now() - 86400000 * 3 },
-      { id: "nm2", icon: "🏹", name: "Caçador", description: "Completou 5 coletas no mapa.", rarity: "common" },
-      { id: "nm3", icon: "⚔️", name: "Guerreiro", description: "Atacou 10 jogadores diferentes.", rarity: "rare" },
-    ],
-  },
-];
+const NEARBY_RADIUS_KM = 5;
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 const DEFAULT_PROFILE: UserProfile = {
   id: "user1",
@@ -390,7 +322,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         .map((s) => ({ ...s, isCollecting: collectingIds[s.id] ?? false })),
     [supabaseSpots, collectingIds, removedIds]
   );
-  const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>(MOCK_USERS);
+  const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
   const [activeCollection, setActiveCollection] = useState<ActiveCollection | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
@@ -466,6 +398,121 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }, STRENGTH_DECAY_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
+
+  // Publica localização do jogador na tabela user_locations (throttle 5s)
+  const locationPublishTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId || !userLocation) return;
+
+    if (locationPublishTimer.current) return; // throttle
+
+    locationPublishTimer.current = setTimeout(async () => {
+      locationPublishTimer.current = null;
+      await supabase.from("user_locations").upsert(
+        {
+          user_id: userId,
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "user_id" }
+      );
+    }, 5000);
+
+    return () => {
+      if (locationPublishTimer.current) {
+        clearTimeout(locationPublishTimer.current);
+        locationPublishTimer.current = null;
+      }
+    };
+  }, [userLocation, session]);
+
+  // Busca e atualiza usuários próximos a partir de user_locations
+  const fetchNearbyUsers = useCallback(async () => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    const cutoff = new Date(Date.now() - 5 * 60 * 1000).toISOString(); // 5 min
+    const { data: locations } = await supabase
+      .from("user_locations")
+      .select("user_id, latitude, longitude, updated_at")
+      .neq("user_id", userId)
+      .gte("updated_at", cutoff);
+
+    if (!locations || locations.length === 0) {
+      setNearbyUsers([]);
+      return;
+    }
+
+    const myLat = userLocationRef.current?.latitude;
+    const myLon = userLocationRef.current?.longitude;
+
+    const nearbyLocations = myLat != null && myLon != null
+      ? locations.filter((l) => haversineKm(myLat, myLon, l.latitude, l.longitude) <= NEARBY_RADIUS_KM)
+      : locations;
+
+    if (nearbyLocations.length === 0) {
+      setNearbyUsers([]);
+      return;
+    }
+
+    const ids = nearbyLocations.map((l) => l.user_id);
+    const { data: profiles } = await supabase
+      .from("users")
+      .select("id, name, nickname, avatar, health, max_health, strength")
+      .in("id", ids);
+
+    if (!profiles) return;
+
+    const profileMap = new Map(profiles.map((p) => [p.id, p]));
+
+    setNearbyUsers((prev) => {
+      const next: NearbyUser[] = nearbyLocations.map((loc) => {
+        const p = profileMap.get(loc.user_id);
+        if (!p) return null;
+        const existing = prev.find((u) => u.id === loc.user_id);
+        return {
+          id: p.id,
+          name: p.nickname || p.name,
+          avatar: p.avatar ?? p.name?.[0] ?? "?",
+          latitude: loc.latitude,
+          longitude: loc.longitude,
+          collectingSpotId: existing?.collectingSpotId,
+          collectProgress: existing?.collectProgress ?? 0,
+          health: p.health ?? 100,
+          maxHealth: p.max_health ?? 100,
+          strength: p.strength ?? 100,
+          immunities: existing?.immunities ?? [],
+          medals: existing?.medals ?? [],
+          bag: existing?.bag ?? [],
+          coins: existing?.coins,
+        } as NearbyUser;
+      }).filter(Boolean) as NearbyUser[];
+      return next;
+    });
+  }, [session]);
+
+  // Assina realtime em user_locations e dispara fetchNearbyUsers
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    fetchNearbyUsers();
+
+    const channel = supabase
+      .channel("user_locations_presence")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_locations" },
+        () => { fetchNearbyUsers(); }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session, fetchNearbyUsers]);
 
   // Detecta quando um spot que estávamos minerando foi coletado por outro jogador
   useEffect(() => {
