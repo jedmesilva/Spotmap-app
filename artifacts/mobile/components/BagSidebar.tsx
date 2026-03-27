@@ -1,17 +1,17 @@
 import { Feather } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated as RNAnimated,
-  Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import COLORS from "@/constants/colors";
 import { InventoryItem, SubstanceType, useGame } from "@/context/GameContext";
@@ -145,8 +145,9 @@ interface BagSidebarProps {
 
 export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0, miningClicks = 0, extraBottomOffset = 0 }: BagSidebarProps) {
   const { userProfile, useSubstance, selectedUser } = useGame();
+  const sheetInsets = useSafeAreaInsets();
   const [expanded, setExpanded] = useState(false);
-  const [modalOpen, setModalOpen] = useState(false);
+  const sheetRef = useRef<BottomSheetModal>(null);
   const pickaxeScale = useRef(new RNAnimated.Value(1)).current;
   const pickaxeY = useRef(new RNAnimated.Value(0)).current;
   const floatY = useRef(new RNAnimated.Value(0)).current;
@@ -239,7 +240,7 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
           )}
 
           <Pressable
-            onPress={() => setModalOpen(true)}
+            onPress={() => sheetRef.current?.present()}
             style={({ pressed }) => [styles.bagBtn, { opacity: pressed ? 0.8 : 1 }]}
           >
             <View style={[styles.bagBtnInner, isInspecting && styles.bagBtnInnerInspecting]}>
@@ -282,80 +283,77 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
         </RNAnimated.View>
       </RNAnimated.View>
 
-      <Modal
-        visible={modalOpen}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setModalOpen(false)}
+      <BottomSheetModal
+        ref={sheetRef}
+        enablePanDownToClose
+        backgroundStyle={styles.sheetBackground}
+        handleIndicatorStyle={styles.handle}
       >
-        <View style={styles.modalOverlay}>
-          <Pressable style={styles.modalBackdrop} onPress={() => setModalOpen(false)} />
-          <View style={[styles.bagModal, { paddingBottom: insets.bottom + 16 }]}>
-            <View style={styles.handle} />
-            <View style={styles.bagHeader}>
-              <View style={styles.bagTitleRow}>
-                <Text style={styles.bagTitle}>
-                  {isInspecting ? `Bag de ${selectedUser.name}` : "Bag"}
-                </Text>
-                {isInspecting && (
-                  <View style={styles.readOnlyBadge}>
-                    <Feather name="eye" size={10} color={COLORS.dark.warning} />
-                    <Text style={styles.readOnlyText}>somente leitura</Text>
-                  </View>
-                )}
-              </View>
-              <View style={styles.statsRow}>
-                <View style={styles.statChip}>
-                  <Feather name="dollar-sign" size={12} color={COLORS.dark.spotMoney} />
-                  <Text style={[styles.statText, { color: COLORS.dark.spotMoney }]}>
-                    {displayCoins}
-                  </Text>
-                </View>
-                {!isInspecting && (
-                  <View style={styles.statChip}>
-                    <Feather name="star" size={12} color={COLORS.dark.spotCoupon} />
-                    <Text style={[styles.statText, { color: COLORS.dark.spotCoupon }]}>
-                      Lv {userProfile.level}
-                    </Text>
-                  </View>
-                )}
-              </View>
-              <Pressable onPress={() => setModalOpen(false)} style={styles.closeBtn}>
-                <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
-              </Pressable>
-            </View>
-
-            {displayImmunities.length > 0 && (
-              <View style={styles.activeImmunities}>
-                <Text style={styles.sectionLabel}>IMUNIDADES ATIVAS</Text>
-                <View style={styles.immunitiesRow}>
-                  {displayImmunities.map((imm) => (
-                    <View key={imm} style={styles.immunityBadge}>
-                      <Feather name="shield" size={11} color={COLORS.dark.purple} />
-                      <Text style={styles.immunityText}>{imm.replace("_", " ")}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            <ScrollView showsVerticalScrollIndicator={false} style={styles.bagList}>
-              <Text style={[styles.sectionLabel, { marginBottom: 10 }]}>INVENTÁRIO</Text>
-              {displayBag
-                .filter((i) => i.quantity > 0)
-                .map((item) => (
-                  <FullItem key={item.id} item={item} onUse={handleUseItem} readOnly={isInspecting} />
-                ))}
-              {displayBag.filter((i) => i.quantity > 0).length === 0 && (
-                <View style={styles.emptyBag}>
-                  <Feather name="inbox" size={32} color={COLORS.dark.textMuted} />
-                  <Text style={styles.emptyText}>Bag vazia</Text>
+        <BottomSheetScrollView
+          contentContainerStyle={[styles.sheetContent, { paddingBottom: 32 + sheetInsets.bottom }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.bagHeader}>
+            <View style={styles.bagTitleRow}>
+              <Text style={styles.bagTitle}>
+                {isInspecting ? `Bag de ${selectedUser.name}` : "Bag"}
+              </Text>
+              {isInspecting && (
+                <View style={styles.readOnlyBadge}>
+                  <Feather name="eye" size={10} color={COLORS.dark.warning} />
+                  <Text style={styles.readOnlyText}>somente leitura</Text>
                 </View>
               )}
-            </ScrollView>
+            </View>
+            <View style={styles.statsRow}>
+              <View style={styles.statChip}>
+                <Feather name="dollar-sign" size={12} color={COLORS.dark.spotMoney} />
+                <Text style={[styles.statText, { color: COLORS.dark.spotMoney }]}>
+                  {displayCoins}
+                </Text>
+              </View>
+              {!isInspecting && (
+                <View style={styles.statChip}>
+                  <Feather name="star" size={12} color={COLORS.dark.spotCoupon} />
+                  <Text style={[styles.statText, { color: COLORS.dark.spotCoupon }]}>
+                    Lv {userProfile.level}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Pressable onPress={() => sheetRef.current?.dismiss()} style={styles.closeBtn}>
+              <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
+            </Pressable>
           </View>
-        </View>
-      </Modal>
+
+          {displayImmunities.length > 0 && (
+            <View style={styles.activeImmunities}>
+              <Text style={styles.sectionLabel}>IMUNIDADES ATIVAS</Text>
+              <View style={styles.immunitiesRow}>
+                {displayImmunities.map((imm) => (
+                  <View key={imm} style={styles.immunityBadge}>
+                    <Feather name="shield" size={11} color={COLORS.dark.purple} />
+                    <Text style={styles.immunityText}>{imm.replace("_", " ")}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          <Text style={[styles.sectionLabel, { marginBottom: 10 }]}>INVENTÁRIO</Text>
+          {displayBag
+            .filter((i) => i.quantity > 0)
+            .map((item) => (
+              <FullItem key={item.id} item={item} onUse={handleUseItem} readOnly={isInspecting} />
+            ))}
+          {displayBag.filter((i) => i.quantity > 0).length === 0 && (
+            <View style={styles.emptyBag}>
+              <Feather name="inbox" size={32} color={COLORS.dark.textMuted} />
+              <Text style={styles.emptyText}>Bag vazia</Text>
+            </View>
+          )}
+        </BottomSheetScrollView>
+      </BottomSheetModal>
     </>
   );
 }
@@ -478,32 +476,17 @@ const styles = StyleSheet.create({
   bagLabelInspecting: {
     color: COLORS.dark.warning,
   },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(5, 10, 20, 0.6)",
-  },
-  bagModal: {
+  sheetBackground: {
     backgroundColor: COLORS.dark.card,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    maxHeight: "75%",
     borderWidth: 1,
     borderColor: COLORS.dark.border,
-    borderBottomWidth: 0,
   },
   handle: {
-    width: 36,
-    height: 4,
     backgroundColor: COLORS.dark.border,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginTop: 12,
-    marginBottom: 16,
+    width: 36,
+  },
+  sheetContent: {
+    paddingHorizontal: 20,
   },
   bagHeader: {
     flexDirection: "row",
@@ -600,9 +583,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: COLORS.dark.purple,
     fontFamily: "Inter_500Medium",
-  },
-  bagList: {
-    flex: 1,
   },
   bagItem: {
     flexDirection: "row",
