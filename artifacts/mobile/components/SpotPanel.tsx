@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Image,
   Pressable,
@@ -65,6 +65,7 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
   const insets = useSafeAreaInsets();
   const { activeCollection } = useGame();
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
+  const [imageError, setImageError] = useState(false);
   const isCollecting = activeCollection?.spotId === spot.id;
   const progress = isCollecting ? activeCollection?.progress ?? 0 : 0;
   const hitsRequired = SPOT_HITS[spot.type] ?? 10;
@@ -106,11 +107,12 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
           </Pressable>
         </View>
 
-        {spot.imageUrl ? (
+        {spot.imageUrl && !imageError ? (
           <Image
             source={{ uri: spot.imageUrl }}
             style={[styles.coverImage, { borderColor: color + "33" }]}
             resizeMode="contain"
+            onError={() => setImageError(true)}
           />
         ) : (
           <View style={[styles.coverPlaceholder, { backgroundColor: color + "15", borderColor: color + "33" }]}>

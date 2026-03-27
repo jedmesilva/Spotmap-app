@@ -30,13 +30,14 @@ export function SpotMarker({ spot, isSelected, onPress }: SpotMarkerProps) {
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
   const iconName = SPOT_ICONS[spot.type] ?? "map-pin";
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   return (
     <Marker
       coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
       onPress={onPress}
       anchor={{ x: 0.5, y: 0.5 }}
-      tracksViewChanges={spot.imageUrl ? !imageLoaded : false}
+      tracksViewChanges={spot.imageUrl && !imageError ? !imageLoaded : false}
     >
       {/*
         Padding externo garante que o bitmap do Android não corte o conteúdo.
@@ -63,12 +64,13 @@ export function SpotMarker({ spot, isSelected, onPress }: SpotMarkerProps) {
               },
             ]}
           >
-            {spot.imageUrl ? (
+            {spot.imageUrl && !imageError ? (
               <Image
                 source={{ uri: spot.imageUrl }}
                 style={styles.markerImage}
                 resizeMode="contain"
                 onLoad={() => setImageLoaded(true)}
+                onError={() => setImageError(true)}
               />
             ) : (
               <Feather name={iconName as any} size={15} color={color} />

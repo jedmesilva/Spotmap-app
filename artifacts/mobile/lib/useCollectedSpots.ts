@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import { resolveImageUrl } from "@/lib/resolveImageUrl";
 import { Spot, SpotBadge, SpotType } from "@/context/GameContext";
 
 interface SupabaseSpot {
@@ -32,7 +33,7 @@ function mapSpot(raw: SupabaseSpot): Spot {
     title: raw.title,
     value: raw.value,
     radius: raw.radius,
-    imageUrl: raw.image_url ?? undefined,
+    imageUrl: resolveImageUrl(raw.image_url),
     expiresAt: raw.expires_at ? new Date(raw.expires_at).getTime() : undefined,
     badges: badges.length > 0 ? badges : undefined,
   };
