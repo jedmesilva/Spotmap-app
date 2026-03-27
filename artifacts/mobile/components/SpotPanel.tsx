@@ -110,7 +110,7 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
           <Image
             source={{ uri: spot.imageUrl }}
             style={[styles.coverImage, { borderColor: color + "33" }]}
-            resizeMode="cover"
+            resizeMode="contain"
           />
         ) : (
           <View style={[styles.coverPlaceholder, { backgroundColor: color + "15", borderColor: color + "33" }]}>
@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   },
   coverImage: {
     width: "100%",
-    height: 180,
+    aspectRatio: 1,
     borderRadius: 14,
     marginBottom: 14,
     borderWidth: 1,

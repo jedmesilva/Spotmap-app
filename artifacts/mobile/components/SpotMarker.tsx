@@ -67,7 +67,7 @@ export function SpotMarker({ spot, isSelected, onPress }: SpotMarkerProps) {
               <Image
                 source={{ uri: spot.imageUrl }}
                 style={styles.markerImage}
-                resizeMode="cover"
+                resizeMode="contain"
                 onLoad={() => setImageLoaded(true)}
               />
             ) : (
