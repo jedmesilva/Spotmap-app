@@ -154,19 +154,32 @@ function userIcon(user,selected,spotColor){
 
   var hColorDim=getHColor(user.health,user.maxHealth);
   var bc=spotColor||hColorDim;
+  var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
+  var statsRow=''
+    +'<div style="margin-top:2px;display:flex;align-items:center;justify-content:center;gap:3px;">'
+      +heartSvg(hColorDim)
+      +'<span style="color:'+hColorDim+';font-size:10px;font-weight:700;'+shadow+';">'+user.health+'</span>'
+      +'<span style="color:'+C.border+';font-size:9px;margin:0 1px;">|</span>'
+      +flashSvg(getStrColor(user.strength||0))
+      +'<span style="color:'+getStrColor(user.strength||0)+';font-size:10px;font-weight:700;'+shadow+';">'+(user.strength!=null?Math.round(user.strength):100)+'</span>'
+    +'</div>';
   if(user.collectingSpotId){
     var badge=collectBadge(user.collectProgress);
-    var html='<div style="position:relative;display:flex;flex-direction:column;align-items:center;width:64px;padding-top:20px;">'
+    var html='<div style="display:flex;flex-direction:column;align-items:center;width:130px;padding-top:22px;position:relative;">'
       +'<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);animation:badgePop 0.25s ease-out forwards;">'+badge+'</div>'
       +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;">'+avatarHtml(user.avatar,36)+'</div>'
+      +'<div style="margin-top:3px;color:'+C.text+';font-size:11px;font-weight:700;letter-spacing:0.3px;text-align:center;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+shadow+';">'+user.name+'</div>'
+      +statsRow
       +'</div>';
-    return L.divIcon({html:html,className:'',iconSize:[64,60],iconAnchor:[32,40]});
+    return L.divIcon({html:html,className:'',iconSize:[130,100],iconAnchor:[65,42]});
   }
 
-  var html='<div style="display:flex;align-items:center;justify-content:center;width:56px;height:40px;">'
+  var html='<div style="display:flex;flex-direction:column;align-items:center;width:130px;">'
     +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;">'+avatarHtml(user.avatar,36)+'</div>'
+    +'<div style="margin-top:3px;color:'+C.text+';font-size:11px;font-weight:700;letter-spacing:0.3px;text-align:center;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+shadow+';">'+user.name+'</div>'
+    +statsRow
     +'</div>';
-  return L.divIcon({html:html,className:'',iconSize:[56,40],iconAnchor:[28,20]});
+  return L.divIcon({html:html,className:'',iconSize:[130,78],iconAnchor:[65,20]});
 }
 
 function showEmojiReaction(userId,emoji,fromUserId){
