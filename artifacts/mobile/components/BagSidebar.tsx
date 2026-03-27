@@ -11,61 +11,10 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { cancelAnimation, runOnJS, useAnimatedProps, useSharedValue, withTiming } from "react-native-reanimated";
-import Svg, { Rect } from "react-native-svg";
 
 import COLORS from "@/constants/colors";
 import { InventoryItem, Spot, SubstanceType, useGame } from "@/context/GameContext";
 import { SpotPanel } from "@/components/SpotPanel";
-
-const AnimatedRect = Animated.createAnimatedComponent(Rect);
-
-function HoldProgressBorder({
-  progress,
-  size,
-  radius,
-  color,
-  strokeWidth = 2.5,
-}: {
-  progress: ReturnType<typeof useSharedValue<number>>;
-  size: number;
-  radius: number;
-  color: string;
-  strokeWidth?: number;
-}) {
-  const sw = strokeWidth;
-  const rw = size - sw;
-  const rh = size - sw;
-  const perimeter = 2 * (rw - 2 * radius) + 2 * (rh - 2 * radius) + 2 * Math.PI * radius;
-
-  const animatedProps = useAnimatedProps(() => ({
-    strokeDashoffset: perimeter * (1 - progress.value),
-  }));
-
-  return (
-    <Svg
-      width={size}
-      height={size}
-      style={{ position: "absolute", top: 0, left: 0 }}
-      pointerEvents="none"
-    >
-      <AnimatedRect
-        x={sw / 2}
-        y={sw / 2}
-        width={rw}
-        height={rh}
-        rx={radius}
-        ry={radius}
-        fill="none"
-        stroke={color}
-        strokeWidth={sw}
-        strokeDasharray={perimeter}
-        animatedProps={animatedProps}
-        strokeLinecap="round"
-      />
-    </Svg>
-  );
-}
 
 const ITEM_COLORS: Record<string, string> = {
   fire: COLORS.dark.danger,
@@ -145,26 +94,31 @@ function CollectedSpotItem({
   const icon = SPOT_ICONS[spot.type] ?? "package";
   const label = SPOT_LABELS[spot.type] ?? spot.type;
 
-  const holdProgress = useSharedValue(0);
+  const holdProgress = useRef(new RNAnimated.Value(0)).current;
+  const holdAnim = useRef<RNAnimated.CompositeAnimation | null>(null);
   const longPressTriggered = useRef(false);
-
-  const handleLongSelectComplete = () => {
-    longPressTriggered.current = true;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onLongSelect(spot);
-  };
 
   const handlePressIn = () => {
     longPressTriggered.current = false;
-    holdProgress.value = 0;
-    holdProgress.value = withTiming(1, { duration: 1200 }, (finished) => {
-      if (finished) runOnJS(handleLongSelectComplete)();
+    holdProgress.setValue(0);
+    holdAnim.current = RNAnimated.timing(holdProgress, {
+      toValue: 1,
+      duration: 1200,
+      useNativeDriver: false,
+    });
+    holdAnim.current.start(({ finished }) => {
+      if (finished) {
+        longPressTriggered.current = true;
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        RNAnimated.timing(holdProgress, { toValue: 0, duration: 200, useNativeDriver: false }).start();
+        onLongSelect(spot);
+      }
     });
   };
 
   const handlePressOut = () => {
-    cancelAnimation(holdProgress);
-    holdProgress.value = withTiming(0, { duration: 150 });
+    holdAnim.current?.stop();
+    RNAnimated.timing(holdProgress, { toValue: 0, duration: 150, useNativeDriver: false }).start();
   };
 
   const handlePress = () => {
@@ -189,7 +143,6 @@ function CollectedSpotItem({
       <View style={[styles.bagItemIcon, { backgroundColor: color + "20", borderColor: isSelected ? color : color + "44", position: "relative" }]}>
         <Feather name={icon as any} size={20} color={color} />
         {isSelected && <View style={[styles.selectedDot, { backgroundColor: color }]} />}
-        <HoldProgressBorder progress={holdProgress} size={40} radius={12} color={color} />
       </View>
       <View style={styles.bagItemInfo}>
         <Text style={styles.bagItemName}>{spot.title}</Text>
@@ -216,14 +169,9 @@ function QuickSpotItem({
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
   const icon = SPOT_ICONS[spot.type] ?? "package";
   const scale = useRef(new RNAnimated.Value(1)).current;
-  const holdProgress = useSharedValue(0);
+  const holdProgress = useRef(new RNAnimated.Value(0)).current;
+  const holdAnim = useRef<RNAnimated.CompositeAnimation | null>(null);
   const longPressTriggered = useRef(false);
-
-  const handleLongSelectComplete = () => {
-    longPressTriggered.current = true;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onLongSelect(spot);
-  };
 
   const handlePress = () => {
     if (longPressTriggered.current) {
@@ -240,16 +188,31 @@ function QuickSpotItem({
 
   const handlePressIn = () => {
     longPressTriggered.current = false;
-    holdProgress.value = 0;
-    holdProgress.value = withTiming(1, { duration: 1200 }, (finished) => {
-      if (finished) runOnJS(handleLongSelectComplete)();
+    holdProgress.setValue(0);
+    holdAnim.current = RNAnimated.timing(holdProgress, {
+      toValue: 1,
+      duration: 1200,
+      useNativeDriver: false,
+    });
+    holdAnim.current.start(({ finished }) => {
+      if (finished) {
+        longPressTriggered.current = true;
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        RNAnimated.timing(holdProgress, { toValue: 0, duration: 200, useNativeDriver: false }).start();
+        onLongSelect(spot);
+      }
     });
   };
 
   const handlePressOut = () => {
-    cancelAnimation(holdProgress);
-    holdProgress.value = withTiming(0, { duration: 150 });
+    holdAnim.current?.stop();
+    RNAnimated.timing(holdProgress, { toValue: 0, duration: 150, useNativeDriver: false }).start();
   };
+
+  const borderColor = holdProgress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [isSelected ? color : color + "55", color],
+  });
 
   return (
     <Pressable onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
@@ -258,7 +221,7 @@ function QuickSpotItem({
           styles.quickItem,
           {
             backgroundColor: isSelected ? color + "30" : color + "18",
-            borderColor: isSelected ? color : color + "44",
+            borderColor: isSelected ? color : borderColor,
             borderWidth: isSelected ? 2 : 1.5,
             transform: [{ scale }],
           },
@@ -268,7 +231,6 @@ function QuickSpotItem({
         {isSelected && (
           <View style={[styles.selectedDot, { backgroundColor: color }]} />
         )}
-        <HoldProgressBorder progress={holdProgress} size={44} radius={12} color={color} />
       </RNAnimated.View>
     </Pressable>
   );
