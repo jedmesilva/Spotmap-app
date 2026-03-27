@@ -79,7 +79,7 @@ const SPOT_LABELS: Record<string, string> = {
   rare: "RARO",
 };
 
-function CollectedSpotItem({
+function GridSpotItem({
   spot,
   isSelected,
   onPress,
@@ -135,22 +135,26 @@ function CollectedSpotItem({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       style={({ pressed }) => [
-        styles.bagItem,
-        isSelected && { backgroundColor: color + "0D", borderRadius: 10 },
-        { opacity: pressed ? 0.8 : 1 },
+        styles.gridCard,
+        {
+          backgroundColor: isSelected ? color + "22" : color + "10",
+          borderColor: isSelected ? color : color + "33",
+          opacity: pressed ? 0.8 : 1,
+        },
       ]}
     >
-      <View style={[styles.bagItemIcon, { backgroundColor: color + "20", borderColor: isSelected ? color : color + "44", position: "relative" }]}>
-        <Feather name={icon as any} size={20} color={color} />
+      <View style={[styles.gridCardIcon, { backgroundColor: color + "25", borderColor: isSelected ? color : color + "44", position: "relative" }]}>
+        <Feather name={icon as any} size={22} color={color} />
         {isSelected && <View style={[styles.selectedDot, { backgroundColor: color }]} />}
       </View>
-      <View style={styles.bagItemInfo}>
-        <Text style={styles.bagItemName}>{spot.title}</Text>
-        <Text style={[styles.bagItemType, { color }]}>{label}{isSelected ? " · SELECIONADO" : ""}</Text>
+      <Text style={styles.gridCardName} numberOfLines={2}>{spot.title}</Text>
+      <Text style={[styles.gridCardType, { color }]}>{label}</Text>
+      <View style={[styles.gridCardBadge, { backgroundColor: color + "20", borderColor: color + "44" }]}>
+        <Text style={[styles.gridCardBadgeText, { color }]} numberOfLines={1}>{spot.value}</Text>
       </View>
-      <View style={[styles.spotValue, { backgroundColor: color + "15", borderColor: color + "44" }]}>
-        <Text style={[styles.spotValueText, { color }]}>{spot.value}</Text>
-      </View>
+      {isSelected && (
+        <View style={[styles.gridSelectedBar, { backgroundColor: color }]} />
+      )}
     </Pressable>
   );
 }
@@ -283,7 +287,7 @@ function QuickItem({
   );
 }
 
-function FullItem({
+function GridFullItem({
   item,
   onUse,
   readOnly,
@@ -298,17 +302,27 @@ function FullItem({
   return (
     <Pressable
       onPress={() => { if (!readOnly) onUse(item); }}
-      style={({ pressed }) => [styles.bagItem, { opacity: pressed && !readOnly ? 0.8 : 1 }]}
+      style={({ pressed }) => [
+        styles.gridCard,
+        {
+          backgroundColor: color + "10",
+          borderColor: color + "33",
+          opacity: pressed && !readOnly ? 0.8 : readOnly ? 0.6 : 1,
+        },
+      ]}
     >
-      <View style={[styles.bagItemIcon, { backgroundColor: color + "20", borderColor: color + "44" }]}>
-        <Feather name={icon as any} size={20} color={color} />
+      <View style={[styles.gridCardIcon, { backgroundColor: color + "25", borderColor: color + "44", position: "relative" }]}>
+        <Feather name={icon as any} size={22} color={color} />
+        {item.quantity > 1 && (
+          <View style={[styles.qtyDot, { backgroundColor: color }]}>
+            <Text style={styles.qtyDotText}>{item.quantity}</Text>
+          </View>
+        )}
       </View>
-      <View style={styles.bagItemInfo}>
-        <Text style={styles.bagItemName}>{item.name}</Text>
-        <Text style={styles.bagItemType}>{item.type.replace("_", " ")}</Text>
-      </View>
-      <View style={[styles.bagItemQty, { backgroundColor: color + "22", borderColor: color + "44" }]}>
-        <Text style={[styles.bagItemQtyText, { color }]}>×{item.quantity}</Text>
+      <Text style={styles.gridCardName} numberOfLines={2}>{item.name}</Text>
+      <Text style={[styles.gridCardType, { color }]}>{item.type.replace("_", " ")}</Text>
+      <View style={[styles.gridCardBadge, { backgroundColor: color + "20", borderColor: color + "44" }]}>
+        <Text style={[styles.gridCardBadgeText, { color }]}>×{item.quantity}</Text>
       </View>
     </Pressable>
   );
@@ -572,20 +586,22 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
           </View>
 
           <Text style={[styles.sectionLabel, { marginBottom: 10 }]}>MEUS SPOTS</Text>
-          {collectedSpots.map((spot) => (
-            <CollectedSpotItem
-              key={spot.id}
-              spot={spot}
-              isSelected={selectedInventorySpot?.id === spot.id}
-              onPress={setSelectedBagSpot}
-              onLongSelect={handleLongSelectSpot}
-            />
-          ))}
-          {displayBag
-            .filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))
-            .map((item) => (
-              <FullItem key={item.id} item={item} onUse={handleUseItem} readOnly={isInspecting} />
+          <View style={styles.gridContainer}>
+            {collectedSpots.map((spot) => (
+              <GridSpotItem
+                key={spot.id}
+                spot={spot}
+                isSelected={selectedInventorySpot?.id === spot.id}
+                onPress={setSelectedBagSpot}
+                onLongSelect={handleLongSelectSpot}
+              />
             ))}
+            {displayBag
+              .filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))
+              .map((item) => (
+                <GridFullItem key={item.id} item={item} onUse={handleUseItem} readOnly={isInspecting} />
+              ))}
+          </View>
           {(isInspecting ? displayBag.filter((i) => i.quantity > 0) : [...collectedSpots, ...displayBag.filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))]).length === 0 && (
             <View style={styles.emptyBag}>
               <Feather name="inbox" size={32} color={COLORS.dark.textMuted} />
@@ -842,46 +858,65 @@ const styles = StyleSheet.create({
     color: COLORS.dark.purple,
     fontFamily: "Inter_500Medium",
   },
-  bagItem: {
+  gridContainer: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.dark.border,
+    flexWrap: "wrap",
+    gap: 10,
+    marginBottom: 8,
   },
-  bagItemIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+  gridCard: {
+    width: "30%",
+    flexGrow: 1,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    padding: 10,
+    alignItems: "center",
+    gap: 6,
+    position: "relative",
+    overflow: "hidden",
+    minWidth: 90,
+  },
+  gridCardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-  bagItemInfo: {
-    flex: 1,
-  },
-  bagItemName: {
-    fontSize: 14,
+  gridCardName: {
+    fontSize: 12,
     fontFamily: "Inter_600SemiBold",
     color: COLORS.dark.text,
-    marginBottom: 2,
+    textAlign: "center",
+    lineHeight: 15,
   },
-  bagItemType: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: COLORS.dark.textMuted,
-    textTransform: "capitalize",
-  },
-  bagItemQty: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-  },
-  bagItemQtyText: {
-    fontSize: 13,
+  gridCardType: {
+    fontSize: 9,
     fontFamily: "Inter_700Bold",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    textAlign: "center",
+  },
+  gridCardBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    maxWidth: "100%",
+  },
+  gridCardBadgeText: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    textAlign: "center",
+  },
+  gridSelectedBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    borderRadius: 2,
   },
   emptyBag: {
     alignItems: "center",
