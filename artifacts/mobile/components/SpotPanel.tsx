@@ -118,15 +118,7 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false }: SpotP
           </View>
         )}
 
-        {isBagView ? (
-          <View style={[styles.mineHint, { borderColor: COLORS.dark.accent + "55", backgroundColor: COLORS.dark.accent + "10" }]}>
-            <Feather name="briefcase" size={20} color={COLORS.dark.accent} />
-            <View style={styles.mineHintBody}>
-              <Text style={[styles.mineHintTitle, { color: COLORS.dark.accent }]}>Na sua bag</Text>
-              <Text style={styles.mineHintSub}>Este spot foi coletado e está em sua bag</Text>
-            </View>
-          </View>
-        ) : isInRange ? (
+        {!isBagView && isInRange ? (
           <View style={[styles.mineHint, { borderColor: color + "55", backgroundColor: color + "10" }]}>
             <Text style={styles.mineHintIcon}>⛏️</Text>
             <View style={styles.mineHintBody}>
