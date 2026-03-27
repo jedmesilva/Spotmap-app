@@ -104,6 +104,38 @@ function CollectedSpotItem({ spot, onPress }: { spot: Spot; onPress: (spot: Spot
   );
 }
 
+function QuickSpotItem({ spot, onPress }: { spot: Spot; onPress: (spot: Spot) => void }) {
+  const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
+  const icon = SPOT_ICONS[spot.type] ?? "package";
+  const scale = useRef(new RNAnimated.Value(1)).current;
+
+  const handlePress = () => {
+    RNAnimated.sequence([
+      RNAnimated.timing(scale, { toValue: 0.85, duration: 80, useNativeDriver: true }),
+      RNAnimated.timing(scale, { toValue: 1, duration: 80, useNativeDriver: true }),
+    ]).start();
+    onPress(spot);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  return (
+    <Pressable onPress={handlePress}>
+      <RNAnimated.View
+        style={[
+          styles.quickItem,
+          {
+            backgroundColor: color + "18",
+            borderColor: color + "55",
+            transform: [{ scale }],
+          },
+        ]}
+      >
+        <Feather name={icon as any} size={16} color={color} />
+      </RNAnimated.View>
+    </Pressable>
+  );
+}
+
 function QuickItem({
   item,
   onUse,
@@ -217,7 +249,11 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
   const displayCoins = isInspecting ? (selectedUser.coins ?? 0) : userProfile.coins;
   const displayImmunities = isInspecting ? selectedUser.immunities : userProfile.immunities;
 
-  const quickItems = displayBag.filter((i) => i.quantity > 0).slice(0, 5);
+  const quickSpots = !isInspecting ? collectedSpots.slice(0, 5) : [];
+  const quickItems = displayBag
+    .filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))
+    .slice(0, Math.max(0, 5 - quickSpots.length));
+  const hasQuickItems = quickSpots.length > 0 || quickItems.length > 0;
 
   const handleUseItem = (item: InventoryItem) => {
     if (isInspecting) return;
@@ -278,9 +314,12 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
             />
           </TouchableOpacity>
 
-          {expanded && quickItems.length > 0 && (
+          {expanded && hasQuickItems && (
             <>
               <View style={styles.itemsDivider} />
+              {quickSpots.map((spot) => (
+                <QuickSpotItem key={spot.id} spot={spot} onPress={setSelectedBagSpot} />
+              ))}
               {quickItems.map((item) => (
                 <QuickItem key={item.id} item={item} onUse={handleUseItem} readOnly={isInspecting} />
               ))}
