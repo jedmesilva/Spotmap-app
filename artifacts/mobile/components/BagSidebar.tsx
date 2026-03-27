@@ -1,8 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
   Animated as RNAnimated,
   Pressable,
@@ -229,6 +229,14 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
   const [expanded, setExpanded] = useState(false);
   const [selectedBagSpot, setSelectedBagSpot] = useState<Spot | null>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
+
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} pressBehavior="close" />
+    ),
+    []
+  );
+
   const pickaxeScale = useRef(new RNAnimated.Value(1)).current;
   const pickaxeY = useRef(new RNAnimated.Value(0)).current;
   const floatY = useRef(new RNAnimated.Value(0)).current;
@@ -372,6 +380,7 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
       <BottomSheetModal
         ref={sheetRef}
         enablePanDownToClose
+        backdropComponent={renderBackdrop}
         backgroundStyle={styles.sheetBackground}
         handleIndicatorStyle={styles.handle}
       >

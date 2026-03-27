@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
-import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import {
   Pressable,
   StyleSheet,
@@ -71,6 +71,13 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
 
   const sheetRef = useRef<BottomSheetModal>(null);
 
+  const renderBackdrop = useCallback(
+    (props: any) => (
+      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} pressBehavior="close" />
+    ),
+    []
+  );
+
   useEffect(() => {
     sheetRef.current?.present();
   }, []);
@@ -80,6 +87,7 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
       ref={sheetRef}
       enablePanDownToClose
       onDismiss={onClose}
+      backdropComponent={renderBackdrop}
       backgroundStyle={styles.sheetBackground}
       handleIndicatorStyle={styles.handle}
     >
