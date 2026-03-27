@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -89,11 +90,13 @@ function GridSpotItem({
   isSelected,
   onPress,
   onLongSelect,
+  cardWidth,
 }: {
   spot: Spot;
   isSelected: boolean;
   onPress: (spot: Spot) => void;
   onLongSelect: (spot: Spot) => void;
+  cardWidth: number;
 }) {
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
   const icon = SPOT_ICONS[spot.type] ?? "package";
@@ -156,6 +159,7 @@ function GridSpotItem({
       style={({ pressed }) => [
         styles.gridCard,
         {
+          width: cardWidth,
           backgroundColor: isSelected ? color + "22" : color + "10",
           opacity: pressed ? 0.8 : 1,
         },
@@ -368,10 +372,12 @@ function GridFullItem({
   item,
   onUse,
   readOnly,
+  cardWidth,
 }: {
   item: InventoryItem;
   onUse: (item: InventoryItem) => void;
   readOnly?: boolean;
+  cardWidth: number;
 }) {
   const color = ITEM_COLORS[item.type] ?? COLORS.dark.accent;
   const icon = ITEM_ICONS[item.type] ?? "package";
@@ -382,6 +388,7 @@ function GridFullItem({
       style={({ pressed }) => [
         styles.gridCard,
         {
+          width: cardWidth,
           backgroundColor: color + "10",
           borderColor: color + "33",
           opacity: pressed && !readOnly ? 0.8 : readOnly ? 0.6 : 1,
@@ -412,6 +419,11 @@ interface BagSidebarProps {
 export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0, miningClicks = 0, extraBottomOffset = 0 }: BagSidebarProps) {
   const { userProfile, useSubstance, selectedUser, collectedSpots, abandonSpot, useSpot, selectedInventorySpot, selectInventorySpot } = useGame();
   const sheetInsets = useSafeAreaInsets();
+  const { width: screenWidth } = useWindowDimensions();
+  const NUM_COLUMNS = 3;
+  const GRID_GAP = 10;
+  const SHEET_PADDING = 20;
+  const cardWidth = (screenWidth - SHEET_PADDING * 2 - GRID_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
   const [expanded, setExpanded] = useState(false);
   const [selectedBagSpot, setSelectedBagSpot] = useState<Spot | null>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
@@ -666,12 +678,13 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
                 isSelected={selectedInventorySpot?.id === spot.id}
                 onPress={setSelectedBagSpot}
                 onLongSelect={handleLongSelectSpot}
+                cardWidth={cardWidth}
               />
             ))}
             {displayBag
               .filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))
               .map((item) => (
-                <GridFullItem key={item.id} item={item} onUse={handleUseItem} readOnly={isInspecting} />
+                <GridFullItem key={item.id} item={item} onUse={handleUseItem} readOnly={isInspecting} cardWidth={cardWidth} />
               ))}
           </View>
           {(isInspecting ? displayBag.filter((i) => i.quantity > 0) : [...collectedSpots, ...displayBag.filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))]).length === 0 && (
@@ -937,14 +950,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   gridCard: {
-    width: "30%",
-    flexGrow: 1,
     borderRadius: 14,
     padding: 10,
     alignItems: "center",
     gap: 6,
     position: "relative",
-    minWidth: 90,
   },
   gridCardIcon: {
     width: 48,
