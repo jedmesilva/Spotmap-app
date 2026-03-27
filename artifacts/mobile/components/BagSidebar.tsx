@@ -11,10 +11,61 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Svg, { Rect } from "react-native-svg";
 
 import COLORS from "@/constants/colors";
 import { InventoryItem, Spot, SubstanceType, useGame } from "@/context/GameContext";
 import { SpotPanel } from "@/components/SpotPanel";
+
+const AnimatedRect = RNAnimated.createAnimatedComponent(Rect);
+
+function HoldProgressBorder({
+  progress,
+  size,
+  radius,
+  color,
+  strokeWidth = 2.5,
+}: {
+  progress: RNAnimated.Value;
+  size: number;
+  radius: number;
+  color: string;
+  strokeWidth?: number;
+}) {
+  const sw = strokeWidth;
+  const rw = size - sw;
+  const rh = size - sw;
+  const perimeter = 2 * (rw - 2 * radius) + 2 * (rh - 2 * radius) + 2 * Math.PI * radius;
+
+  const strokeDashoffset = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: [perimeter, 0],
+  });
+
+  return (
+    <Svg
+      width={size}
+      height={size}
+      style={{ position: "absolute", top: 0, left: 0 }}
+      pointerEvents="none"
+    >
+      <AnimatedRect
+        x={sw / 2}
+        y={sw / 2}
+        width={rw}
+        height={rh}
+        rx={radius}
+        ry={radius}
+        fill="none"
+        stroke={color}
+        strokeWidth={sw}
+        strokeDasharray={perimeter}
+        strokeDashoffset={strokeDashoffset as any}
+        strokeLinecap="round"
+      />
+    </Svg>
+  );
+}
 
 const ITEM_COLORS: Record<string, string> = {
   fire: COLORS.dark.danger,
@@ -143,6 +194,7 @@ function CollectedSpotItem({
       <View style={[styles.bagItemIcon, { backgroundColor: color + "20", borderColor: isSelected ? color : color + "44", position: "relative" }]}>
         <Feather name={icon as any} size={20} color={color} />
         {isSelected && <View style={[styles.selectedDot, { backgroundColor: color }]} />}
+        <HoldProgressBorder progress={holdProgress} size={40} radius={12} color={color} />
       </View>
       <View style={styles.bagItemInfo}>
         <Text style={styles.bagItemName}>{spot.title}</Text>
@@ -209,11 +261,6 @@ function QuickSpotItem({
     RNAnimated.timing(holdProgress, { toValue: 0, duration: 150, useNativeDriver: false }).start();
   };
 
-  const borderColor = holdProgress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [isSelected ? color : color + "55", color],
-  });
-
   return (
     <Pressable onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
       <RNAnimated.View
@@ -221,7 +268,7 @@ function QuickSpotItem({
           styles.quickItem,
           {
             backgroundColor: isSelected ? color + "30" : color + "18",
-            borderColor: isSelected ? color : borderColor,
+            borderColor: isSelected ? color : color + "44",
             borderWidth: isSelected ? 2 : 1.5,
             transform: [{ scale }],
           },
@@ -231,6 +278,7 @@ function QuickSpotItem({
         {isSelected && (
           <View style={[styles.selectedDot, { backgroundColor: color }]} />
         )}
+        <HoldProgressBorder progress={holdProgress} size={44} radius={12} color={color} />
       </RNAnimated.View>
     </Pressable>
   );
