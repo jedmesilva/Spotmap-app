@@ -697,22 +697,16 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
                   <Text style={styles.readOnlyText}>somente leitura</Text>
                 </View>
               )}
-              <View style={styles.statsRow}>
-                <View style={styles.statChip}>
-                  <Feather name="dollar-sign" size={12} color={COLORS.dark.spotMoney} />
-                  <Text style={[styles.statText, { color: COLORS.dark.spotMoney }]}>
-                    {displayCoins}
-                  </Text>
-                </View>
-                {!isInspecting && (
+              {!isInspecting && (
+                <View style={styles.statsRow}>
                   <View style={styles.statChip}>
                     <Feather name="star" size={12} color={COLORS.dark.spotCoupon} />
                     <Text style={[styles.statText, { color: COLORS.dark.spotCoupon }]}>
                       Lv {userProfile.level}
                     </Text>
                   </View>
-                )}
-              </View>
+                </View>
+              )}
             </View>
 
             <View style={styles.headerRight}>
