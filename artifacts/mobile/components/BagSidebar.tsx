@@ -104,12 +104,14 @@ function GridSpotItem({
   const holdAnim = useRef<RNAnimated.CompositeAnimation | null>(null);
   const longPressTriggered = useRef(false);
 
-  const DASH_LENGTH = 2000;
+  const perimeter = cardSize.width > 0
+    ? Math.ceil(2 * (cardSize.width + cardSize.height))
+    : 800;
 
-  const strokeDashoffset = holdProgress.interpolate({
+  const strokeDashoffset = React.useMemo(() => holdProgress.interpolate({
     inputRange: [0, 1],
-    outputRange: [DASH_LENGTH, 0],
-  });
+    outputRange: [perimeter, 0],
+  }), [perimeter]);
 
   const handlePressIn = () => {
     longPressTriggered.current = false;
@@ -189,7 +191,7 @@ function GridSpotItem({
             fill="none"
             stroke={color}
             strokeWidth={2}
-            strokeDasharray={DASH_LENGTH}
+            strokeDasharray={perimeter}
             strokeDashoffset={strokeDashoffset}
             strokeLinecap="round"
           />
