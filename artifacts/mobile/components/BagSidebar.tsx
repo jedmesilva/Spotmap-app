@@ -311,14 +311,14 @@ function GridFullItem({
         },
       ]}
     >
-      <View style={[styles.gridCardIcon, { backgroundColor: color + "25", borderColor: color + "44", position: "relative" }]}>
+      <View style={[styles.gridCardQtyBadge, { backgroundColor: color, borderColor: COLORS.dark.bg }]}>
+        <Text style={styles.gridCardQtyBadgeText}>×{item.quantity}</Text>
+      </View>
+      <View style={[styles.gridCardIcon, { backgroundColor: color + "25", borderColor: color + "44" }]}>
         <Feather name={icon as any} size={22} color={color} />
       </View>
       <Text style={styles.gridCardName} numberOfLines={2}>{item.name}</Text>
       <Text style={[styles.gridCardType, { color }]}>{item.type.replace("_", " ")}</Text>
-      <View style={[styles.gridCardBadge, { backgroundColor: color + "20", borderColor: color + "44" }]}>
-        <Text style={[styles.gridCardBadgeText, { color }]}>×{item.quantity}</Text>
-      </View>
     </Pressable>
   );
 }
@@ -912,6 +912,24 @@ const styles = StyleSheet.create({
     right: 0,
     height: 3,
     borderRadius: 2,
+  },
+  gridCardQtyBadge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+    zIndex: 1,
+  },
+  gridCardQtyBadgeText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    color: COLORS.dark.bg,
   },
   emptyBag: {
     alignItems: "center",
