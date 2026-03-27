@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
-import { Spot, SpotType } from "@/context/GameContext";
+import { Spot, SpotBadge, SpotType } from "@/context/GameContext";
 
 interface SupabaseSpot {
   id: string;
@@ -12,9 +12,17 @@ interface SupabaseSpot {
   radius: number;
   expires_at: string | null;
   owner_id: string | null;
+  manipulated: boolean | null;
+}
+
+function buildBadges(raw: SupabaseSpot): SpotBadge[] {
+  const badges: SpotBadge[] = [];
+  if (raw.manipulated) badges.push("manipulated");
+  return badges;
 }
 
 function mapSpot(raw: SupabaseSpot): Spot {
+  const badges = buildBadges(raw);
   return {
     id: raw.id,
     type: raw.type,
@@ -24,6 +32,7 @@ function mapSpot(raw: SupabaseSpot): Spot {
     value: raw.value,
     radius: raw.radius,
     expiresAt: raw.expires_at ? new Date(raw.expires_at).getTime() : undefined,
+    badges: badges.length > 0 ? badges : undefined,
   };
 }
 
@@ -40,11 +49,20 @@ export function useSpots(): Spot[] {
     let cancelled = false;
 
     const fetchSpots = async () => {
-      const { data, error } = await supabase
+      const isoNow = new Date().toISOString();
+      let { data, error } = await supabase
         .from("spots")
-        .select("id, type, latitude, longitude, title, value, radius, expires_at, owner_id")
+        .select("id, type, latitude, longitude, title, value, radius, expires_at, owner_id, manipulated")
         .is("owner_id", null)
-        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+        .or(`expires_at.is.null,expires_at.gt.${isoNow}`);
+
+      if (error?.code === "42703") {
+        ({ data, error } = await supabase
+          .from("spots")
+          .select("id, type, latitude, longitude, title, value, radius, expires_at, owner_id")
+          .is("owner_id", null)
+          .or(`expires_at.is.null,expires_at.gt.${isoNow}`));
+      }
 
       if (!cancelled && !error && data) {
         setSpots((data as SupabaseSpot[]).map(mapSpot));

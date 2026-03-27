@@ -20,6 +20,18 @@ export type ArtifactType = "fire" | "ice" | "lightning" | "poison" | "shield";
 export type SubstanceType = "flame_shield" | "cryo_armor" | "volt_ward" | "antidote" | "barrier";
 export type MedalRarity = "common" | "rare" | "epic" | "legendary";
 
+export type SpotBadge = "manipulated" | (string & {});
+
+export interface SpotBadgeConfig {
+  icon: string;
+  color: string;
+  label: string;
+}
+
+export const SPOT_BADGE_CONFIGS: Record<string, SpotBadgeConfig> = {
+  manipulated: { icon: "flask", color: "#A78BFA", label: "Manipulado" },
+};
+
 export interface Medal {
   id: string;
   icon: string;
@@ -39,6 +51,7 @@ export interface Spot {
   radius: number;
   expiresAt?: number;
   isCollecting?: boolean;
+  badges?: SpotBadge[];
 }
 
 export interface InventoryItem {

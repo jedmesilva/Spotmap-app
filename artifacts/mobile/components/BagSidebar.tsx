@@ -1,4 +1,4 @@
-import { Feather } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -16,7 +16,7 @@ import Svg, { Rect } from "react-native-svg";
 const AnimatedRect = RNAnimated.createAnimatedComponent(Rect);
 
 import COLORS from "@/constants/colors";
-import { InventoryItem, Spot, SubstanceType, useGame } from "@/context/GameContext";
+import { InventoryItem, Spot, SPOT_BADGE_CONFIGS, SubstanceType, useGame } from "@/context/GameContext";
 import { SpotPanel } from "@/components/SpotPanel";
 
 const ITEM_COLORS: Record<string, string> = {
@@ -205,6 +205,19 @@ function GridSpotItem({
       <View style={[styles.gridCardBadge, { backgroundColor: color + "20", borderColor: color + "44" }]}>
         <Text style={[styles.gridCardBadgeText, { color }]} numberOfLines={1}>{spot.value}</Text>
       </View>
+      {spot.badges && spot.badges.length > 0 && (
+        <View style={styles.spotBadgeStrip}>
+          {spot.badges.map((badge) => {
+            const cfg = SPOT_BADGE_CONFIGS[badge];
+            if (!cfg) return null;
+            return (
+              <View key={badge} style={[styles.spotBadgePill, { backgroundColor: cfg.color + "22", borderColor: cfg.color + "66" }]}>
+                <Ionicons name={cfg.icon as any} size={10} color={cfg.color} />
+              </View>
+            );
+          })}
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -286,6 +299,19 @@ function QuickSpotItem({
           <Feather name={icon as any} size={16} color={color} />
           {isSelected && (
             <View style={[styles.selectedDot, { backgroundColor: color }]} />
+          )}
+          {spot.badges && spot.badges.length > 0 && (
+            <View style={styles.quickBadgeGroup}>
+              {spot.badges.slice(0, 3).map((badge) => {
+                const cfg = SPOT_BADGE_CONFIGS[badge];
+                if (!cfg) return null;
+                return (
+                  <View key={badge} style={[styles.quickBadgeDot, { backgroundColor: cfg.color }]}>
+                    <Ionicons name={cfg.icon as any} size={6} color="#fff" />
+                  </View>
+                );
+              })}
+            </View>
           )}
         </RNAnimated.View>
       </RNAnimated.View>
@@ -1058,5 +1084,36 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontFamily: "Inter_700Bold",
     color: "#F5C518",
+  },
+  spotBadgeStrip: {
+    flexDirection: "row",
+    gap: 3,
+    marginTop: 5,
+    flexWrap: "wrap",
+  },
+  spotBadgePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1,
+  },
+  quickBadgeGroup: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    flexDirection: "row",
+    gap: 2,
+  },
+  quickBadgeDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
+    borderColor: COLORS.dark.bg,
   },
 });
