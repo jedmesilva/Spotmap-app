@@ -238,7 +238,7 @@ function GridSpotItem({
         </View>
       )}
 
-      <View style={[styles.newGridCardIcon, { backgroundColor: color + "18", borderColor: color + "44" }]}>
+      <View style={styles.newGridCardIcon}>
         <Feather name={SPOT_ICONS[spot.type] as any ?? "package"} size={22} color={color} />
       </View>
 
@@ -297,7 +297,7 @@ function GridFullItem({
         </View>
       )}
 
-      <View style={[styles.newGridCardIcon, { backgroundColor: color + "18", borderColor: color + "44" }]}>
+      <View style={styles.newGridCardIcon}>
         <Feather name={ITEM_ICONS[item.type] as any ?? "package"} size={22} color={color} />
       </View>
 
@@ -1101,8 +1101,6 @@ const styles = StyleSheet.create({
   newGridCardIcon: {
     width: 52,
     height: 52,
-    borderRadius: 10,
-    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
