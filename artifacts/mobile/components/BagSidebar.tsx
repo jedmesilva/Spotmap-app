@@ -313,11 +313,6 @@ function GridFullItem({
     >
       <View style={[styles.gridCardIcon, { backgroundColor: color + "25", borderColor: color + "44", position: "relative" }]}>
         <Feather name={icon as any} size={22} color={color} />
-        {item.quantity > 1 && (
-          <View style={[styles.qtyDot, { backgroundColor: color }]}>
-            <Text style={styles.qtyDotText}>{item.quantity}</Text>
-          </View>
-        )}
       </View>
       <Text style={styles.gridCardName} numberOfLines={2}>{item.name}</Text>
       <Text style={[styles.gridCardType, { color }]}>{item.type.replace("_", " ")}</Text>
