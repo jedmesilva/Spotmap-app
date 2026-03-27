@@ -12,6 +12,7 @@ import React, {
 import { supabase } from "@/lib/supabase";
 import { useSpots } from "@/lib/useSpots";
 import { useSpotCollections, CollectionProgress } from "@/lib/useSpotCollections";
+import { useCollectedSpots } from "@/lib/useCollectedSpots";
 import { useAuth } from "@/context/AuthContext";
 
 export type SpotType = "coupon" | "money" | "product" | "rare";
@@ -338,7 +339,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         .map((s) => ({ ...s, isCollecting: collectingIds[s.id] ?? false })),
     [supabaseSpots, collectingIds, removedIds]
   );
-  const [collectedSpots, setCollectedSpots] = useState<Spot[]>([]);
+  const collectedSpots = useCollectedSpots(session?.user?.id ?? null);
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
   const [activeCollection, setActiveCollection] = useState<ActiveCollection | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
@@ -1041,10 +1042,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const next = { ...prev };
       delete next[spotId];
       return next;
-    });
-    setCollectedSpots((prev) => {
-      if (prev.some((s) => s.id === spotId)) return prev;
-      return [...prev, { ...spot, isCollecting: false }];
     });
     setActiveCollection(null);
     setSelectedSpot(null);
