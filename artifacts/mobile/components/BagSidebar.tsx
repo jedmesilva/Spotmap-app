@@ -157,8 +157,7 @@ function GridSpotItem({
         styles.gridCard,
         {
           backgroundColor: isSelected ? color + "22" : color + "10",
-          borderColor: isSelected ? color : color + "33",
-          borderWidth: isSelected ? 2 : 1.5,
+          borderColor: "transparent",
           opacity: pressed ? 0.8 : 1,
         },
       ]}
@@ -170,20 +169,34 @@ function GridSpotItem({
           height={cardSize.height}
           pointerEvents="none"
         >
-          <AnimatedRect
-            x={1}
-            y={1}
-            width={cardSize.width - 2}
-            height={cardSize.height - 2}
-            rx={CARD_RADIUS - 1}
-            ry={CARD_RADIUS - 1}
-            fill="none"
-            stroke={color}
-            strokeWidth={2.5}
-            strokeDasharray={perimeter}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-          />
+          {isSelected ? (
+            <Rect
+              x={1}
+              y={1}
+              width={cardSize.width - 2}
+              height={cardSize.height - 2}
+              rx={CARD_RADIUS - 1}
+              ry={CARD_RADIUS - 1}
+              fill="none"
+              stroke={color}
+              strokeWidth={2}
+            />
+          ) : (
+            <AnimatedRect
+              x={1}
+              y={1}
+              width={cardSize.width - 2}
+              height={cardSize.height - 2}
+              rx={CARD_RADIUS - 1}
+              ry={CARD_RADIUS - 1}
+              fill="none"
+              stroke={color}
+              strokeWidth={2.5}
+              strokeDasharray={perimeter}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+            />
+          )}
         </Svg>
       )}
       <View style={[styles.gridCardIcon, { backgroundColor: color + "25", borderColor: isSelected ? color : color + "44" }]}>
