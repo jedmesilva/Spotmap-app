@@ -139,22 +139,19 @@ function GridSpotItem({
         {
           backgroundColor: isSelected ? color + "22" : color + "10",
           borderColor: isSelected ? color : color + "33",
+          borderWidth: isSelected ? 2 : 1.5,
           opacity: pressed ? 0.8 : 1,
         },
       ]}
     >
-      <View style={[styles.gridCardIcon, { backgroundColor: color + "25", borderColor: isSelected ? color : color + "44", position: "relative" }]}>
+      <View style={[styles.gridCardIcon, { backgroundColor: color + "25", borderColor: isSelected ? color : color + "44" }]}>
         <Feather name={icon as any} size={22} color={color} />
-        {isSelected && <View style={[styles.selectedDot, { backgroundColor: color }]} />}
       </View>
       <Text style={styles.gridCardName} numberOfLines={2}>{spot.title}</Text>
       <Text style={[styles.gridCardType, { color }]}>{label}</Text>
       <View style={[styles.gridCardBadge, { backgroundColor: color + "20", borderColor: color + "44" }]}>
         <Text style={[styles.gridCardBadgeText, { color }]} numberOfLines={1}>{spot.value}</Text>
       </View>
-      {isSelected && (
-        <View style={[styles.gridSelectedBar, { backgroundColor: color }]} />
-      )}
     </Pressable>
   );
 }
@@ -868,7 +865,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     position: "relative",
-    overflow: "hidden",
     minWidth: 90,
   },
   gridCardIcon: {
@@ -904,14 +900,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Inter_700Bold",
     textAlign: "center",
-  },
-  gridSelectedBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    borderRadius: 2,
   },
   gridCardQtyBadge: {
     position: "absolute",
