@@ -61,6 +61,14 @@ export function useSpots(): Spot[] {
       if (error?.code === "42703") {
         ({ data, error } = await supabase
           .from("spots")
+          .select("id, type, latitude, longitude, title, value, radius, image_url, expires_at, owner_id")
+          .is("owner_id", null)
+          .or(`expires_at.is.null,expires_at.gt.${isoNow}`));
+      }
+
+      if (error?.code === "42703") {
+        ({ data, error } = await supabase
+          .from("spots")
           .select("id, type, latitude, longitude, title, value, radius, expires_at, owner_id")
           .is("owner_id", null)
           .or(`expires_at.is.null,expires_at.gt.${isoNow}`));

@@ -58,6 +58,13 @@ export function useCollectedSpots(userId: string | null): Spot[] {
       if (error?.code === "42703") {
         ({ data, error } = await supabase
           .from("spots")
+          .select("id, type, latitude, longitude, title, value, radius, image_url, expires_at, owner_id")
+          .eq("owner_id", userId));
+      }
+
+      if (error?.code === "42703") {
+        ({ data, error } = await supabase
+          .from("spots")
           .select("id, type, latitude, longitude, title, value, radius, expires_at, owner_id")
           .eq("owner_id", userId));
       }

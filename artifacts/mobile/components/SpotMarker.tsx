@@ -1,5 +1,5 @@
 import { Feather } from "@expo/vector-icons";
-import React from "react";
+import React, { useState } from "react";
 import { Image, StyleSheet, View } from "react-native";
 import { Callout, Marker } from "react-native-maps";
 
@@ -29,13 +29,14 @@ interface SpotMarkerProps {
 export function SpotMarker({ spot, isSelected, onPress }: SpotMarkerProps) {
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
   const iconName = SPOT_ICONS[spot.type] ?? "map-pin";
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   return (
     <Marker
       coordinate={{ latitude: spot.latitude, longitude: spot.longitude }}
       onPress={onPress}
       anchor={{ x: 0.5, y: 0.5 }}
-      tracksViewChanges={false}
+      tracksViewChanges={spot.imageUrl ? !imageLoaded : false}
     >
       {/*
         Padding externo garante que o bitmap do Android não corte o conteúdo.
@@ -62,7 +63,16 @@ export function SpotMarker({ spot, isSelected, onPress }: SpotMarkerProps) {
               },
             ]}
           >
-            <Feather name={iconName as any} size={15} color={color} />
+            {spot.imageUrl ? (
+              <Image
+                source={{ uri: spot.imageUrl }}
+                style={styles.markerImage}
+                resizeMode="cover"
+                onLoad={() => setImageLoaded(true)}
+              />
+            ) : (
+              <Feather name={iconName as any} size={15} color={color} />
+            )}
           </View>
         </View>
 
@@ -105,7 +115,13 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
     /* NO shadow/elevation — causes bitmap clipping on Android */
+  },
+  markerImage: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
   },
   dot: {
     position: "absolute",
