@@ -104,8 +104,11 @@ function GridSpotItem({
   const holdAnim = useRef<RNAnimated.CompositeAnimation | null>(null);
   const longPressTriggered = useRef(false);
 
+  const rectW = cardSize.width - 4;
+  const rectH = cardSize.height - 4;
+  const rectR = CARD_RADIUS - 2;
   const perimeter = cardSize.width > 0
-    ? 2 * (cardSize.width + cardSize.height) - 8 * CARD_RADIUS + 2 * Math.PI * CARD_RADIUS
+    ? 2 * (rectW + rectH) - 8 * rectR + 2 * Math.PI * rectR
     : 0;
 
   const strokeDashoffset = holdProgress.interpolate({
@@ -164,33 +167,33 @@ function GridSpotItem({
       {cardSize.width > 0 && (
         <Svg
           style={StyleSheet.absoluteFill}
-          width={cardSize.width}
-          height={cardSize.height}
+          width="100%"
+          height="100%"
           pointerEvents="none"
         >
           {isSelected ? (
             <Rect
-              x={1}
-              y={1}
-              width={cardSize.width - 2}
-              height={cardSize.height - 2}
-              rx={CARD_RADIUS - 1}
-              ry={CARD_RADIUS - 1}
+              x={2}
+              y={2}
+              width={cardSize.width - 4}
+              height={cardSize.height - 4}
+              rx={CARD_RADIUS - 2}
+              ry={CARD_RADIUS - 2}
               fill="none"
               stroke={color}
               strokeWidth={2}
             />
           ) : (
             <AnimatedRect
-              x={1}
-              y={1}
-              width={cardSize.width - 2}
-              height={cardSize.height - 2}
-              rx={CARD_RADIUS - 1}
-              ry={CARD_RADIUS - 1}
+              x={2}
+              y={2}
+              width={cardSize.width - 4}
+              height={cardSize.height - 4}
+              rx={CARD_RADIUS - 2}
+              ry={CARD_RADIUS - 2}
               fill="none"
               stroke={color}
-              strokeWidth={2.5}
+              strokeWidth={2}
               strokeDasharray={perimeter}
               strokeDashoffset={strokeDashoffset}
               strokeLinecap="round"
