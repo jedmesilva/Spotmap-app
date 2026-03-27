@@ -123,6 +123,8 @@ interface GameActions {
   useSubstance: (substance: SubstanceType) => void;
   addToInventory: (item: InventoryItem) => void;
   completeCollection: (spotId: string) => void;
+  abandonSpot: (spotId: string) => Promise<void>;
+  useSpot: (spotId: string) => Promise<void>;
   updateProfile: (fields: Partial<Pick<UserProfile, "name" | "nickname" | "email" | "avatar">>) => void;
   restoreStrength: (amount: number) => void;
 }
@@ -1074,6 +1076,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
   }, [spots]);
 
+  const abandonSpot = useCallback(async (spotId: string) => {
+    await supabase
+      .from("spots")
+      .update({ owner_id: null })
+      .eq("id", spotId);
+  }, []);
+
+  const useSpot = useCallback(async (spotId: string) => {
+    await supabase
+      .from("spots")
+      .update({ is_active: false })
+      .eq("id", spotId);
+  }, []);
+
   const value: GameState & GameActions = {
     userProfile,
     spots,
@@ -1096,6 +1112,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     useSubstance,
     addToInventory,
     completeCollection,
+    abandonSpot,
+    useSpot,
     updateProfile,
     restoreStrength,
   };

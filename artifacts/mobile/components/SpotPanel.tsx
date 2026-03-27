@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef } from "react";
 import {
   Pressable,
@@ -54,9 +55,12 @@ interface SpotPanelProps {
   onClose: () => void;
   isInRange: boolean;
   isBagView?: boolean;
+  onUse?: () => void;
+  onManipulate?: () => void;
+  onAbandon?: () => void;
 }
 
-export function SpotPanel({ spot, onClose, isInRange, isBagView = false }: SpotPanelProps) {
+export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, onManipulate, onAbandon }: SpotPanelProps) {
   const insets = useSafeAreaInsets();
   const { activeCollection } = useGame();
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
@@ -133,6 +137,34 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false }: SpotP
             </View>
           </View>
         ) : null}
+
+        {isBagView && (
+          <View style={styles.actions}>
+            <Pressable
+              style={({ pressed }) => [styles.actionBtn, styles.actionUse, { opacity: pressed ? 0.8 : 1 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onUse?.(); }}
+            >
+              <Feather name="check-circle" size={16} color="#fff" />
+              <Text style={styles.actionLabel}>Usar</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [styles.actionBtn, styles.actionManipulate, { opacity: pressed ? 0.8 : 1 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onManipulate?.(); }}
+            >
+              <Feather name="tool" size={16} color="#fff" />
+              <Text style={styles.actionLabel}>Manipular</Text>
+            </Pressable>
+
+            <Pressable
+              style={({ pressed }) => [styles.actionBtn, styles.actionAbandon, { opacity: pressed ? 0.8 : 1 }]}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); onAbandon?.(); }}
+            >
+              <Feather name="trash-2" size={16} color="#fff" />
+              <Text style={styles.actionLabel}>Abandonar</Text>
+            </Pressable>
+          </View>
+        )}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
@@ -249,5 +281,33 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Inter_400Regular",
     color: COLORS.dark.textMuted,
+  },
+  actions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 8,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 13,
+    borderRadius: 14,
+  },
+  actionUse: {
+    backgroundColor: COLORS.dark.accent,
+  },
+  actionManipulate: {
+    backgroundColor: COLORS.dark.info,
+  },
+  actionAbandon: {
+    backgroundColor: COLORS.dark.danger,
+  },
+  actionLabel: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
   },
 });

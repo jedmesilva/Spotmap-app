@@ -224,7 +224,7 @@ interface BagSidebarProps {
 }
 
 export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0, miningClicks = 0, extraBottomOffset = 0 }: BagSidebarProps) {
-  const { userProfile, useSubstance, selectedUser, collectedSpots } = useGame();
+  const { userProfile, useSubstance, selectedUser, collectedSpots, abandonSpot, useSpot } = useGame();
   const sheetInsets = useSafeAreaInsets();
   const [expanded, setExpanded] = useState(false);
   const [selectedBagSpot, setSelectedBagSpot] = useState<Spot | null>(null);
@@ -436,6 +436,15 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
           onClose={() => setSelectedBagSpot(null)}
           isInRange={false}
           isBagView={true}
+          onUse={() => {
+            useSpot(selectedBagSpot.id);
+            setSelectedBagSpot(null);
+          }}
+          onManipulate={() => {}}
+          onAbandon={() => {
+            abandonSpot(selectedBagSpot.id);
+            setSelectedBagSpot(null);
+          }}
         />
       )}
     </>
