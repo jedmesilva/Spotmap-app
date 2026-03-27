@@ -83,24 +83,71 @@ const SPOT_LABELS: Record<string, string> = {
   rare: "RARO",
 };
 
+const ITEM_TYPE_LABELS: Record<string, string> = {
+  fire: "FOGO",
+  ice: "GELO",
+  lightning: "RAIO",
+  poison: "VENENO",
+  flame_shield: "ESCUDO",
+  cryo_armor: "ARMADURA",
+  volt_ward: "PROTEÇÃO",
+  antidote: "ANTÍDOTO",
+  barrier: "BARREIRA",
+  coupon: "CUPOM",
+  money: "DINHEIRO",
+  product: "PRODUTO",
+  rare: "RARO",
+};
+
+const RARITY_CONFIG: Record<string, { label: string; color: string }> = {
+  comum:    { label: "Comum",    color: "#888888" },
+  incomum:  { label: "Incomum",  color: "#2aab5c" },
+  raro:     { label: "Raro",     color: "#3a8fd4" },
+  épico:    { label: "Épico",    color: "#9b5de5" },
+  lendário: { label: "Lendário", color: "#e5a62a" },
+};
+
+const TYPE_RARITY: Record<string, string> = {
+  coupon: "incomum",
+  money: "incomum",
+  product: "raro",
+  rare: "épico",
+  fire: "raro",
+  ice: "raro",
+  lightning: "raro",
+  poison: "raro",
+  flame_shield: "épico",
+  cryo_armor: "épico",
+  volt_ward: "épico",
+  antidote: "incomum",
+  barrier: "épico",
+};
+
+type SheetSelected =
+  | { kind: "spot"; data: Spot }
+  | { kind: "item"; data: InventoryItem }
+  | null;
+
 const CARD_RADIUS = 14;
 
 function GridSpotItem({
   spot,
   isSelected,
+  isFireSelected,
   onPress,
   onLongSelect,
   cardWidth,
 }: {
   spot: Spot;
   isSelected: boolean;
+  isFireSelected: boolean;
   onPress: (spot: Spot) => void;
   onLongSelect: (spot: Spot) => void;
   cardWidth: number;
 }) {
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
-  const icon = SPOT_ICONS[spot.type] ?? "package";
-  const label = SPOT_LABELS[spot.type] ?? spot.type;
+  const rarity = RARITY_CONFIG[TYPE_RARITY[spot.type] ?? "comum"];
+  const isManipulated = spot.badges?.includes("manipulated");
 
   const [cardSize, setCardSize] = useState({ width: 0, height: 0 });
   const holdProgress = useRef(new RNAnimated.Value(0)).current;
@@ -147,6 +194,8 @@ function GridSpotItem({
     onPress(spot);
   };
 
+  const borderColor = isSelected ? rarity.color : isFireSelected ? color + "88" : "#ffffff14";
+
   return (
     <Pressable
       onPress={handlePress}
@@ -157,27 +206,17 @@ function GridSpotItem({
         setCardSize({ width, height });
       }}
       style={({ pressed }) => [
-        styles.gridCard,
+        styles.newGridCard,
         {
           width: cardWidth,
-          backgroundColor: isSelected ? color + "22" : color + "10",
+          backgroundColor: isSelected ? "#1a1e2e" : "transparent",
+          borderColor,
           opacity: pressed ? 0.8 : 1,
+          shadowColor: isSelected ? rarity.color : "transparent",
+          shadowOpacity: isSelected ? 0.4 : 0,
         },
       ]}
     >
-      {isSelected && (
-        <View
-          pointerEvents="none"
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              borderRadius: CARD_RADIUS,
-              borderWidth: 2,
-              borderColor: color,
-            },
-          ]}
-        />
-      )}
       {!isSelected && cardSize.width > 0 && (
         <Svg
           style={StyleSheet.absoluteFill}
@@ -201,17 +240,26 @@ function GridSpotItem({
           />
         </Svg>
       )}
-      <View style={[styles.gridCardIcon, { backgroundColor: color + "25", borderColor: isSelected ? color : color + "44" }]}>
-        <Feather name={icon as any} size={22} color={color} />
+
+      {isManipulated && (
+        <View style={styles.manipulatedBadge}>
+          <Ionicons name="flask-outline" size={10} color="#7eefc4" />
+        </View>
+      )}
+
+      <View style={[styles.newGridCardIcon, { backgroundColor: color + "18", borderColor: color + "44" }]}>
+        <Feather name={SPOT_ICONS[spot.type] as any ?? "package"} size={22} color={color} />
       </View>
-      <Text style={styles.gridCardName} numberOfLines={2}>{spot.title}</Text>
-      <Text style={[styles.gridCardType, { color }]}>{label}</Text>
-      <View style={[styles.gridCardBadge, { backgroundColor: color + "20", borderColor: color + "44" }]}>
-        <Text style={[styles.gridCardBadgeText, { color }]} numberOfLines={1}>{spot.value}</Text>
+
+      <Text style={styles.newGridCardName} numberOfLines={2}>{spot.title}</Text>
+
+      <View style={[styles.newGridCardTypePill, { backgroundColor: color + "18", borderColor: color + "33" }]}>
+        <Text style={[styles.newGridCardTypeText, { color }]}>{SPOT_LABELS[spot.type] ?? spot.type.toUpperCase()}</Text>
       </View>
+
       {spot.badges && spot.badges.length > 0 && (
         <View style={styles.spotBadgeStrip}>
-          {spot.badges.map((badge) => {
+          {spot.badges.filter(b => b !== "manipulated").map((badge) => {
             const cfg = SPOT_BADGE_CONFIGS[badge];
             if (!cfg) return null;
             return (
@@ -222,6 +270,58 @@ function GridSpotItem({
           })}
         </View>
       )}
+    </Pressable>
+  );
+}
+
+function GridFullItem({
+  item,
+  isSelected,
+  onPress,
+  readOnly,
+  cardWidth,
+}: {
+  item: InventoryItem;
+  isSelected: boolean;
+  onPress: (item: InventoryItem) => void;
+  readOnly?: boolean;
+  cardWidth: number;
+}) {
+  const color = ITEM_COLORS[item.type] ?? COLORS.dark.accent;
+  const rarity = RARITY_CONFIG[TYPE_RARITY[item.type] ?? "comum"];
+
+  const borderColor = isSelected ? rarity.color : "#ffffff14";
+
+  return (
+    <Pressable
+      onPress={() => { if (!readOnly) onPress(item); }}
+      style={({ pressed }) => [
+        styles.newGridCard,
+        {
+          width: cardWidth,
+          backgroundColor: isSelected ? "#1a1e2e" : "transparent",
+          borderColor,
+          opacity: pressed && !readOnly ? 0.8 : readOnly ? 0.6 : 1,
+          shadowColor: isSelected ? rarity.color : "transparent",
+          shadowOpacity: isSelected ? 0.4 : 0,
+        },
+      ]}
+    >
+      {item.quantity > 1 && (
+        <View style={styles.qtyBadge}>
+          <Text style={styles.qtyBadgeText}>×{item.quantity}</Text>
+        </View>
+      )}
+
+      <View style={[styles.newGridCardIcon, { backgroundColor: color + "18", borderColor: color + "44" }]}>
+        <Feather name={ITEM_ICONS[item.type] as any ?? "package"} size={22} color={color} />
+      </View>
+
+      <Text style={styles.newGridCardName} numberOfLines={2}>{item.name}</Text>
+
+      <View style={[styles.newGridCardTypePill, { backgroundColor: color + "18", borderColor: color + "33" }]}>
+        <Text style={[styles.newGridCardTypeText, { color }]}>{ITEM_TYPE_LABELS[item.type] ?? item.type.toUpperCase()}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -287,9 +387,7 @@ function QuickSpotItem({
 
   return (
     <Pressable onPress={handlePress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
-      {/* outer view: only native-driver scale */}
       <RNAnimated.View style={{ transform: [{ scale }] }}>
-        {/* inner view: JS-driver borderColor — must NOT mix with native driver */}
         <RNAnimated.View
           style={[
             styles.quickItem,
@@ -368,45 +466,6 @@ function QuickItem({
   );
 }
 
-function GridFullItem({
-  item,
-  onUse,
-  readOnly,
-  cardWidth,
-}: {
-  item: InventoryItem;
-  onUse: (item: InventoryItem) => void;
-  readOnly?: boolean;
-  cardWidth: number;
-}) {
-  const color = ITEM_COLORS[item.type] ?? COLORS.dark.accent;
-  const icon = ITEM_ICONS[item.type] ?? "package";
-
-  return (
-    <Pressable
-      onPress={() => { if (!readOnly) onUse(item); }}
-      style={({ pressed }) => [
-        styles.gridCard,
-        {
-          width: cardWidth,
-          backgroundColor: color + "10",
-          borderColor: color + "33",
-          opacity: pressed && !readOnly ? 0.8 : readOnly ? 0.6 : 1,
-        },
-      ]}
-    >
-      <View style={[styles.gridCardQtyBadge, { backgroundColor: color, borderColor: COLORS.dark.bg }]}>
-        <Text style={styles.gridCardQtyBadgeText}>×{item.quantity}</Text>
-      </View>
-      <View style={[styles.gridCardIcon, { backgroundColor: color + "25", borderColor: color + "44" }]}>
-        <Feather name={icon as any} size={22} color={color} />
-      </View>
-      <Text style={styles.gridCardName} numberOfLines={2}>{item.name}</Text>
-      <Text style={[styles.gridCardType, { color }]}>{item.type.replace("_", " ")}</Text>
-    </Pressable>
-  );
-}
-
 interface BagSidebarProps {
   insets: { top: number; bottom: number };
   onFire?: () => void;
@@ -426,6 +485,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
   const cardWidth = (screenWidth - SHEET_PADDING * 2 - GRID_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
   const [expanded, setExpanded] = useState(false);
   const [selectedBagSpot, setSelectedBagSpot] = useState<Spot | null>(null);
+  const [selectedSheetItem, setSelectedSheetItem] = useState<SheetSelected>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
 
   const renderBackdrop = useCallback(
@@ -453,7 +513,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
   const isInspecting = selectedUser !== null;
   const displayBag = isInspecting ? (selectedUser.bag ?? []) : userProfile.bag;
   const displayCoins = isInspecting ? (selectedUser.coins ?? 0) : userProfile.coins;
-  // When inspecting, show player's OWN spots (so they can select to attack)
   const quickSpots = collectedSpots.slice(0, 5);
   const quickItems = !isInspecting
     ? displayBag
@@ -520,6 +579,33 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
   const isFireActive = !!selectedInventorySpot && canFire;
   const isFireReady = !!selectedInventorySpot;
 
+  const handleSpotCardPress = (spot: Spot) => {
+    setSelectedSheetItem((prev) =>
+      prev?.kind === "spot" && prev.data.id === spot.id ? null : { kind: "spot", data: spot }
+    );
+  };
+
+  const handleItemCardPress = (item: InventoryItem) => {
+    setSelectedSheetItem((prev) =>
+      prev?.kind === "item" && prev.data.id === item.id ? null : { kind: "item", data: item }
+    );
+  };
+
+  const selectedColor = selectedSheetItem
+    ? selectedSheetItem.kind === "spot"
+      ? (SPOT_COLORS[selectedSheetItem.data.type] ?? COLORS.dark.accent)
+      : (ITEM_COLORS[selectedSheetItem.data.type] ?? COLORS.dark.accent)
+    : COLORS.dark.accent;
+
+  const selectedRarity = selectedSheetItem
+    ? RARITY_CONFIG[TYPE_RARITY[selectedSheetItem.data.type] ?? "comum"]
+    : null;
+
+  const isEmpty = (isInspecting
+    ? displayBag.filter((i) => i.quantity > 0)
+    : [...collectedSpots, ...displayBag.filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))]
+  ).length === 0;
+
   return (
     <>
       <RNAnimated.View style={[styles.column, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}>
@@ -556,7 +642,10 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
           )}
 
           <Pressable
-            onPress={() => sheetRef.current?.present()}
+            onPress={() => {
+              setSelectedSheetItem(null);
+              sheetRef.current?.present();
+            }}
             style={({ pressed }) => [styles.bagBtn, { opacity: pressed ? 0.8 : 1 }]}
           >
             <View style={[styles.bagBtnInner, isInspecting && styles.bagBtnInnerInspecting]}>
@@ -567,7 +656,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
                 </Text>
               </View>
             </View>
-            <Text style={[styles.bagLabel, isInspecting && styles.bagLabelInspecting]}>BAG</Text>
+            <Text style={[styles.bagLabel, isInspecting && styles.bagLabelInspecting]}>SPOTBAG</Text>
           </Pressable>
         </View>
 
@@ -636,10 +725,11 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
           contentContainerStyle={[styles.sheetContent, { paddingBottom: 32 + sheetInsets.bottom }]}
           showsVerticalScrollIndicator={false}
         >
+          {/* Header */}
           <View style={styles.bagHeader}>
             <View style={styles.bagTitleRow}>
               <Text style={styles.bagTitle}>
-                {isInspecting ? `Bag de ${selectedUser.name}` : "Bag"}
+                {isInspecting ? `SpotBag de ${selectedUser.name}` : "SpotBag"}
               </Text>
               {isInspecting && (
                 <View style={styles.readOnlyBadge}>
@@ -647,36 +737,62 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
                   <Text style={styles.readOnlyText}>somente leitura</Text>
                 </View>
               )}
-            </View>
-            <View style={styles.statsRow}>
-              <View style={styles.statChip}>
-                <Feather name="dollar-sign" size={12} color={COLORS.dark.spotMoney} />
-                <Text style={[styles.statText, { color: COLORS.dark.spotMoney }]}>
-                  {displayCoins}
-                </Text>
-              </View>
-              {!isInspecting && (
+              <View style={styles.statsRow}>
                 <View style={styles.statChip}>
-                  <Feather name="star" size={12} color={COLORS.dark.spotCoupon} />
-                  <Text style={[styles.statText, { color: COLORS.dark.spotCoupon }]}>
-                    Lv {userProfile.level}
+                  <Feather name="dollar-sign" size={12} color={COLORS.dark.spotMoney} />
+                  <Text style={[styles.statText, { color: COLORS.dark.spotMoney }]}>
+                    {displayCoins}
                   </Text>
                 </View>
-              )}
+                {!isInspecting && (
+                  <View style={styles.statChip}>
+                    <Feather name="star" size={12} color={COLORS.dark.spotCoupon} />
+                    <Text style={[styles.statText, { color: COLORS.dark.spotCoupon }]}>
+                      Lv {userProfile.level}
+                    </Text>
+                  </View>
+                )}
+              </View>
             </View>
-            <Pressable onPress={() => sheetRef.current?.dismiss()} style={styles.closeBtn}>
-              <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
-            </Pressable>
+
+            <View style={styles.headerRight}>
+              {!isInspecting && (
+                <View style={styles.labBtn}>
+                  <Ionicons name="flask-outline" size={13} color="#7eefc4" />
+                  <Text style={styles.labBtnText}>Lab</Text>
+                </View>
+              )}
+              <Pressable onPress={() => sheetRef.current?.dismiss()} style={styles.closeBtn}>
+                <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
+              </Pressable>
+            </View>
           </View>
 
-          <Text style={[styles.sectionLabel, { marginBottom: 10 }]}>MEUS SPOTS</Text>
+          {/* Legend */}
+          <View style={styles.legendRow}>
+            <View style={styles.legendItem}>
+              <View style={styles.legendManipulatedDot}>
+                <Ionicons name="flask-outline" size={9} color="#7eefc4" />
+              </View>
+              <Text style={styles.legendText}>Manipulado</Text>
+            </View>
+            <View style={styles.legendItem}>
+              <View style={styles.legendQtyDot}>
+                <Text style={styles.legendQtyText}>×N</Text>
+              </View>
+              <Text style={styles.legendText}>Quantidade</Text>
+            </View>
+          </View>
+
+          {/* Grid */}
           <View style={styles.gridContainer}>
             {collectedSpots.map((spot) => (
               <GridSpotItem
                 key={spot.id}
                 spot={spot}
-                isSelected={selectedInventorySpot?.id === spot.id}
-                onPress={setSelectedBagSpot}
+                isSelected={selectedSheetItem?.kind === "spot" && selectedSheetItem.data.id === spot.id}
+                isFireSelected={selectedInventorySpot?.id === spot.id}
+                onPress={handleSpotCardPress}
                 onLongSelect={handleLongSelectSpot}
                 cardWidth={cardWidth}
               />
@@ -684,13 +800,83 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
             {displayBag
               .filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))
               .map((item) => (
-                <GridFullItem key={item.id} item={item} onUse={handleUseItem} readOnly={isInspecting} cardWidth={cardWidth} />
+                <GridFullItem
+                  key={item.id}
+                  item={item}
+                  isSelected={selectedSheetItem?.kind === "item" && selectedSheetItem.data.id === item.id}
+                  onPress={handleItemCardPress}
+                  readOnly={isInspecting}
+                  cardWidth={cardWidth}
+                />
               ))}
           </View>
-          {(isInspecting ? displayBag.filter((i) => i.quantity > 0) : [...collectedSpots, ...displayBag.filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))]).length === 0 && (
+
+          {isEmpty && (
             <View style={styles.emptyBag}>
               <Feather name="inbox" size={32} color={COLORS.dark.textMuted} />
               <Text style={styles.emptyText}>Bag vazia</Text>
+            </View>
+          )}
+
+          {/* Detail panel */}
+          {selectedSheetItem && (
+            <View style={[styles.detailPanel, { borderColor: selectedColor + "44" }]}>
+              <View style={[styles.detailIcon, { backgroundColor: selectedColor + "18", borderColor: selectedColor + "44" }]}>
+                <Feather
+                  name={
+                    selectedSheetItem.kind === "spot"
+                      ? (SPOT_ICONS[selectedSheetItem.data.type] as any ?? "package")
+                      : (ITEM_ICONS[selectedSheetItem.data.type] as any ?? "package")
+                  }
+                  size={22}
+                  color={selectedColor}
+                />
+              </View>
+
+              <View style={{ flex: 1 }}>
+                <View style={styles.detailNameRow}>
+                  <Text style={styles.detailName} numberOfLines={1}>
+                    {selectedSheetItem.kind === "spot"
+                      ? selectedSheetItem.data.title
+                      : selectedSheetItem.data.name}
+                  </Text>
+                  {selectedSheetItem.kind === "spot" && selectedSheetItem.data.badges?.includes("manipulated") && (
+                    <View style={styles.manipulatedTag}>
+                      <Ionicons name="flask-outline" size={9} color="#7eefc4" />
+                      <Text style={styles.manipulatedTagText}>MANIPULADO</Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.detailMeta}>
+                  <Text style={styles.detailType}>
+                    {selectedSheetItem.kind === "spot"
+                      ? (SPOT_LABELS[selectedSheetItem.data.type] ?? selectedSheetItem.data.type.toUpperCase())
+                      : (ITEM_TYPE_LABELS[selectedSheetItem.data.type] ?? selectedSheetItem.data.type.toUpperCase())}
+                  </Text>
+                  {selectedRarity && (
+                    <Text style={[styles.detailRarity, { color: selectedRarity.color }]}>
+                      {selectedRarity.label}
+                    </Text>
+                  )}
+                  {selectedSheetItem.kind === "item" && (
+                    <Text style={styles.detailQty}>×{selectedSheetItem.data.quantity} na bolsa</Text>
+                  )}
+                </View>
+              </View>
+
+              {selectedSheetItem.kind === "spot" && (
+                <TouchableOpacity
+                  style={[styles.detailOpenBtn, { borderColor: selectedColor + "55", backgroundColor: selectedColor + "12" }]}
+                  onPress={() => {
+                    if (selectedSheetItem.kind === "spot") {
+                      setSelectedBagSpot(selectedSheetItem.data);
+                    }
+                  }}
+                >
+                  <Feather name="arrow-right" size={14} color={selectedColor} />
+                </TouchableOpacity>
+              )}
             </View>
           )}
         </BottomSheetScrollView>
@@ -827,10 +1013,10 @@ const styles = StyleSheet.create({
     color: COLORS.dark.warning,
   },
   bagLabel: {
-    fontSize: 9,
+    fontSize: 7,
     fontFamily: "Inter_700Bold",
     color: COLORS.dark.accent,
-    letterSpacing: 1.5,
+    letterSpacing: 1,
   },
   bagLabelInspecting: {
     color: COLORS.dark.warning,
@@ -849,8 +1035,8 @@ const styles = StyleSheet.create({
   },
   bagHeader: {
     flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
+    alignItems: "flex-start",
+    marginBottom: 10,
     gap: 8,
   },
   bagTitleRow: {
@@ -861,6 +1047,30 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontFamily: "Inter_700Bold",
     color: COLORS.dark.text,
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingTop: 2,
+  },
+  labBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "#0d2b21",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#2aab6c55",
+  },
+  labBtnText: {
+    color: "#7eefc4",
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
   },
   readOnlyBadge: {
     flexDirection: "row",
@@ -907,106 +1117,124 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  activeImmunities: {
-    marginBottom: 16,
-    padding: 12,
-    backgroundColor: COLORS.dark.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.dark.border,
-  },
-  sectionLabel: {
-    fontSize: 10,
-    fontFamily: "Inter_700Bold",
-    color: COLORS.dark.textMuted,
-    letterSpacing: 1.5,
-    marginBottom: 6,
-  },
-  immunitiesRow: {
+  legendRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
+    gap: 14,
+    alignItems: "center",
+    paddingVertical: 8,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: "#ffffff08",
+    marginBottom: 14,
   },
-  immunityBadge: {
+  legendItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    backgroundColor: COLORS.dark.purpleGlow,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.dark.purple + "44",
+    gap: 5,
   },
-  immunityText: {
-    fontSize: 11,
-    color: COLORS.dark.purple,
-    fontFamily: "Inter_500Medium",
+  legendManipulatedDot: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#0d2b21",
+    borderWidth: 1,
+    borderColor: "#2aab6c44",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  legendQtyDot: {
+    backgroundColor: "#0008",
+    borderRadius: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  legendQtyText: {
+    color: COLORS.dark.text,
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+  },
+  legendText: {
+    color: COLORS.dark.textMuted,
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    letterSpacing: 0.3,
   },
   gridContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 10,
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  gridCard: {
-    borderRadius: 14,
-    padding: 10,
+  newGridCard: {
+    borderRadius: 12,
+    padding: 12,
+    paddingTop: 12,
     alignItems: "center",
     gap: 6,
     position: "relative",
+    borderWidth: 1.5,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 8,
+    elevation: 4,
   },
-  gridCardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  gridCardName: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    color: COLORS.dark.text,
-    textAlign: "center",
-    lineHeight: 15,
-  },
-  gridCardType: {
-    fontSize: 9,
-    fontFamily: "Inter_700Bold",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-    textAlign: "center",
-  },
-  gridCardBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-    maxWidth: "100%",
-  },
-  gridCardBadgeText: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    textAlign: "center",
-  },
-  gridCardQtyBadge: {
+  manipulatedBadge: {
     position: "absolute",
     top: 6,
     right: 6,
-    minWidth: 20,
+    width: 20,
     height: 20,
+    borderRadius: 10,
+    backgroundColor: "#0d2b21",
+    borderWidth: 1,
+    borderColor: "#2aab6c44",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 2,
+  },
+  qtyBadge: {
+    position: "absolute",
+    top: 6,
+    left: 6,
+    backgroundColor: "#00000088",
+    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    zIndex: 2,
+  },
+  qtyBadgeText: {
+    color: COLORS.dark.text,
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.5,
+  },
+  newGridCardIcon: {
+    width: 52,
+    height: 52,
     borderRadius: 10,
     borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 4,
-    zIndex: 1,
+    flexShrink: 0,
   },
-  gridCardQtyBadgeText: {
+  newGridCardName: {
+    fontSize: 11.5,
+    fontFamily: "Inter_600SemiBold",
+    color: COLORS.dark.text,
+    textAlign: "center",
+    lineHeight: 15,
+    letterSpacing: 0.2,
+  },
+  newGridCardTypePill: {
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  newGridCardTypeText: {
     fontSize: 9,
     fontFamily: "Inter_700Bold",
-    color: COLORS.dark.bg,
+    letterSpacing: 1,
+    textTransform: "uppercase",
   },
   emptyBag: {
     alignItems: "center",
@@ -1018,17 +1246,87 @@ const styles = StyleSheet.create({
     color: COLORS.dark.textMuted,
     fontFamily: "Inter_400Regular",
   },
-  spotValue: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+  detailPanel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: COLORS.dark.surface + "cc",
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 14,
+    marginTop: 4,
+  },
+  detailIcon: {
+    width: 44,
+    height: 44,
     borderRadius: 10,
     borderWidth: 1,
-    maxWidth: 120,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
-  spotValueText: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
+  detailNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 4,
+    flexWrap: "wrap",
+  },
+  detailName: {
+    color: COLORS.dark.text,
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
     flexShrink: 1,
+  },
+  manipulatedTag: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: "#0d2b21",
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderWidth: 1,
+    borderColor: "#2aab6c44",
+  },
+  manipulatedTagText: {
+    color: "#7eefc4",
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.5,
+  },
+  detailMeta: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
+    flexWrap: "wrap",
+  },
+  detailType: {
+    color: COLORS.dark.textMuted,
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  detailRarity: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+  },
+  detailQty: {
+    color: COLORS.dark.textSecondary,
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+  },
+  detailOpenBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
   },
   fireBtn: {
     alignItems: "center",
@@ -1052,14 +1350,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
     color: COLORS.dark.textMuted,
     letterSpacing: 1.5,
-  },
-  selectedSpotIndicator: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
   },
   selectedDot: {
     position: "absolute",
@@ -1098,8 +1388,9 @@ const styles = StyleSheet.create({
   spotBadgeStrip: {
     flexDirection: "row",
     gap: 3,
-    marginTop: 5,
+    marginTop: 2,
     flexWrap: "wrap",
+    justifyContent: "center",
   },
   spotBadgePill: {
     flexDirection: "row",
