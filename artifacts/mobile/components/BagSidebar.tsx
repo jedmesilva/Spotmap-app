@@ -11,13 +11,14 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import Animated, { cancelAnimation, runOnJS, useAnimatedProps, useSharedValue, withTiming } from "react-native-reanimated";
 import Svg, { Rect } from "react-native-svg";
 
 import COLORS from "@/constants/colors";
 import { InventoryItem, Spot, SubstanceType, useGame } from "@/context/GameContext";
 import { SpotPanel } from "@/components/SpotPanel";
 
-const AnimatedRect = RNAnimated.createAnimatedComponent(Rect);
+const AnimatedRect = Animated.createAnimatedComponent(Rect);
 
 function HoldProgressBorder({
   progress,
@@ -26,7 +27,7 @@ function HoldProgressBorder({
   color,
   strokeWidth = 2.5,
 }: {
-  progress: RNAnimated.Value;
+  progress: ReturnType<typeof useSharedValue<number>>;
   size: number;
   radius: number;
   color: string;
@@ -37,10 +38,9 @@ function HoldProgressBorder({
   const rh = size - sw;
   const perimeter = 2 * (rw - 2 * radius) + 2 * (rh - 2 * radius) + 2 * Math.PI * radius;
 
-  const strokeDashoffset = progress.interpolate({
-    inputRange: [0, 1],
-    outputRange: [perimeter, 0],
-  });
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: perimeter * (1 - progress.value),
+  }));
 
   return (
     <Svg
@@ -60,7 +60,7 @@ function HoldProgressBorder({
         stroke={color}
         strokeWidth={sw}
         strokeDasharray={perimeter}
-        strokeDashoffset={strokeDashoffset as any}
+        animatedProps={animatedProps}
         strokeLinecap="round"
       />
     </Svg>
@@ -145,31 +145,26 @@ function CollectedSpotItem({
   const icon = SPOT_ICONS[spot.type] ?? "package";
   const label = SPOT_LABELS[spot.type] ?? spot.type;
 
-  const holdProgress = useRef(new RNAnimated.Value(0)).current;
-  const holdAnim = useRef<RNAnimated.CompositeAnimation | null>(null);
+  const holdProgress = useSharedValue(0);
   const longPressTriggered = useRef(false);
+
+  const handleLongSelectComplete = () => {
+    longPressTriggered.current = true;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    onLongSelect(spot);
+  };
 
   const handlePressIn = () => {
     longPressTriggered.current = false;
-    holdProgress.setValue(0);
-    holdAnim.current = RNAnimated.timing(holdProgress, {
-      toValue: 1,
-      duration: 1200,
-      useNativeDriver: false,
-    });
-    holdAnim.current.start(({ finished }) => {
-      if (finished) {
-        longPressTriggered.current = true;
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        RNAnimated.timing(holdProgress, { toValue: 0, duration: 200, useNativeDriver: false }).start();
-        onLongSelect(spot);
-      }
+    holdProgress.value = 0;
+    holdProgress.value = withTiming(1, { duration: 1200 }, (finished) => {
+      if (finished) runOnJS(handleLongSelectComplete)();
     });
   };
 
   const handlePressOut = () => {
-    holdAnim.current?.stop();
-    RNAnimated.timing(holdProgress, { toValue: 0, duration: 150, useNativeDriver: false }).start();
+    cancelAnimation(holdProgress);
+    holdProgress.value = withTiming(0, { duration: 150 });
   };
 
   const handlePress = () => {
@@ -221,9 +216,14 @@ function QuickSpotItem({
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
   const icon = SPOT_ICONS[spot.type] ?? "package";
   const scale = useRef(new RNAnimated.Value(1)).current;
-  const holdProgress = useRef(new RNAnimated.Value(0)).current;
-  const holdAnim = useRef<RNAnimated.CompositeAnimation | null>(null);
+  const holdProgress = useSharedValue(0);
   const longPressTriggered = useRef(false);
+
+  const handleLongSelectComplete = () => {
+    longPressTriggered.current = true;
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    onLongSelect(spot);
+  };
 
   const handlePress = () => {
     if (longPressTriggered.current) {
@@ -240,25 +240,15 @@ function QuickSpotItem({
 
   const handlePressIn = () => {
     longPressTriggered.current = false;
-    holdProgress.setValue(0);
-    holdAnim.current = RNAnimated.timing(holdProgress, {
-      toValue: 1,
-      duration: 1200,
-      useNativeDriver: false,
-    });
-    holdAnim.current.start(({ finished }) => {
-      if (finished) {
-        longPressTriggered.current = true;
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        RNAnimated.timing(holdProgress, { toValue: 0, duration: 200, useNativeDriver: false }).start();
-        onLongSelect(spot);
-      }
+    holdProgress.value = 0;
+    holdProgress.value = withTiming(1, { duration: 1200 }, (finished) => {
+      if (finished) runOnJS(handleLongSelectComplete)();
     });
   };
 
   const handlePressOut = () => {
-    holdAnim.current?.stop();
-    RNAnimated.timing(holdProgress, { toValue: 0, duration: 150, useNativeDriver: false }).start();
+    cancelAnimation(holdProgress);
+    holdProgress.value = withTiming(0, { duration: 150 });
   };
 
   return (
