@@ -94,3 +94,33 @@ Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHea
 ### `scripts` (`@workspace/scripts`)
 
 Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+
+Available scripts:
+- `add-user-presence` — adds presence columns to the `users` table
+- `add-location-history` — creates `location_history` and `location_events` tables (run via Supabase Management API using `PERSONAL_ACESS_TOKEN`)
+
+## Supabase Database
+
+The main database is hosted on Supabase (`xsfcilfrzhtxmwmegian.supabase.co`). The `@workspace/db` pool connects to the Replit-provisioned PostgreSQL (separate from Supabase). All game data lives in Supabase and is accessed via `@supabase/supabase-js`.
+
+DB migrations against Supabase use the Management API:
+```bash
+curl -X POST "https://api.supabase.com/v1/projects/xsfcilfrzhtxmwmegian/database/query" \
+  -H "Authorization: Bearer $PERSONAL_ACESS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"query": "<SQL>"}'
+```
+
+### Key Tables (Supabase)
+
+| Table | Purpose |
+|---|---|
+| `users` | Player profiles (health, strength, avatar, etc.) |
+| `user_locations` | Current location per user — upserted every 4s (no history) |
+| `location_history` | Full location trail — inserted every 30s or when user moves >50m |
+| `location_events` | Significant events (collect_start, collect_complete, collect_fail, attack) with FK to `location_history` |
+| `spots` | Collectable spots on the map |
+| `collections` | History of all collection attempts per user/spot |
+| `inventory` | Player item inventory |
+| `attacks` | Attack log |
+| `medals` | Player medals/achievements |

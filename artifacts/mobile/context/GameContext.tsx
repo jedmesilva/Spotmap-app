@@ -716,7 +716,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       });
       setActiveCollection(null);
     }
-  }, [spots]);
+  }, [spots, ensureLocationRecorded]);
 
   const setUserLocationCb = useCallback((loc: { latitude: number; longitude: number }) => {
     setUserLocation(loc);
@@ -900,7 +900,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           .neq("user_id", userId);
       }
     }
-  }, [spots]);
+  }, [spots, ensureLocationRecorded]);
 
   const selectSpot = useCallback((spot: Spot | null) => {
     setSelectedSpot(spot);
