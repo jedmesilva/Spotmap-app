@@ -49,6 +49,7 @@ export interface Spot {
   title: string;
   value: string;
   radius: number;
+  imageUrl?: string;
   expiresAt?: number;
   isCollecting?: boolean;
   badges?: SpotBadge[];

@@ -3,6 +3,7 @@ import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@g
 import * as Haptics from "expo-haptics";
 import React, { useCallback, useEffect, useRef } from "react";
 import {
+  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -104,6 +105,18 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
             <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
           </Pressable>
         </View>
+
+        {spot.imageUrl ? (
+          <Image
+            source={{ uri: spot.imageUrl }}
+            style={[styles.coverImage, { borderColor: color + "33" }]}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.coverPlaceholder, { backgroundColor: color + "15", borderColor: color + "33" }]}>
+            <Feather name={SPOT_ICONS[spot.type] as any} size={40} color={color + "88"} />
+          </View>
+        )}
 
         <Text style={styles.title}>{spot.title}</Text>
         <Text style={[styles.value, { color }]}>{spot.value}</Text>
@@ -219,6 +232,22 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 16,
     backgroundColor: COLORS.dark.surface,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  coverImage: {
+    width: "100%",
+    height: 180,
+    borderRadius: 14,
+    marginBottom: 14,
+    borderWidth: 1,
+  },
+  coverPlaceholder: {
+    width: "100%",
+    height: 120,
+    borderRadius: 14,
+    marginBottom: 14,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },

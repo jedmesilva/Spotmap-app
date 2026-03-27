@@ -10,6 +10,7 @@ interface SupabaseSpot {
   title: string;
   value: string;
   radius: number;
+  image_url: string | null;
   expires_at: string | null;
   owner_id: string | null;
   manipulated: boolean | null;
@@ -31,6 +32,7 @@ function mapSpot(raw: SupabaseSpot): Spot {
     title: raw.title,
     value: raw.value,
     radius: raw.radius,
+    imageUrl: raw.image_url ?? undefined,
     expiresAt: raw.expires_at ? new Date(raw.expires_at).getTime() : undefined,
     badges: badges.length > 0 ? badges : undefined,
   };
@@ -52,7 +54,7 @@ export function useSpots(): Spot[] {
       const isoNow = new Date().toISOString();
       let { data, error } = await supabase
         .from("spots")
-        .select("id, type, latitude, longitude, title, value, radius, expires_at, owner_id, manipulated")
+        .select("id, type, latitude, longitude, title, value, radius, image_url, expires_at, owner_id, manipulated")
         .is("owner_id", null)
         .or(`expires_at.is.null,expires_at.gt.${isoNow}`);
 
