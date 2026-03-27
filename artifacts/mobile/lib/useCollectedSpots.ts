@@ -71,6 +71,19 @@ export function useCollectedSpots(userId: string | null): Spot[] {
       .channel(`collected-spots-${userId}`)
       .on(
         "postgres_changes",
+        { event: "INSERT", schema: "public", table: "spots" },
+        (payload) => {
+          const raw = payload.new as SupabaseSpot;
+          if (raw.owner_id === userId) {
+            setSpots((prev) => {
+              if (prev.some((s) => s.id === raw.id)) return prev;
+              return [...prev, mapSpot(raw)];
+            });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
         { event: "UPDATE", schema: "public", table: "spots" },
         (payload) => {
           const raw = payload.new as SupabaseSpot;
