@@ -247,8 +247,6 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
   const isInspecting = selectedUser !== null;
   const displayBag = isInspecting ? (selectedUser.bag ?? []) : userProfile.bag;
   const displayCoins = isInspecting ? (selectedUser.coins ?? 0) : userProfile.coins;
-  const displayImmunities = isInspecting ? selectedUser.immunities : userProfile.immunities;
-
   const quickSpots = !isInspecting ? collectedSpots.slice(0, 5) : [];
   const quickItems = displayBag
     .filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))
@@ -413,20 +411,6 @@ export function BagSidebar({ insets, onMine, canMine = false, miningProgress = 0
               <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
             </Pressable>
           </View>
-
-          {displayImmunities.length > 0 && (
-            <View style={styles.activeImmunities}>
-              <Text style={styles.sectionLabel}>IMUNIDADES ATIVAS</Text>
-              <View style={styles.immunitiesRow}>
-                {displayImmunities.map((imm) => (
-                  <View key={imm} style={styles.immunityBadge}>
-                    <Feather name="shield" size={11} color={COLORS.dark.purple} />
-                    <Text style={styles.immunityText}>{imm.replace("_", " ")}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
 
           <Text style={[styles.sectionLabel, { marginBottom: 10 }]}>MEUS SPOTS</Text>
           {!isInspecting && collectedSpots.map((spot) => (
