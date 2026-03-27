@@ -91,6 +91,12 @@ function flashSvg(color){
   return '<svg width="11" height="11" viewBox="0 0 24 24" fill="'+color+'" stroke="'+color+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
 }
 function getStrColor(s){return s>=200?'#ff6b00':s>=150?'#c084fc':s>=100?'#60a5fa':s>=50?'#94a3b8':C.danger;}
+function avatarHtml(avatar,size){
+  if(avatar&&(avatar.indexOf('http://')===0||avatar.indexOf('https://')===0)){
+    return '<img src="'+avatar+'" style="width:'+size+'px;height:'+size+'px;border-radius:50%;object-fit:cover;display:block;" />';
+  }
+  return '<span>'+avatar+'</span>';
+}
 
 function collectBadge(progress){
   return '<div style="'
@@ -132,7 +138,7 @@ function userIcon(user,selected,spotColor){
     var html=''
       +'<div style="width:170px;display:flex;flex-direction:column;align-items:center;">'
         +statusRow
-        +'<div style="width:54px;height:54px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 16px '+bc+'66;">'+user.avatar+'</div>'
+        +'<div style="width:54px;height:54px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:22px;box-shadow:0 0 16px '+bc+'66;overflow:hidden;">'+avatarHtml(user.avatar,50)+'</div>'
         +'<div style="margin-top:5px;color:'+C.text+';font-size:12px;font-weight:700;letter-spacing:0.3px;text-align:center;'+shadow+';">'+user.name+'</div>'
         +'<div style="margin-top:3px;display:flex;align-items:center;justify-content:center;gap:4px;">'
           +heartSvg(hColor)
@@ -152,13 +158,13 @@ function userIcon(user,selected,spotColor){
     var badge=collectBadge(user.collectProgress);
     var html='<div style="position:relative;display:flex;flex-direction:column;align-items:center;width:64px;padding-top:20px;">'
       +'<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);animation:badgePop 0.25s ease-out forwards;">'+badge+'</div>'
-      +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;">'+user.avatar+'</div>'
+      +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;">'+avatarHtml(user.avatar,36)+'</div>'
       +'</div>';
     return L.divIcon({html:html,className:'',iconSize:[64,60],iconAnchor:[32,40]});
   }
 
   var html='<div style="display:flex;align-items:center;justify-content:center;width:56px;height:40px;">'
-    +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;">'+user.avatar+'</div>'
+    +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;">'+avatarHtml(user.avatar,36)+'</div>'
     +'</div>';
   return L.divIcon({html:html,className:'',iconSize:[56,40],iconAnchor:[28,20]});
 }
@@ -318,7 +324,7 @@ function playerIcon(profile){
   var hColor=getHColor(profile.health,profile.maxHealth);
   var html=''
     +'<div style="width:170px;display:flex;flex-direction:column;align-items:center;">'
-      +'<div style="width:46px;height:46px;border-radius:50%;border:2.5px solid '+C.accent+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 14px '+C.accent+'88;">'+profile.avatar+'</div>'
+      +'<div style="width:46px;height:46px;border-radius:50%;border:2.5px solid '+C.accent+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 14px '+C.accent+'88;overflow:hidden;">'+avatarHtml(profile.avatar,42)+'</div>'
       +'<div style="margin-top:4px;color:'+C.text+';font-size:12px;font-weight:700;letter-spacing:0.3px;text-align:center;'+shadow+';">Você</div>'
       +'<div style="margin-top:2px;display:flex;align-items:center;justify-content:center;gap:4px;">'
         +heartSvg(hColor)
