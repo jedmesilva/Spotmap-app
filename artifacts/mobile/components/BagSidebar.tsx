@@ -746,6 +746,20 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
 
   return (
     <>
+      {longMenuOpen && (
+        <RNAnimated.View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFill,
+            {
+              backgroundColor: "rgba(0,0,0,0.62)",
+              opacity: menuAnim,
+              zIndex: 9,
+            },
+          ]}
+        />
+      )}
+
       <RNAnimated.View style={[styles.column, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}>
         <View style={[styles.bagSection, isInspecting && styles.bagSectionInspecting]}>
           <TouchableOpacity
