@@ -746,7 +746,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
               isInspecting && { borderColor: COLORS.dark.warning + "55", backgroundColor: COLORS.dark.warning + "18" },
             ]}
           >
-            <Feather name="briefcase" size={22} color={isInspecting ? COLORS.dark.warning : COLORS.dark.accent} />
+            <Feather name="briefcase" size={22} color={isInspecting ? COLORS.dark.warning : "#fff"} />
             <View style={[styles.coinBadge, isInspecting && styles.coinBadgeInspecting]}>
               <Text style={[styles.coinText, isInspecting && styles.coinTextInspecting]}>
                 {displayCoins}
@@ -757,7 +757,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
               adjustsFontSizeToFit
               style={[
                 styles.fireLabel,
-                { color: isInspecting ? COLORS.dark.warning : COLORS.dark.accent },
+                { color: isInspecting ? COLORS.dark.warning : "#fff" },
               ]}
             >
               BAG
@@ -784,7 +784,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
           <View
             style={[
               styles.fireBtn,
-              !isFireReady && !longMenuOpen && { borderColor: COLORS.dark.accent + "99" },
               isFireActive && { borderColor: invSpotColor + "88", backgroundColor: invSpotColor + "18" },
               isFireReady && !isFireActive && { borderColor: invSpotColor + "44", backgroundColor: invSpotColor + "0D" },
               longMenuOpen && { borderColor: COLORS.dark.accent + "CC", backgroundColor: COLORS.dark.accent + "18" },
@@ -796,7 +795,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
               </RNAnimated.View>
             ) : (
               <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
-                <Feather name="zap" size={24} color={COLORS.dark.accent} />
+                <Feather name="zap" size={24} color="#fff" />
               </RNAnimated.View>
             )}
             {isFireReady && miningClicks > 0 && !longMenuOpen && (
@@ -809,7 +808,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
               adjustsFontSizeToFit
               style={[
                 styles.fireLabel,
-                !isFireReady && !longMenuOpen && { color: COLORS.dark.accent },
+                !isFireReady && !longMenuOpen && { color: "#fff" },
                 isFireReady && { color: invSpotColor },
                 selectedInventorySpot && { letterSpacing: 0 },
                 longMenuOpen && { color: COLORS.dark.accent },
@@ -1332,13 +1331,13 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 20,
-    backgroundColor: COLORS.dark.card,
+    backgroundColor: COLORS.dark.accent,
     borderWidth: 2,
-    borderColor: COLORS.dark.border,
+    borderColor: COLORS.dark.accentDim,
     justifyContent: "center",
     shadowColor: COLORS.dark.accent,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
+    shadowOpacity: 0.55,
     shadowRadius: 12,
     elevation: 10,
     position: "relative",
