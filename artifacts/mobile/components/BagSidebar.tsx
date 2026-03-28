@@ -130,8 +130,10 @@ const CARD_RADIUS = 14;
 const LONG_MENU_ITEM_HEIGHT = 50;
 const LONG_MENU_ITEM_GAP = 6;
 const LONG_MENU_ITEM_SLOT = LONG_MENU_ITEM_HEIGHT + LONG_MENU_ITEM_GAP;
-const LONG_MENU_ITEM_WIDTH = 158;
+const LONG_MENU_ITEM_WIDTH = 168;
 const FIRE_BTN_WIDTH = 60;
+const FIRE_BTN_HEIGHT = 60;
+const LONG_MENU_GAP_FROM_BTN = 8;
 
 function GridSpotItem({
   spot,
@@ -683,13 +685,14 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
         const touchY = evt.nativeEvent.pageY;
         const touchX = evt.nativeEvent.pageX;
 
-        const listRight = rect.x - 10;
-        const listLeft = listRight - LONG_MENU_ITEM_WIDTH;
-        const listBottom = rect.y + rect.h;
+        // List is above the button, items ordered top→bottom (index 0 = top, n-1 = bottom/closest to btn)
+        const listBottom = rect.y - LONG_MENU_GAP_FROM_BTN;
         const listTop = listBottom - items.length * LONG_MENU_ITEM_SLOT;
+        const listRight = rect.x + rect.w;
+        const listLeft = listRight - LONG_MENU_ITEM_WIDTH;
 
-        const inX = touchX >= listLeft - 12 && touchX <= listRight + 12;
-        const inY = touchY >= listTop - 12 && touchY <= listBottom + 12;
+        const inX = touchX >= listLeft - 16 && touchX <= listRight + 16;
+        const inY = touchY >= listTop - 16 && touchY <= listBottom + 16;
 
         if (inX && inY) {
           const relY = touchY - listTop;
@@ -1043,6 +1046,7 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     gap: 8,
     zIndex: 51,
+    overflow: "visible",
   },
   bagSection: {
     alignItems: "center",
@@ -1058,6 +1062,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 10,
     elevation: 8,
+    overflow: "visible",
   },
   bagSectionInspecting: {
     borderColor: COLORS.dark.warning + "44",
@@ -1451,8 +1456,8 @@ const styles = StyleSheet.create({
   },
   longPressMenu: {
     position: "absolute",
-    right: FIRE_BTN_WIDTH + 10,
-    bottom: 0,
+    right: 0,
+    bottom: FIRE_BTN_HEIGHT + LONG_MENU_GAP_FROM_BTN,
     width: LONG_MENU_ITEM_WIDTH,
     gap: LONG_MENU_ITEM_GAP,
     zIndex: 100,
