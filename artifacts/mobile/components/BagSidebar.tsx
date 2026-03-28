@@ -1063,6 +1063,7 @@ const styles = StyleSheet.create({
     gap: 6,
     position: "relative",
     borderWidth: 1.5,
+    overflow: "visible",
   },
   manipulatedBadge: {
     position: "absolute",
