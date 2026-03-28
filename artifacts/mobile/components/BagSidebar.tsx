@@ -911,9 +911,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
                         <Text style={[styles.longPressMenuItemQtyText, { color: menuItem.color }]}>×{menuItem.qty}</Text>
                       </View>
                     )}
-                    {isHovered && (
-                      <View style={[styles.longPressMenuHoverDot, { backgroundColor: menuItem.color }]} />
-                    )}
                   </View>
                 );
               })}
