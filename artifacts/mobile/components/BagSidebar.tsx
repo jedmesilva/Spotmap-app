@@ -783,7 +783,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
           <View
             style={[
               styles.fireBtn,
-              !isFireReady && !longMenuOpen && { borderStyle: "dashed", borderWidth: 2 },
+
               isFireReady && { backgroundColor: invSpotColor, borderColor: invSpotColor, shadowColor: invSpotColor, shadowOpacity: 0.5, shadowRadius: 12, elevation: 10 },
               longMenuOpen && !isFireReady && { backgroundColor: COLORS.dark.accentDim, borderColor: COLORS.dark.accent, opacity: 1 },
             ]}
