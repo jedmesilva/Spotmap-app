@@ -9,7 +9,7 @@ import {
 } from "react-native";
 
 import COLORS from "@/constants/colors";
-import { Spot, useGame } from "@/context/GameContext";
+import { Spot } from "@/context/GameContext";
 
 const SPOT_COLORS: Record<string, string> = {
   coupon: COLORS.dark.spotCoupon,
@@ -18,12 +18,6 @@ const SPOT_COLORS: Record<string, string> = {
   rare: COLORS.dark.spotRare,
 };
 
-const SPOT_HITS: Record<string, number> = {
-  coupon: 5,
-  money: 8,
-  product: 12,
-  rare: 20,
-};
 
 interface SpotFloatingPanelProps {
   spot: Spot;
@@ -34,14 +28,9 @@ interface SpotFloatingPanelProps {
 export const SPOT_FLOATING_PANEL_HEIGHT = 52;
 
 export function SpotFloatingPanel({ spot, isInRange, bottomInset }: SpotFloatingPanelProps) {
-  const { activeCollection } = useGame();
   const slideAnim = useRef(new Animated.Value(100)).current;
 
   const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
-  const isCollecting = activeCollection?.spotId === spot.id;
-  const progress = isCollecting ? (activeCollection?.progress ?? 0) : 0;
-  const hitsRequired = SPOT_HITS[spot.type] ?? 10;
-  const hitsRemaining = Math.ceil(((100 - progress) / 100) * hitsRequired);
 
   useEffect(() => {
     if (Platform.OS !== "web") {
@@ -67,9 +56,7 @@ export function SpotFloatingPanel({ spot, isInRange, bottomInset }: SpotFloating
       <View style={[styles.mineHint, { borderColor: color + "55", backgroundColor: color + "10" }]}>
         <Text style={styles.mineHintIcon}>⛏️</Text>
         <Text style={[styles.mineHintText, { color }]}>
-          {isCollecting
-            ? `${hitsRemaining} picaretada${hitsRemaining !== 1 ? "s" : ""} restante${hitsRemaining !== 1 ? "s" : ""}`
-            : "Use o botão ⛏️ para minerar"}
+          Use o botão ⛏️ para minerar
         </Text>
       </View>
     </Animated.View>
