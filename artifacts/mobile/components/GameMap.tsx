@@ -131,11 +131,11 @@ function userIcon(user,selected,spotColor){
     var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
 
     var statusRow=user.collectingSpotId
-      ?'<div style="display:flex;justify-content:center;gap:4px;margin-bottom:5px;">'+collectBadge(user.collectProgress)+'</div>'
+      ?'<div style="display:flex;justify-content:center;gap:4px;margin-bottom:2px;">'+collectBadge(user.collectProgress)+'</div>'
       :'';
 
-    var avatarOffsetY=user.collectingSpotId?25:0;
-    var totalH=user.collectingSpotId?148:122;
+    var avatarOffsetY=user.collectingSpotId?19:0;
+    var totalH=user.collectingSpotId?141:122;
 
     var html=''
       +'<div style="width:170px;display:flex;flex-direction:column;align-items:center;">'
@@ -167,13 +167,13 @@ function userIcon(user,selected,spotColor){
     +'</div>';
   if(user.collectingSpotId){
     var badge=collectBadge(user.collectProgress);
-    var html='<div style="display:flex;flex-direction:column;align-items:center;width:130px;padding-top:22px;position:relative;">'
+    var html='<div style="display:flex;flex-direction:column;align-items:center;width:130px;padding-top:16px;position:relative;">'
       +'<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);animation:badgePop 0.25s ease-out forwards;">'+badge+'</div>'
       +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;">'+avatarHtml(user.avatar,36)+'</div>'
       +'<div style="margin-top:3px;color:'+C.text+';font-size:11px;font-weight:700;letter-spacing:0.3px;text-align:center;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+shadow+';">'+user.name+'</div>'
       +statsRow
       +'</div>';
-    return L.divIcon({html:html,className:'',iconSize:[130,100],iconAnchor:[65,42]});
+    return L.divIcon({html:html,className:'',iconSize:[130,94],iconAnchor:[65,36]});
   }
 
   var html='<div style="display:flex;flex-direction:column;align-items:center;width:130px;">'
@@ -346,10 +346,10 @@ function playerIcon(profile,collecting){
   var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
   var hColor=getHColor(profile.health,profile.maxHealth);
   var badgeRow=collecting
-    ?'<div style="display:flex;justify-content:center;margin-bottom:5px;animation:badgePop 0.25s ease-out forwards;">'+collectBadge(Math.round(collecting.progress))+'</div>'
+    ?'<div style="display:flex;justify-content:center;margin-bottom:2px;animation:badgePop 0.25s ease-out forwards;">'+collectBadge(Math.round(collecting.progress))+'</div>'
     :'';
-  var totalH=collecting?136:110;
-  var anchorY=collecting?27+26:27;
+  var totalH=collecting?133:110;
+  var anchorY=collecting?27+23:27;
   var html=''
     +'<div style="width:170px;display:flex;flex-direction:column;align-items:center;">'
       +badgeRow
