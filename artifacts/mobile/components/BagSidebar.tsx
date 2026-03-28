@@ -754,7 +754,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
             {
               backgroundColor: "rgba(0,0,0,0.62)",
               opacity: menuAnim,
-              zIndex: 9,
+              zIndex: 50,
             },
           ]}
         />
@@ -1042,7 +1042,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     flexDirection: "column",
     gap: 8,
-    zIndex: 10,
+    zIndex: 51,
   },
   bagSection: {
     alignItems: "center",
