@@ -202,25 +202,29 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
           </View>
         </View>
 
-        {/* Strip de mineradores — player sempre primeiro */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.minersScroll}
-        >
-          <MinerCard
-            avatar={userProfile.avatar}
-            progress={isPlayerMining ? playerProgress : null}
-            isPlayer
-          />
-          {otherMiners.map((u) => (
-            <MinerCard
-              key={u.id}
-              avatar={u.avatar}
-              progress={u.collectProgress}
-            />
-          ))}
-        </ScrollView>
+        {/* Strip de mineradores — só aparece quem está coletando */}
+        {(isPlayerMining || otherMiners.length > 0) && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.minersScroll}
+          >
+            {isPlayerMining && (
+              <MinerCard
+                avatar={userProfile.avatar}
+                progress={playerProgress}
+                isPlayer
+              />
+            )}
+            {otherMiners.map((u) => (
+              <MinerCard
+                key={u.id}
+                avatar={u.avatar}
+                progress={u.collectProgress}
+              />
+            ))}
+          </ScrollView>
+        )}
       </View>
     );
   }
