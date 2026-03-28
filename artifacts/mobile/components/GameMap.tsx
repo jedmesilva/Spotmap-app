@@ -105,8 +105,7 @@ function collectBadge(progress){
     +'position:relative;display:inline-flex;align-items:center;gap:3px;'
     +'border:1px solid '+C.warning+'88;border-radius:8px;'
     +'padding:2px 7px;white-space:nowrap;overflow:hidden;'
-    +'background:'+C.bgSec+';'
-    +'animation:badgePop 0.25s ease-out forwards;">'
+    +'background:'+C.bgSec+';">'
     +'<div style="position:absolute;left:0;top:0;bottom:0;width:'+progress+'%;background:'+C.warning+'2A;transition:width 0.4s ease;"></div>'
     +'<span style="position:relative;font-size:10px;">⛏️</span>'
     +'<span style="position:relative;color:'+C.warning+';font-size:10px;font-weight:700;">'+progress+'%</span>'
@@ -346,7 +345,7 @@ function playerIcon(profile,collecting){
   var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
   var hColor=getHColor(profile.health,profile.maxHealth);
   var badgeRow=collecting
-    ?'<div style="display:flex;justify-content:center;margin-bottom:2px;animation:badgePop 0.25s ease-out forwards;">'+collectBadge(Math.round(collecting.progress))+'</div>'
+    ?'<div style="display:flex;justify-content:center;margin-bottom:2px;">'+collectBadge(Math.round(collecting.progress))+'</div>'
     :'';
   var totalH=collecting?133:110;
   var anchorY=collecting?27+23:27;
