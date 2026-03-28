@@ -166,8 +166,8 @@ function userIcon(user,selected,spotColor){
     +'</div>';
   if(user.collectingSpotId){
     var badge=collectBadge(user.collectProgress);
-    var html='<div style="display:flex;flex-direction:column;align-items:center;width:130px;padding-top:16px;position:relative;">'
-      +'<div style="position:absolute;top:0;left:50%;transform:translateX(-50%);animation:badgePop 0.25s ease-out forwards;">'+badge+'</div>'
+    var html='<div style="display:flex;flex-direction:column;align-items:center;width:130px;">'
+      +'<div style="display:flex;justify-content:center;gap:4px;margin-bottom:2px;">'+badge+'</div>'
       +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;">'+avatarHtml(user.avatar,36)+'</div>'
       +'<div style="margin-top:3px;color:'+C.text+';font-size:11px;font-weight:700;letter-spacing:0.3px;text-align:center;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+shadow+';">'+user.name+'</div>'
       +statsRow
