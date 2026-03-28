@@ -480,7 +480,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
   const GRID_GAP = 10;
   const SHEET_PADDING = 20;
   const cardWidth = (screenWidth - SHEET_PADDING * 2 - GRID_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
-  const [expanded, setExpanded] = useState(false);
   const [selectedBagSpot, setSelectedBagSpot] = useState<Spot | null>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
 
@@ -518,25 +517,12 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
   const isInspecting = selectedUser !== null;
   const displayBag = isInspecting ? (selectedUser.bag ?? []) : userProfile.bag;
   const displayCoins = isInspecting ? (selectedUser.coins ?? 0) : userProfile.coins;
-  const quickSpots = collectedSpots.slice(0, 5);
-  const quickItems = !isInspecting
-    ? displayBag
-        .filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))
-        .slice(0, Math.max(0, 5 - quickSpots.length))
-    : [];
-  const hasQuickItems = quickSpots.length > 0 || quickItems.length > 0;
-
   const handleUseItem = (item: InventoryItem) => {
     if (isInspecting) return;
     if (SUBSTANCE_TYPES.includes(item.type as SubstanceType)) {
       useSubstance(item.type as SubstanceType);
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  };
-
-  const toggleExpand = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    setExpanded((v) => !v);
   };
 
   const handleLongSelectSpot = (spot: Spot) => {
@@ -750,55 +736,34 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
   return (
     <>
       <RNAnimated.View style={[styles.column, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}>
-        <View style={[styles.bagSection, isInspecting && styles.bagSectionInspecting]}>
-          <TouchableOpacity
-            style={styles.expandBtn}
-            onPress={toggleExpand}
-            activeOpacity={0.75}
+        <Pressable
+          onPress={() => sheetRef.current?.present()}
+          style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
+        >
+          <View
+            style={[
+              styles.fireBtn,
+              isInspecting && { borderColor: COLORS.dark.warning + "55", backgroundColor: COLORS.dark.warning + "18" },
+            ]}
           >
-            <Feather
-              name={expanded ? "chevron-down" : "chevron-up"}
-              size={14}
-              color={COLORS.dark.textSecondary}
-            />
-          </TouchableOpacity>
-
-          {expanded && hasQuickItems && (
-            <>
-              <View style={styles.itemsDivider} />
-              {quickSpots.map((spot) => (
-                <QuickSpotItem
-                  key={spot.id}
-                  spot={spot}
-                  isSelected={selectedInventorySpot?.id === spot.id}
-                  onPress={setSelectedBagSpot}
-                  onLongSelect={handleLongSelectSpot}
-                />
-              ))}
-              {quickItems.map((item) => (
-                <QuickItem key={item.id} item={item} onUse={handleUseItem} readOnly={isInspecting} />
-              ))}
-              <View style={styles.itemsDivider} />
-            </>
-          )}
-
-          <Pressable
-            onPress={() => {
-              sheetRef.current?.present();
-            }}
-            style={({ pressed }) => [styles.bagBtn, { opacity: pressed ? 0.8 : 1 }]}
-          >
-            <View style={[styles.bagBtnInner, isInspecting && styles.bagBtnInnerInspecting]}>
-              <Feather name="briefcase" size={20} color={isInspecting ? COLORS.dark.warning : COLORS.dark.accent} />
-              <View style={[styles.coinBadge, isInspecting && styles.coinBadgeInspecting]}>
-                <Text style={[styles.coinText, isInspecting && styles.coinTextInspecting]}>
-                  {displayCoins}
-                </Text>
-              </View>
+            <Feather name="briefcase" size={22} color={isInspecting ? COLORS.dark.warning : COLORS.dark.accent} />
+            <View style={[styles.coinBadge, isInspecting && styles.coinBadgeInspecting]}>
+              <Text style={[styles.coinText, isInspecting && styles.coinTextInspecting]}>
+                {displayCoins}
+              </Text>
             </View>
-            <Text style={[styles.bagLabel, isInspecting && styles.bagLabelInspecting]}>SPOTBAG</Text>
-          </Pressable>
-        </View>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              style={[
+                styles.fireLabel,
+                { color: isInspecting ? COLORS.dark.warning : COLORS.dark.accent },
+              ]}
+            >
+              BAG
+            </Text>
+          </View>
+        </Pressable>
 
         {longMenuOpen && (
           <RNAnimated.View
