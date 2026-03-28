@@ -260,7 +260,7 @@ function GridSpotItem({
 
       {isManipulated && (
         <View style={styles.manipulatedBadge} pointerEvents="none">
-          <Ionicons name="flask" size={12} color="#ffffff" />
+          <Ionicons name="flask-outline" size={10} color="#7eefc4" />
         </View>
       )}
     </View>
@@ -1073,12 +1073,12 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 4,
     right: 4,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: "#A78BFA",
-    borderWidth: 1.5,
-    borderColor: "#C4B5FD",
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: "#0d2b21",
+    borderWidth: 1,
+    borderColor: "#2aab6c44",
     alignItems: "center",
     justifyContent: "center",
     zIndex: 10,
