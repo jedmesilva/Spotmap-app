@@ -61,33 +61,68 @@ function formatExpiry(ts: number) {
 interface MinerCardProps {
   avatar: string;
   progress: number | null;
-  color: string;
   isPlayer?: boolean;
 }
 
-function MinerCard({ avatar, progress, color, isPlayer = false }: MinerCardProps) {
+function CollectBadge({ progress }: { progress: number | null }) {
   const pct = progress !== null ? Math.round(progress) : null;
+  const W = COLORS.dark.warning;
+  return (
+    <View style={badgeStyles.wrap}>
+      {pct !== null && (
+        <View style={[badgeStyles.fill, { width: `${pct}%` as any }]} />
+      )}
+      <Text style={badgeStyles.icon}>⛏️</Text>
+      <Text style={[badgeStyles.text, { color: pct !== null ? W : COLORS.dark.textMuted }]}>
+        {pct !== null ? `${pct}%` : "—"}
+      </Text>
+    </View>
+  );
+}
+
+const badgeStyles = StyleSheet.create({
+  wrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    borderWidth: 1,
+    borderColor: COLORS.dark.warning + "88",
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    backgroundColor: COLORS.dark.bgSecondary,
+    overflow: "hidden",
+    position: "relative",
+  },
+  fill: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    backgroundColor: COLORS.dark.warning + "2A",
+  },
+  icon: {
+    fontSize: 10,
+    zIndex: 1,
+  },
+  text: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    zIndex: 1,
+  },
+});
+
+function MinerCard({ avatar, progress, isPlayer = false }: MinerCardProps) {
   return (
     <View style={minerStyles.card}>
-      <View style={[minerStyles.ring, { borderColor: isPlayer ? COLORS.dark.accent : color + "88" }]}>
+      <View style={[minerStyles.ring, { borderColor: isPlayer ? COLORS.dark.accent : COLORS.dark.warning + "88" }]}>
         {isImageUrl(avatar) ? (
           <Image source={{ uri: avatar }} style={minerStyles.img} />
         ) : (
           <Text style={minerStyles.emoji}>{avatar}</Text>
         )}
       </View>
-      {pct !== null ? (
-        <View style={[minerStyles.badge, { borderColor: color + "66" }]}>
-          <View style={[minerStyles.badgeFill, { width: `${pct}%` as any, backgroundColor: color + "40" }]} />
-          <Text style={minerStyles.badgeIcon}>⛏️</Text>
-          <Text style={[minerStyles.badgeText, { color }]}>{pct}%</Text>
-        </View>
-      ) : (
-        <View style={[minerStyles.badge, { borderColor: COLORS.dark.border }]}>
-          <Text style={minerStyles.badgeIconDim}>⛏️</Text>
-          <Text style={minerStyles.badgeTextDim}>—</Text>
-        </View>
-      )}
+      <CollectBadge progress={progress} />
     </View>
   );
 }
@@ -115,43 +150,6 @@ const minerStyles = StyleSheet.create({
   },
   emoji: {
     fontSize: 15,
-  },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    overflow: "hidden",
-    position: "relative",
-    backgroundColor: COLORS.dark.bgSecondary,
-  },
-  badgeFill: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    borderRadius: 6,
-  },
-  badgeIcon: {
-    fontSize: 9,
-    zIndex: 1,
-  },
-  badgeText: {
-    fontSize: 9,
-    fontFamily: "Inter_700Bold",
-    zIndex: 1,
-  },
-  badgeIconDim: {
-    fontSize: 9,
-    opacity: 0.4,
-  },
-  badgeTextDim: {
-    fontSize: 9,
-    fontFamily: "Inter_700Bold",
-    color: COLORS.dark.textMuted,
   },
 });
 
@@ -213,7 +211,6 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
           <MinerCard
             avatar={userProfile.avatar}
             progress={isPlayerMining ? playerProgress : null}
-            color={color}
             isPlayer
           />
           {otherMiners.map((u) => (
@@ -221,7 +218,6 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
               key={u.id}
               avatar={u.avatar}
               progress={u.collectProgress}
-              color={color}
             />
           ))}
         </ScrollView>
