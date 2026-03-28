@@ -701,16 +701,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
                   <Text style={styles.readOnlyText}>somente leitura</Text>
                 </View>
               )}
-              {!isInspecting && (
-                <View style={styles.statsRow}>
-                  <View style={styles.statChip}>
-                    <Feather name="star" size={12} color={COLORS.dark.spotCoupon} />
-                    <Text style={[styles.statText, { color: COLORS.dark.spotCoupon }]}>
-                      Lv {userProfile.level}
-                    </Text>
-                  </View>
-                </View>
-              )}
             </View>
 
             <View style={styles.headerRight}>
@@ -984,25 +974,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: COLORS.dark.warning,
     letterSpacing: 0.3,
-  },
-  statsRow: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  statChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: COLORS.dark.surface,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.dark.border,
-  },
-  statText: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
   },
   closeBtn: {
     width: 32,
