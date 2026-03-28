@@ -315,8 +315,8 @@ const styles = StyleSheet.create({
     maxWidth: 100,
   },
   spotImage: {
-    width: "100%",
-    height: 80,
+    width: 72,
+    height: 72,
     borderRadius: 12,
     borderWidth: 2,
     alignItems: "center",
