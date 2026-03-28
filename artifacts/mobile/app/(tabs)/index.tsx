@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useGame } from "@/context/GameContext";
 import { GameMap, GameMapHandle } from "@/components/GameMap";
-import { SpotPanel } from "@/components/SpotPanel";
+import { SpotFloatingPanel, SPOT_FLOATING_PANEL_HEIGHT } from "@/components/SpotFloatingPanel";
 import { BagSidebar } from "@/components/BagSidebar";
 import { UserProfileHUD } from "@/components/UserProfileHUD";
 import { MedalsStrip } from "@/components/MedalsStrip";
@@ -150,6 +150,23 @@ export default function MapScreen() {
               <Feather name="x" size={20} color={COLORS.dark.danger} />
             </TouchableOpacity>
           </>
+        ) : selectedSpot ? (
+          <>
+            <TouchableOpacity
+              style={styles.mapBtn}
+              onPress={() => mapRef.current?.centerOn(selectedSpot.latitude, selectedSpot.longitude)}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="locate" size={22} color={COLORS.dark.accent} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.mapBtn, styles.exitBtn]}
+              onPress={() => selectSpot(null)}
+              activeOpacity={0.75}
+            >
+              <Feather name="x" size={20} color={COLORS.dark.danger} />
+            </TouchableOpacity>
+          </>
         ) : (
           <TouchableOpacity
             style={styles.mapBtn}
@@ -170,14 +187,14 @@ export default function MapScreen() {
         canFire={!!selectedInventorySpot && (canMine || !!selectedUser)}
         miningProgress={miningProgress}
         miningClicks={miningClicks}
-        extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
+        extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : selectedSpot ? SPOT_FLOATING_PANEL_HEIGHT + 10 : 0}
       />
 
       {selectedSpot && (
-        <SpotPanel
+        <SpotFloatingPanel
           spot={selectedSpot}
-          onClose={() => selectSpot(null)}
           isInRange={isSpotInRange(selectedSpot)}
+          bottomInset={bottomInset}
         />
       )}
 
