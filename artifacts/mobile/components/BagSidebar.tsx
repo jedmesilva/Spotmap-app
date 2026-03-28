@@ -799,7 +799,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
               style={[
                 styles.fireBtnGlow,
                 {
-                  opacity: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.0, 0.55] }),
+                  opacity: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.0, 0.5] }),
                   transform: [{ scale: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] }) }],
                 },
               ]}
@@ -808,10 +808,10 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
           <View
             style={[
               styles.fireBtn,
-              !isFireReady && !longMenuOpen && { borderColor: COLORS.dark.danger + "99", backgroundColor: COLORS.dark.danger + "18" },
+              !isFireReady && !longMenuOpen && { borderColor: COLORS.dark.accent + "99", backgroundColor: COLORS.dark.accent + "22" },
               isFireActive && { borderColor: invSpotColor + "88", backgroundColor: invSpotColor + "18" },
               isFireReady && !isFireActive && { borderColor: invSpotColor + "44", backgroundColor: invSpotColor + "0D" },
-              longMenuOpen && { borderColor: COLORS.dark.accent + "88", backgroundColor: COLORS.dark.accent + "10" },
+              longMenuOpen && { borderColor: COLORS.dark.accent + "CC", backgroundColor: COLORS.dark.accent + "18" },
             ]}
           >
             {selectedInventorySpot ? (
@@ -820,7 +820,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
               </RNAnimated.View>
             ) : (
               <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
-                <Feather name="zap" size={24} color={longMenuOpen ? COLORS.dark.accent : COLORS.dark.danger} />
+                <Feather name="zap" size={24} color={COLORS.dark.accent} />
               </RNAnimated.View>
             )}
             {isFireReady && miningClicks > 0 && !longMenuOpen && (
@@ -833,7 +833,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
               adjustsFontSizeToFit
               style={[
                 styles.fireLabel,
-                !isFireReady && !longMenuOpen && { color: COLORS.dark.danger },
+                !isFireReady && !longMenuOpen && { color: COLORS.dark.accent },
                 isFireReady && { color: invSpotColor },
                 selectedInventorySpot && { letterSpacing: 0 },
                 longMenuOpen && { color: COLORS.dark.accent },
@@ -1360,7 +1360,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: COLORS.dark.border,
     justifyContent: "center",
-    shadowColor: COLORS.dark.danger,
+    shadowColor: COLORS.dark.accent,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.45,
     shadowRadius: 12,
@@ -1372,7 +1372,7 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 20,
-    backgroundColor: COLORS.dark.danger,
+    backgroundColor: COLORS.dark.accent,
   },
   fireLabel: {
     fontSize: 8,
