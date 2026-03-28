@@ -100,29 +100,6 @@ const ITEM_TYPE_LABELS: Record<string, string> = {
   rare: "RARO",
 };
 
-const RARITY_CONFIG: Record<string, { label: string; color: string }> = {
-  comum:    { label: "Comum",    color: "#888888" },
-  incomum:  { label: "Incomum",  color: "#2aab5c" },
-  raro:     { label: "Raro",     color: "#3a8fd4" },
-  épico:    { label: "Épico",    color: "#9b5de5" },
-  lendário: { label: "Lendário", color: "#e5a62a" },
-};
-
-const TYPE_RARITY: Record<string, string> = {
-  coupon: "incomum",
-  money: "incomum",
-  product: "raro",
-  rare: "épico",
-  fire: "raro",
-  ice: "raro",
-  lightning: "raro",
-  poison: "raro",
-  flame_shield: "épico",
-  cryo_armor: "épico",
-  volt_ward: "épico",
-  antidote: "incomum",
-  barrier: "épico",
-};
 
 
 const CARD_RADIUS = 14;
