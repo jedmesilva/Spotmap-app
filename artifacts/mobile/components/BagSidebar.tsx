@@ -494,6 +494,18 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
   const fireY = useRef(new RNAnimated.Value(0)).current;
   const floatY = useRef(new RNAnimated.Value(0)).current;
   const floatOpacity = useRef(new RNAnimated.Value(0)).current;
+  const pulseAnim = useRef(new RNAnimated.Value(0)).current;
+
+  useEffect(() => {
+    const loop = RNAnimated.loop(
+      RNAnimated.sequence([
+        RNAnimated.timing(pulseAnim, { toValue: 1, duration: 1400, useNativeDriver: true }),
+        RNAnimated.timing(pulseAnim, { toValue: 0, duration: 1400, useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, []);
 
   const [longMenuOpen, setLongMenuOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -781,9 +793,22 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
         )}
 
         <View ref={fireBtnContainerRef} {...panResponder.panHandlers} style={styles.fireBtnWrapper}>
+          {!isFireReady && !longMenuOpen && (
+            <RNAnimated.View
+              pointerEvents="none"
+              style={[
+                styles.fireBtnGlow,
+                {
+                  opacity: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.0, 0.55] }),
+                  transform: [{ scale: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] }) }],
+                },
+              ]}
+            />
+          )}
           <View
             style={[
               styles.fireBtn,
+              !isFireReady && !longMenuOpen && { borderColor: COLORS.dark.danger + "99", backgroundColor: COLORS.dark.danger + "18" },
               isFireActive && { borderColor: invSpotColor + "88", backgroundColor: invSpotColor + "18" },
               isFireReady && !isFireActive && { borderColor: invSpotColor + "44", backgroundColor: invSpotColor + "0D" },
               longMenuOpen && { borderColor: COLORS.dark.accent + "88", backgroundColor: COLORS.dark.accent + "10" },
@@ -791,11 +816,11 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
           >
             {selectedInventorySpot ? (
               <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
-                <Feather name={SPOT_ICONS[selectedInventorySpot.type] as any} size={22} color={invSpotColor} />
+                <Feather name={SPOT_ICONS[selectedInventorySpot.type] as any} size={24} color={invSpotColor} />
               </RNAnimated.View>
             ) : (
               <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
-                <Feather name="zap" size={22} color={longMenuOpen ? COLORS.dark.accent : COLORS.dark.textMuted} />
+                <Feather name="zap" size={24} color={longMenuOpen ? COLORS.dark.accent : COLORS.dark.danger} />
               </RNAnimated.View>
             )}
             {isFireReady && miningClicks > 0 && !longMenuOpen && (
@@ -808,6 +833,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
               adjustsFontSizeToFit
               style={[
                 styles.fireLabel,
+                !isFireReady && !longMenuOpen && { color: COLORS.dark.danger },
                 isFireReady && { color: invSpotColor },
                 selectedInventorySpot && { letterSpacing: 0 },
                 longMenuOpen && { color: COLORS.dark.accent },
@@ -1327,19 +1353,26 @@ const styles = StyleSheet.create({
   fireBtn: {
     alignItems: "center",
     gap: 4,
-    width: 60,
-    height: 60,
-    borderRadius: 18,
+    width: 68,
+    height: 68,
+    borderRadius: 20,
     backgroundColor: COLORS.dark.card,
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: COLORS.dark.border,
     justifyContent: "center",
-    shadowColor: "#000",
+    shadowColor: COLORS.dark.danger,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 10,
     position: "relative",
+  },
+  fireBtnGlow: {
+    position: "absolute",
+    width: 68,
+    height: 68,
+    borderRadius: 20,
+    backgroundColor: COLORS.dark.danger,
   },
   fireLabel: {
     fontSize: 8,
