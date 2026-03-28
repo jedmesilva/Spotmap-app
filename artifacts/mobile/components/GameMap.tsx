@@ -9,7 +9,8 @@ export interface GameMapHandle {
   centerOn: (lat: number, lng: number) => void;
   sendEmojiReaction: (userId: string, emoji: string, fromUserId?: string) => void;
   mineHit: (spotId: string, clickCount: number) => void;
-  fireAtSpot: (spotId: string) => void;
+  fireAtSpot: (spotId: string, itemType: string) => void;
+  fireAtUser: (userId: string, itemType: string) => void;
 }
 
 const USER_RADIUS = 60;
@@ -455,22 +456,17 @@ window.receiveFromRN=function(jsonStr){
     } else if(d.type==='MINE_HIT'){
       showMineHit(d.spotId,d.clicks);
     } else if(d.type==='SPOT_FIRE'){
-      showSpotFire(d.spotId);
+      showSpotFire(d.spotId,d.itemType);
+    } else if(d.type==='USER_FIRE'){
+      showUserFire(d.userId,d.itemType);
     } else if(d.type==='SET_THEME'){
       window.applyTheme(d.isDark);
     }
   }catch(e){}
 };
 
-function showSpotFire(spotId){
-  if(!playerDot||!spotMarkers[spotId])return;
-  var spot=currentSpots.find(function(s){return s.id===spotId;});
-  if(!spot)return;
-  var color=SPOT_COLOR[spot.type]||C.accent;
+function launchProjectile(fromPt,toPt,color,iconSvg,onDone){
   var mapEl=document.getElementById('map');
-  var fromPt=map.latLngToContainerPoint(playerDot.getLatLng());
-  var toPt=map.latLngToContainerPoint(spotMarkers[spotId].getLatLng());
-
   var el=document.createElement('div');
   el.style.cssText=[
     'position:absolute',
@@ -486,10 +482,8 @@ function showSpotFire(spotId){
     'z-index:999','pointer-events:none',
     'box-shadow:0 0 10px '+color+',0 0 20px '+color+'55'
   ].join(';');
-  el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">'+
-    (ICONS[spot.type]||ICONS.rare)+'</div>';
+  el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">'+iconSvg+'</div>';
   mapEl.appendChild(el);
-
   var duration=520;var startTs=null;
   function easeInOut(t){return t<0.5?2*t*t:-1+(4-2*t)*t;}
   function step(ts){
@@ -498,8 +492,7 @@ function showSpotFire(spotId){
     var t=easeInOut(p);
     var x=fromPt.x+(toPt.x-fromPt.x)*t;
     var y=fromPt.y+(toPt.y-fromPt.y)*t;
-    var arc=-Math.sin(p*Math.PI)*28;
-    y+=arc;
+    y+=-Math.sin(p*Math.PI)*28;
     var scale=0.55+0.6*Math.sin(p*Math.PI);
     el.style.left=x+'px';el.style.top=y+'px';
     el.style.transform='translate(-50%,-50%) scale('+scale+')';
@@ -507,10 +500,28 @@ function showSpotFire(spotId){
     if(p<1){requestAnimationFrame(step);}
     else{
       el.parentNode&&el.parentNode.removeChild(el);
-      showSpotFireImpact(toPt,color);
+      if(onDone)onDone(toPt,color);
     }
   }
   requestAnimationFrame(step);
+}
+
+function showSpotFire(spotId,itemType){
+  if(!playerDot||!spotMarkers[spotId])return;
+  var color=SPOT_COLOR[itemType]||C.accent;
+  var icon=ICONS[itemType]||ICONS.rare;
+  var fromPt=map.latLngToContainerPoint(playerDot.getLatLng());
+  var toPt=map.latLngToContainerPoint(spotMarkers[spotId].getLatLng());
+  launchProjectile(fromPt,toPt,color,icon,showSpotFireImpact);
+}
+
+function showUserFire(userId,itemType){
+  if(!playerDot||!userMarkers[userId])return;
+  var color=SPOT_COLOR[itemType]||C.accent;
+  var icon=ICONS[itemType]||ICONS.rare;
+  var fromPt=map.latLngToContainerPoint(playerDot.getLatLng());
+  var toPt=map.latLngToContainerPoint(userMarkers[userId].getLatLng());
+  launchProjectile(fromPt,toPt,color,icon,showSpotFireImpact);
 }
 
 function showSpotFireImpact(pt,color){
@@ -660,8 +671,11 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
     mineHit: (spotId: string, clickCount: number) => {
       inject({ type: "MINE_HIT", spotId, clicks: clickCount });
     },
-    fireAtSpot: (spotId: string) => {
-      inject({ type: "SPOT_FIRE", spotId });
+    fireAtSpot: (spotId: string, itemType: string) => {
+      inject({ type: "SPOT_FIRE", spotId, itemType });
+    },
+    fireAtUser: (userId: string, itemType: string) => {
+      inject({ type: "USER_FIRE", userId, itemType });
     },
   }));
 

@@ -193,11 +193,12 @@ export default function MapScreen() {
         insets={{ top: topInset, bottom: bottomInset }}
         onFire={() => {
           fireInventorySpot(mineableSpotId);
-          if (mineableSpotId) {
+          const itemType = selectedInventorySpot?.type ?? "rare";
+          if (selectedUser) {
+            mapRef.current?.fireAtUser(selectedUser.id, itemType);
+          } else if (mineableSpotId) {
             mapRef.current?.mineHit(mineableSpotId, miningClicks + 1);
-            if (!selectedUser) {
-              mapRef.current?.fireAtSpot(mineableSpotId);
-            }
+            mapRef.current?.fireAtSpot(mineableSpotId, itemType);
           }
         }}
         canFire={!!selectedInventorySpot && (canMine || !!selectedUser)}
