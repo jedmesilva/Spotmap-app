@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { supabase, supabaseService } from "@/lib/supabase";
 import { resolveImageUrl } from "@/lib/resolveImageUrl";
 import { Spot, SpotBadge, SpotType } from "@/context/GameContext";
 
@@ -82,7 +82,7 @@ export function useSpots(): Spot[] {
 
     fetchSpots();
 
-    const channel = supabase
+    const channel = supabaseService
       .channel("spots-realtime")
       .on(
         "postgres_changes",
@@ -130,7 +130,7 @@ export function useSpots(): Spot[] {
 
     return () => {
       cancelled = true;
-      supabase.removeChannel(channel);
+      supabaseService.removeChannel(channel);
     };
   }, []);
 
