@@ -193,7 +193,12 @@ export default function MapScreen() {
         insets={{ top: topInset, bottom: bottomInset }}
         onFire={() => {
           fireInventorySpot(mineableSpotId);
-          if (mineableSpotId) mapRef.current?.mineHit(mineableSpotId, miningClicks + 1);
+          if (mineableSpotId) {
+            mapRef.current?.mineHit(mineableSpotId, miningClicks + 1);
+            if (!selectedUser) {
+              mapRef.current?.fireAtSpot(mineableSpotId);
+            }
+          }
         }}
         canFire={!!selectedInventorySpot && (canMine || !!selectedUser)}
         miningProgress={miningProgress}

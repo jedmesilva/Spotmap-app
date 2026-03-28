@@ -9,6 +9,7 @@ export interface GameMapHandle {
   centerOn: (lat: number, lng: number) => void;
   sendEmojiReaction: (userId: string, emoji: string, fromUserId?: string) => void;
   mineHit: (spotId: string, clickCount: number) => void;
+  fireAtSpot: (spotId: string) => void;
 }
 
 const USER_RADIUS = 60;
@@ -453,11 +454,109 @@ window.receiveFromRN=function(jsonStr){
       showEmojiReaction(d.userId,d.emoji,d.fromUserId||null);
     } else if(d.type==='MINE_HIT'){
       showMineHit(d.spotId,d.clicks);
+    } else if(d.type==='SPOT_FIRE'){
+      showSpotFire(d.spotId);
     } else if(d.type==='SET_THEME'){
       window.applyTheme(d.isDark);
     }
   }catch(e){}
 };
+
+function showSpotFire(spotId){
+  if(!playerDot||!spotMarkers[spotId])return;
+  var spot=currentSpots.find(function(s){return s.id===spotId;});
+  if(!spot)return;
+  var color=SPOT_COLOR[spot.type]||C.accent;
+  var mapEl=document.getElementById('map');
+  var fromPt=map.latLngToContainerPoint(playerDot.getLatLng());
+  var toPt=map.latLngToContainerPoint(spotMarkers[spotId].getLatLng());
+
+  var el=document.createElement('div');
+  el.style.cssText=[
+    'position:absolute',
+    'left:'+fromPt.x+'px',
+    'top:'+fromPt.y+'px',
+    'width:28px','height:28px',
+    'border-radius:50%',
+    'background:'+color+'22',
+    'border:2.5px solid '+color,
+    'display:flex','align-items:center','justify-content:center',
+    'color:'+color,
+    'transform:translate(-50%,-50%)',
+    'z-index:999','pointer-events:none',
+    'box-shadow:0 0 10px '+color+',0 0 20px '+color+'55'
+  ].join(';');
+  el.innerHTML='<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;">'+
+    (ICONS[spot.type]||ICONS.rare)+'</div>';
+  mapEl.appendChild(el);
+
+  var duration=520;var startTs=null;
+  function easeInOut(t){return t<0.5?2*t*t:-1+(4-2*t)*t;}
+  function step(ts){
+    if(!startTs)startTs=ts;
+    var p=Math.min((ts-startTs)/duration,1);
+    var t=easeInOut(p);
+    var x=fromPt.x+(toPt.x-fromPt.x)*t;
+    var y=fromPt.y+(toPt.y-fromPt.y)*t;
+    var arc=-Math.sin(p*Math.PI)*28;
+    y+=arc;
+    var scale=0.55+0.6*Math.sin(p*Math.PI);
+    el.style.left=x+'px';el.style.top=y+'px';
+    el.style.transform='translate(-50%,-50%) scale('+scale+')';
+    el.style.opacity=p>0.8?String(1-(p-0.8)/0.2):'1';
+    if(p<1){requestAnimationFrame(step);}
+    else{
+      el.parentNode&&el.parentNode.removeChild(el);
+      showSpotFireImpact(toPt,color);
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+function showSpotFireImpact(pt,color){
+  var mapEl=document.getElementById('map');
+  var ring=document.createElement('div');
+  ring.style.cssText=[
+    'position:absolute','left:'+pt.x+'px','top:'+pt.y+'px',
+    'width:22px','height:22px','border-radius:50%',
+    'border:2px solid '+color,'box-shadow:0 0 8px '+color,
+    'transform:translate(-50%,-50%) scale(1)',
+    'opacity:1','z-index:999','pointer-events:none'
+  ].join(';');
+  mapEl.appendChild(ring);
+  var numSparks=6;var sparks=[];
+  for(var i=0;i<numSparks;i++){
+    var angle=(i/numSparks)*Math.PI*2;
+    var sp=document.createElement('div');
+    sp.style.cssText=[
+      'position:absolute','left:'+pt.x+'px','top:'+pt.y+'px',
+      'width:4px','height:4px','border-radius:50%',
+      'background:'+color,'box-shadow:0 0 4px '+color,
+      'transform:translate(-50%,-50%)',
+      'z-index:999','pointer-events:none','opacity:1'
+    ].join(';');
+    sp._angle=angle;mapEl.appendChild(sp);sparks.push(sp);
+  }
+  var dur=380;var startTs=null;
+  function impactStep(ts){
+    if(!startTs)startTs=ts;
+    var p=Math.min((ts-startTs)/dur,1);
+    ring.style.transform='translate(-50%,-50%) scale('+(1+p*2.8)+')';
+    ring.style.opacity=String(1-p);
+    sparks.forEach(function(sp){
+      var d=p*32;
+      sp.style.left=(pt.x+Math.cos(sp._angle)*d)+'px';
+      sp.style.top=(pt.y+Math.sin(sp._angle)*d)+'px';
+      sp.style.opacity=String(1-p);
+    });
+    if(p<1){requestAnimationFrame(impactStep);}
+    else{
+      ring.parentNode&&ring.parentNode.removeChild(ring);
+      sparks.forEach(function(s){s.parentNode&&s.parentNode.removeChild(s);});
+    }
+  }
+  requestAnimationFrame(impactStep);
+}
 
 function showMineHit(spotId,clicks){
   var marker=spotMarkers[spotId];
@@ -560,6 +659,9 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
     },
     mineHit: (spotId: string, clickCount: number) => {
       inject({ type: "MINE_HIT", spotId, clicks: clickCount });
+    },
+    fireAtSpot: (spotId: string) => {
+      inject({ type: "SPOT_FIRE", spotId });
     },
   }));
 
