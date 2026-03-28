@@ -57,43 +57,135 @@ function formatExpiry(ts: number) {
   return `${m}m`;
 }
 
+function MinerAvatar({ avatar, progress, color }: { avatar: string; progress: number; color: string }) {
+  return (
+    <View style={minerStyles.wrapper}>
+      <View style={[minerStyles.ring, { borderColor: color + "99" }]}>
+        {isImageUrl(avatar) ? (
+          <Image source={{ uri: avatar }} style={minerStyles.img} />
+        ) : (
+          <Text style={minerStyles.emoji}>{avatar}</Text>
+        )}
+      </View>
+      <View style={[minerStyles.badge, { backgroundColor: color + "22", borderColor: color + "66" }]}>
+        <Text style={[minerStyles.badgeText, { color }]}>{Math.round(progress)}%</Text>
+      </View>
+    </View>
+  );
+}
+
+const minerStyles = StyleSheet.create({
+  wrapper: {
+    alignItems: "center",
+    gap: 3,
+  },
+  ring: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    backgroundColor: COLORS.dark.bgSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  img: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+  },
+  emoji: {
+    fontSize: 14,
+  },
+  badge: {
+    borderRadius: 6,
+    borderWidth: 1,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+  },
+});
+
 export function UserProfileHUD({ insets }: UserProfileHUDProps) {
-  const { userProfile, selectedUser, selectedSpot } = useGame();
+  const { userProfile, selectedUser, selectedSpot, nearbyUsers, activeCollection } = useGame();
 
   const top = Math.max(insets.top + 10, 50);
 
   if (selectedSpot) {
     const color = SPOT_COLORS[selectedSpot.type] ?? COLORS.dark.accent;
     const icon = SPOT_ICONS[selectedSpot.type] ?? "star";
-    const label = SPOT_LABELS[selectedSpot.type] ?? selectedSpot.type;
+
+    const isPlayerMining = activeCollection?.spotId === selectedSpot.id;
+    const playerProgress = isPlayerMining ? (activeCollection?.progress ?? 0) : 0;
+
+    const otherMiners = nearbyUsers.filter(
+      (u) => u.collectingSpotId === selectedSpot.id
+    );
 
     return (
-      <View style={[styles.row, { top }]}>
-        <View style={[styles.avatar, { borderColor: color }]}>
-          <View style={[styles.spotIconBg, { backgroundColor: color + "22" }]}>
-            <Feather name={icon as any} size={18} color={color} />
+      <View style={[styles.spotBlock, { top }]}>
+        <View style={styles.spotInfoRow}>
+          <View style={[styles.avatar, { borderColor: color }]}>
+            <View style={[styles.spotIconBg, { backgroundColor: color + "22" }]}>
+              <Feather name={icon as any} size={18} color={color} />
+            </View>
+          </View>
+
+          <View style={[styles.card, { borderColor: color + "44" }]}>
+            <Feather name="map-pin" size={13} color={color} />
+            <Text style={[styles.statText, { color }]}>{selectedSpot.radius}m</Text>
+
+            {selectedSpot.expiresAt && (
+              <>
+                <View style={styles.divider} />
+                <Feather name="clock" size={13} color={COLORS.dark.textMuted} />
+                <Text style={[styles.statText, { color: COLORS.dark.textMuted }]}>
+                  {formatExpiry(selectedSpot.expiresAt)}
+                </Text>
+              </>
+            )}
+          </View>
+
+          <View style={styles.spotNameBlock}>
+            <Text style={styles.spotName} numberOfLines={1}>{selectedSpot.title}</Text>
+            <Text style={[styles.spotValue, { color }]}>{selectedSpot.value}</Text>
           </View>
         </View>
 
-        <View style={[styles.card, { borderColor: color + "44" }]}>
-          <Feather name="map-pin" size={13} color={color} />
-          <Text style={[styles.statText, { color }]}>{selectedSpot.radius}m</Text>
-
-          {selectedSpot.expiresAt && (
-            <>
-              <View style={styles.divider} />
-              <Feather name="clock" size={13} color={COLORS.dark.textMuted} />
-              <Text style={[styles.statText, { color: COLORS.dark.textMuted }]}>
-                {formatExpiry(selectedSpot.expiresAt)}
+        {isPlayerMining && (
+          <View style={styles.progressSection}>
+            <View style={styles.progressRow}>
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    { width: `${playerProgress}%` as any, backgroundColor: color },
+                  ]}
+                />
+              </View>
+              <Text style={[styles.progressLabel, { color }]}>
+                {Math.round(playerProgress)}%
               </Text>
-            </>
-          )}
-        </View>
+            </View>
+          </View>
+        )}
 
-        <View style={styles.spotNameBlock}>
-          <Text style={styles.spotName} numberOfLines={1}>{selectedSpot.title}</Text>
-          <Text style={[styles.spotValue, { color }]}>{selectedSpot.value}</Text>
-        </View>
+        {otherMiners.length > 0 && (
+          <View style={styles.minersRow}>
+            <Text style={styles.minersLabel}>Minerando:</Text>
+            {otherMiners.map((u) => (
+              <MinerAvatar
+                key={u.id}
+                avatar={u.avatar}
+                progress={u.collectProgress}
+                color={color}
+              />
+            ))}
+          </View>
+        )}
       </View>
     );
   }
@@ -150,6 +242,13 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
 }
 
 const styles = StyleSheet.create({
+  spotBlock: {
+    position: "absolute",
+    left: 16,
+    right: 80,
+    zIndex: 10,
+    gap: 8,
+  },
   row: {
     position: "absolute",
     left: 16,
@@ -157,6 +256,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
     zIndex: 10,
+  },
+  spotInfoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   avatar: {
     width: 40,
@@ -245,5 +349,41 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_600SemiBold",
     lineHeight: 15,
+  },
+  progressSection: {
+    gap: 4,
+  },
+  progressRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  progressBar: {
+    flex: 1,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: COLORS.dark.border,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 3,
+  },
+  progressLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    minWidth: 30,
+    textAlign: "right",
+  },
+  minersRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  minersLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: COLORS.dark.textMuted,
   },
 });

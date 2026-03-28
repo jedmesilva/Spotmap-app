@@ -31,7 +31,7 @@ interface SpotFloatingPanelProps {
   bottomInset: number;
 }
 
-export const SPOT_FLOATING_PANEL_HEIGHT = 60;
+export const SPOT_FLOATING_PANEL_HEIGHT = 52;
 
 export function SpotFloatingPanel({ spot, isInRange, bottomInset }: SpotFloatingPanelProps) {
   const { activeCollection } = useGame();
@@ -64,15 +64,6 @@ export function SpotFloatingPanel({ spot, isInRange, bottomInset }: SpotFloating
         { bottom: bottomInset + 10, transform: [{ translateY: slideAnim }] },
       ]}
     >
-      {isCollecting && (
-        <View style={styles.progressRow}>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${progress}%` as any, backgroundColor: color }]} />
-          </View>
-          <Text style={[styles.progressText, { color }]}>{Math.round(progress)}%</Text>
-        </View>
-      )}
-
       <View style={[styles.mineHint, { borderColor: color + "55", backgroundColor: color + "10" }]}>
         <Text style={styles.mineHintIcon}>⛏️</Text>
         <Text style={[styles.mineHintText, { color }]}>
@@ -102,29 +93,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 10,
     zIndex: 20,
-    gap: 8,
-  },
-  progressRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  progressBar: {
-    flex: 1,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: COLORS.dark.border,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 3,
-  },
-  progressText: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    minWidth: 32,
-    textAlign: "right",
   },
   mineHint: {
     flexDirection: "row",
