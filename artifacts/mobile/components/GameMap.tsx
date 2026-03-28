@@ -67,6 +67,8 @@ map.getContainer().querySelector('.leaflet-map-pane').appendChild(navyOverlay);
 var spotMarkers={},spotCircles={},userMarkers={};
 var playerDot=null,playerCircle=null;
 var selSpot=null,selUser=null;
+var userCollectingSpot={};
+var playerCollectingSpotId=null;
 var currentSpots=[];var playerLoc=null;var mineableSpotId=null;
 
 function haversineM(lat1,lon1,lat2,lon2){
@@ -263,7 +265,14 @@ function applySpotVisibility(){
 
 function applyUserVisibility(){
   Object.keys(userMarkers).forEach(function(id){
-    var hide=selUser!==null&&selUser!==id;
+    var hide;
+    if(selUser!==null){
+      hide=selUser!==id;
+    } else if(selSpot!==null){
+      hide=userCollectingSpot[id]!==selSpot;
+    } else {
+      hide=false;
+    }
     var m=userMarkers[id];
     if(m){
       var el=m.getElement();
@@ -273,6 +282,14 @@ function applyUserVisibility(){
       }
     }
   });
+}
+
+function applyPlayerVisibility(){
+  if(!playerDot)return;
+  var el=playerDot.getElement();
+  if(!el)return;
+  var hide=selSpot!==null&&playerCollectingSpotId!==selSpot;
+  el.style.opacity=hide?'0':'1';
 }
 
 function updateSpots(spots){
@@ -315,9 +332,10 @@ function updateSpots(spots){
 function updateUsers(users){
   var ids=users.map(function(u){return u.id});
   Object.keys(userMarkers).forEach(function(id){
-    if(ids.indexOf(id)<0){map.removeLayer(userMarkers[id]);delete userMarkers[id]}
+    if(ids.indexOf(id)<0){map.removeLayer(userMarkers[id]);delete userMarkers[id];delete userCollectingSpot[id];}
   });
   users.forEach(function(user){
+    userCollectingSpot[user.id]=user.collectingSpotId||null;
     var ll=[user.latitude,user.longitude];
     var sc=spotColorForPos(user.latitude,user.longitude);
     var icon=userIcon(user,selUser===user.id,sc);
@@ -360,6 +378,7 @@ var lastPlayerLat=null,lastPlayerLng=null;
 
 function updatePlayer(loc,radius,profile,collecting){
   if(!loc)return;
+  playerCollectingSpotId=collecting?collecting.spotId:null;
   var ll=[loc.latitude,loc.longitude];
   var isFirst=!playerDot&&!playerCircle;
   var posChanged=(ll[0]!==lastPlayerLat||ll[1]!==lastPlayerLng);
@@ -398,6 +417,7 @@ window.receiveFromRN=function(jsonStr){
       updateSpots(d.spots||[]);
       updateUsers(d.users||[]);
       updatePlayer(d.userLocation,d.userRadius,d.userProfile||null,d.playerCollecting||null);
+      applyPlayerVisibility();
       if(selUser&&selUser!==prevSelUser&&userMarkers[selUser]){
         map.panTo(userMarkers[selUser].getLatLng(),{animate:true,duration:0.5,easeLinearity:0.5});
       } else if(selSpot&&selSpot!==prevSelSpot&&spotMarkers[selSpot]){
