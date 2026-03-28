@@ -265,14 +265,7 @@ function applySpotVisibility(){
 
 function applyUserVisibility(){
   Object.keys(userMarkers).forEach(function(id){
-    var hide;
-    if(selUser!==null){
-      hide=selUser!==id;
-    } else if(selSpot!==null){
-      hide=userCollectingSpot[id]!==selSpot;
-    } else {
-      hide=false;
-    }
+    var hide=selUser!==null&&selUser!==id;
     var m=userMarkers[id];
     if(m){
       var el=m.getElement();
@@ -288,8 +281,7 @@ function applyPlayerVisibility(){
   if(!playerDot)return;
   var el=playerDot.getElement();
   if(!el)return;
-  var hide=selSpot!==null&&playerCollectingSpotId!==selSpot;
-  el.style.opacity=hide?'0':'1';
+  el.style.opacity='1';
 }
 
 function updateSpots(spots){
