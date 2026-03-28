@@ -84,8 +84,6 @@ export interface UserProfile {
   nickname: string;
   email: string;
   avatar: string;
-  level: number;
-  xp: number;
   health: number;
   maxHealth: number;
   strength: number;
@@ -206,8 +204,6 @@ const DEFAULT_PROFILE: UserProfile = {
   nickname: "você",
   email: "voce@exemplo.com",
   avatar: "V",
-  level: 0,
-  xp: 0,
   health: 0,
   maxHealth: 0,
   strength: 0,
@@ -302,7 +298,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (!userId) return;
     supabase
       .from("users")
-      .select("strength, health, max_health, coins, xp, level")
+      .select("strength, health, max_health, coins")
       .eq("id", userId)
       .single()
       .then(({ data }) => {
@@ -313,8 +309,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             health: data.health ?? prev.health,
             maxHealth: data.max_health ?? prev.maxHealth,
             coins: data.coins ?? prev.coins,
-            xp: data.xp ?? prev.xp,
-            level: data.level ?? prev.level,
           }));
         }
       });
@@ -799,7 +793,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       setSelectedSpot(null);
       setUserProfile((prevProfile) => ({
         ...prevProfile,
-        xp: prevProfile.xp + 100,
         coins: prevProfile.coins + (spot.type === "money" ? 50 : 10),
       }));
 
@@ -1017,7 +1010,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     setUserProfile((prev) => ({
       ...prev,
-      xp: prev.xp + 100,
       coins: prev.coins + (spot.type === "money" ? 50 : 10),
     }));
 

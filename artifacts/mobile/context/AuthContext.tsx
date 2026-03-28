@@ -10,8 +10,6 @@ export interface UserProfile {
   nickname: string;
   email: string;
   avatar: string;
-  level: number;
-  xp: number;
   health: number;
   max_health: number;
   coins: number;
