@@ -465,7 +465,7 @@ interface GameMapProps {
   selectedUserId?: string | null;
   mineableSpotId?: string | null;
   userLocation?: { latitude: number; longitude: number } | null;
-  userProfile?: { name: string; avatar: string; health: number; maxHealth: number } | null;
+  userProfile?: { name: string; avatar: string; health: number; maxHealth: number; strength: number } | null;
   activeCollection?: { spotId: string; progress: number } | null;
   onSpotPress: (spotId: string) => void;
   onUserPress: (userId: string) => void;
@@ -527,7 +527,7 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
       selectedUserId: selectedUserId ?? null,
       mineableSpotId: mineableSpotId ?? null,
       userProfile: userProfile
-        ? { name: userProfile.name, avatar: userProfile.avatar, health: userProfile.health, maxHealth: userProfile.maxHealth }
+        ? { name: userProfile.name, avatar: userProfile.avatar, health: userProfile.health, maxHealth: userProfile.maxHealth, strength: userProfile.strength }
         : null,
       playerCollecting: activeCollection
         ? { spotId: activeCollection.spotId, progress: activeCollection.progress }
