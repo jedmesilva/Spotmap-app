@@ -37,17 +37,9 @@ export interface Medal {
   icon: string;
   name: string;
   description: string;
+  rarity: MedalRarity;
   holderCount: number;
   unlockedAt?: number;
-}
-
-export function computeMedalRarity(holderCount: number, totalUsers: number): MedalRarity {
-  if (totalUsers === 0) return "legendary";
-  const pct = holderCount / totalUsers;
-  if (pct <= 0.01) return "legendary";
-  if (pct <= 0.05) return "epic";
-  if (pct <= 0.20) return "rare";
-  return "common";
 }
 
 export interface Spot {
@@ -123,7 +115,6 @@ interface ActiveCollection {
 
 interface GameState {
   userProfile: UserProfile;
-  totalUsers: number;
   spots: Spot[];
   collectedSpots: Spot[];
   nearbyUsers: NearbyUser[];
@@ -226,15 +217,7 @@ const DEFAULT_PROFILE: UserProfile = {
   immunities: [],
   coins: 0,
   bag: [],
-  medals: [
-    { id: "m1", icon: "🎯", name: "Primeiro Passo", description: "Realizou sua primeira coleta.", holderCount: 850, unlockedAt: Date.now() - 86400000 * 10 },
-    { id: "m2", icon: "🏹", name: "Caçador", description: "Completou 5 coletas no mapa.", holderCount: 420, unlockedAt: Date.now() - 86400000 * 7 },
-    { id: "m3", icon: "⚔️", name: "Guerreiro", description: "Atacou 10 jogadores diferentes.", holderCount: 180, unlockedAt: Date.now() - 86400000 * 3 },
-    { id: "m4", icon: "💀", name: "Sobrevivente", description: "Sobreviveu com menos de 20% de vida.", holderCount: 95, unlockedAt: Date.now() - 86400000 },
-    { id: "m5", icon: "🗺️", name: "Explorador", description: "Visite 20 spots diferentes.", holderCount: 40 },
-    { id: "m6", icon: "🛡️", name: "Intocável", description: "Bloqueie 5 ataques seguidos.", holderCount: 8 },
-    { id: "m7", icon: "👑", name: "Lendário", description: "Alcance o nível 10.", holderCount: 3 },
-  ],
+  medals: [],
 };
 
 const LOCATION_HISTORY_MIN_INTERVAL_MS = 10_000;
@@ -270,7 +253,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   );
   const collectedSpots = useCollectedSpots(session?.user?.id ?? null);
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
-  const [totalUsers, setTotalUsers] = useState<number>(0);
   const [activeCollection, setActiveCollection] = useState<ActiveCollection | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
@@ -1078,8 +1060,52 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       .eq("id", spotId);
   }, []);
 
+  useEffect(() => {
+    const userId = session?.user?.id;
+    if (!userId) return;
+
+    async function loadMedals() {
+      const [{ data: userMedals }, { data: allHolders }, { count: usersTotal }] = await Promise.all([
+        supabase
+          .from("user_medals")
+          .select("medal_id, unlocked_at, medal_definitions(id, key, name, description, image_url)")
+          .eq("user_id", userId),
+        supabase.from("user_medals").select("medal_id"),
+        supabase.from("users").select("*", { count: "exact", head: true }),
+      ]);
+
+      if (usersTotal !== null) setTotalUsers(usersTotal);
+
+      if (!userMedals || !allHolders) return;
+
+      const holderMap = new Map<string, number>();
+      for (const row of allHolders) {
+        holderMap.set(row.medal_id, (holderMap.get(row.medal_id) ?? 0) + 1);
+      }
+
+      const medals: Medal[] = userMedals
+        .filter((um) => um.medal_definitions)
+        .map((um) => {
+          const def = um.medal_definitions as any;
+          return {
+            id: def.id,
+            icon: def.image_url ?? "🏅",
+            name: def.name,
+            description: def.description,
+            holderCount: holderMap.get(def.id) ?? 0,
+            unlockedAt: new Date(um.unlocked_at).getTime(),
+          };
+        });
+
+      setUserProfile((prev) => ({ ...prev, medals }));
+    }
+
+    loadMedals();
+  }, [session]);
+
   const value: GameState & GameActions = {
     userProfile,
+    totalUsers,
     spots,
     collectedSpots,
     nearbyUsers,

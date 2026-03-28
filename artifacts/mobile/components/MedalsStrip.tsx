@@ -10,7 +10,7 @@ import {
 } from "react-native";
 
 import COLORS from "@/constants/colors";
-import { Medal, MedalRarity } from "@/context/GameContext";
+import { Medal, MedalRarity, computeMedalRarity } from "@/context/GameContext";
 import { useGame } from "@/context/GameContext";
 
 interface MedalsStripProps {
@@ -38,10 +38,11 @@ const RARITY_LABEL: Record<MedalRarity, string> = {
   legendary: "Lendário",
 };
 
-function MedalBadge({ medal, onPress }: { medal: Medal; onPress: () => void }) {
+function MedalBadge({ medal, totalUsers, onPress }: { medal: Medal; totalUsers: number; onPress: () => void }) {
   const locked = !medal.unlockedAt;
-  const color = locked ? COLORS.dark.textMuted : RARITY_COLOR[medal.rarity];
-  const glow = locked ? "transparent" : RARITY_GLOW[medal.rarity];
+  const rarity = computeMedalRarity(medal.holderCount, totalUsers);
+  const color = locked ? COLORS.dark.textMuted : RARITY_COLOR[rarity];
+  const glow = locked ? "transparent" : RARITY_GLOW[rarity];
 
   return (
     <TouchableOpacity style={styles.badgeContainer} onPress={onPress} activeOpacity={0.75}>
@@ -64,7 +65,7 @@ function MedalBadge({ medal, onPress }: { medal: Medal; onPress: () => void }) {
 }
 
 export function MedalsStrip({ insets }: MedalsStripProps) {
-  const { userProfile, selectedUser } = useGame();
+  const { userProfile, selectedUser, totalUsers } = useGame();
   const [selected, setSelected] = useState<Medal | null>(null);
 
   const isInspecting = selectedUser !== null;
@@ -89,7 +90,7 @@ export function MedalsStrip({ insets }: MedalsStripProps) {
         >
           {unlockedFirst.length > 0 ? (
             unlockedFirst.map((medal) => (
-              <MedalBadge key={medal.id} medal={medal} onPress={() => setSelected(medal)} />
+              <MedalBadge key={medal.id} medal={medal} totalUsers={totalUsers} onPress={() => setSelected(medal)} />
             ))
           ) : (
             <View style={styles.emptyMedals}>
@@ -106,66 +107,49 @@ export function MedalsStrip({ insets }: MedalsStripProps) {
         onRequestClose={() => setSelected(null)}
       >
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setSelected(null)}>
-          {selected && (
-            <View style={styles.card}>
-              <View
-                style={[
-                  styles.cardCircle,
-                  {
-                    borderColor: selected.unlockedAt
-                      ? RARITY_COLOR[selected.rarity]
-                      : COLORS.dark.textMuted,
-                    shadowColor: selected.unlockedAt
-                      ? RARITY_GLOW[selected.rarity]
-                      : "transparent",
-                  },
-                ]}
-              >
-                <Text style={styles.cardIcon}>
-                  {selected.unlockedAt ? selected.icon : "🔒"}
-                </Text>
-              </View>
+          {selected && (() => {
+            const rarity = computeMedalRarity(selected.holderCount, totalUsers);
+            const rarityColor = selected.unlockedAt ? RARITY_COLOR[rarity] : COLORS.dark.textMuted;
+            const rarityGlow = selected.unlockedAt ? RARITY_GLOW[rarity] : "transparent";
+            return (
+              <View style={styles.card}>
+                <View style={[styles.cardCircle, { borderColor: rarityColor, shadowColor: rarityGlow }]}>
+                  <Text style={styles.cardIcon}>
+                    {selected.unlockedAt ? selected.icon : "🔒"}
+                  </Text>
+                </View>
 
-              <View
-                style={[
-                  styles.rarityBadge,
-                  {
-                    backgroundColor: selected.unlockedAt
-                      ? RARITY_COLOR[selected.rarity] + "22"
-                      : COLORS.dark.border + "22",
-                    borderColor: selected.unlockedAt
-                      ? RARITY_COLOR[selected.rarity] + "66"
-                      : COLORS.dark.border,
-                  },
-                ]}
-              >
-                <Text
+                <View
                   style={[
-                    styles.rarityText,
+                    styles.rarityBadge,
                     {
-                      color: selected.unlockedAt
-                        ? RARITY_COLOR[selected.rarity]
-                        : COLORS.dark.textMuted,
+                      backgroundColor: rarityColor + "22",
+                      borderColor: rarityColor + "66",
                     },
                   ]}
                 >
-                  {RARITY_LABEL[selected.rarity]}
+                  <Text style={[styles.rarityText, { color: rarityColor }]}>
+                    {RARITY_LABEL[rarity]}
+                  </Text>
+                </View>
+
+                <Text style={styles.cardName}>{selected.name}</Text>
+                <Text style={styles.cardDesc}>{selected.description}</Text>
+                <Text style={styles.cardHolders}>
+                  {selected.holderCount} {selected.holderCount === 1 ? "jogador possui" : "jogadores possuem"}
                 </Text>
+
+                {selected.unlockedAt ? (
+                  <Text style={styles.cardDate}>
+                    Conquistada em{" "}
+                    {new Date(selected.unlockedAt).toLocaleDateString("pt-BR")}
+                  </Text>
+                ) : (
+                  <Text style={styles.cardLocked}>Ainda não conquistada</Text>
+                )}
               </View>
-
-              <Text style={styles.cardName}>{selected.name}</Text>
-              <Text style={styles.cardDesc}>{selected.description}</Text>
-
-              {selected.unlockedAt ? (
-                <Text style={styles.cardDate}>
-                  Conquistada em{" "}
-                  {new Date(selected.unlockedAt).toLocaleDateString("pt-BR")}
-                </Text>
-              ) : (
-                <Text style={styles.cardLocked}>Ainda não conquistada</Text>
-              )}
-            </View>
-          )}
+            );
+          })()}
         </TouchableOpacity>
       </Modal>
     </>
@@ -288,6 +272,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
     lineHeight: 19,
+  },
+  cardHolders: {
+    color: COLORS.dark.textSecondary,
+    fontSize: 12,
+    marginTop: 2,
   },
   cardDate: {
     color: COLORS.dark.textMuted,
