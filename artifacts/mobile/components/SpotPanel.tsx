@@ -145,14 +145,12 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
           </View>
         )}
 
-        {!isBagView && isInRange ? (
+        {!isBagView && isInRange && isCollecting ? (
           <View style={[styles.mineHint, { borderColor: color + "55", backgroundColor: color + "10" }]}>
             <Text style={styles.mineHintIcon}>⛏️</Text>
             <View style={styles.mineHintBody}>
               <Text style={[styles.mineHintTitle, { color }]}>
-                {isCollecting
-                  ? `${hitsRemaining} picaretada${hitsRemaining !== 1 ? "s" : ""} restante${hitsRemaining !== 1 ? "s" : ""}`
-                  : "Use o botão ⛏️ para minerar"}
+                {`${hitsRemaining} picaretada${hitsRemaining !== 1 ? "s" : ""} restante${hitsRemaining !== 1 ? "s" : ""}`}
               </Text>
               <Text style={styles.mineHintSub}>
                 {hitsRequired} picaretada{hitsRequired !== 1 ? "s" : ""} necessária{hitsRequired !== 1 ? "s" : ""}
