@@ -6,7 +6,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useGame } from "@/context/GameContext";
 import { GameMap, GameMapHandle } from "@/components/GameMap";
-import { SpotFloatingPanel, SPOT_FLOATING_PANEL_HEIGHT } from "@/components/SpotFloatingPanel";
 import { BagSidebar } from "@/components/BagSidebar";
 import { UserProfileHUD } from "@/components/UserProfileHUD";
 import { MedalsStrip } from "@/components/MedalsStrip";
@@ -187,16 +186,9 @@ export default function MapScreen() {
         canFire={!!selectedInventorySpot && (canMine || !!selectedUser)}
         miningProgress={miningProgress}
         miningClicks={miningClicks}
-        extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : selectedSpot ? SPOT_FLOATING_PANEL_HEIGHT + 10 : 0}
+        extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
       />
 
-      {selectedSpot && (
-        <SpotFloatingPanel
-          spot={selectedSpot}
-          isInRange={isSpotInRange(selectedSpot)}
-          bottomInset={bottomInset}
-        />
-      )}
 
       {selectedUser && (
         <EmojiBar
