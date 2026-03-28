@@ -778,7 +778,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
         <View
           ref={fireBtnContainerRef}
           {...panResponder.panHandlers}
-          style={[styles.fireBtnWrapper, !isFireReady && !longMenuOpen && { opacity: 0.7 }]}
+          style={[styles.fireBtnWrapper]}
         >
           <View
             style={[
