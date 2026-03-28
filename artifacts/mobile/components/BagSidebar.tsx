@@ -1,9 +1,10 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated as RNAnimated,
+  PanResponder,
   Pressable,
   StyleSheet,
   Text,
@@ -125,6 +126,12 @@ const TYPE_RARITY: Record<string, string> = {
 
 
 const CARD_RADIUS = 14;
+
+const LONG_MENU_ITEM_HEIGHT = 50;
+const LONG_MENU_ITEM_GAP = 6;
+const LONG_MENU_ITEM_SLOT = LONG_MENU_ITEM_HEIGHT + LONG_MENU_ITEM_GAP;
+const LONG_MENU_ITEM_WIDTH = 158;
+const FIRE_BTN_WIDTH = 60;
 
 function GridSpotItem({
   spot,
@@ -487,6 +494,15 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
   const floatY = useRef(new RNAnimated.Value(0)).current;
   const floatOpacity = useRef(new RNAnimated.Value(0)).current;
 
+  const [longMenuOpen, setLongMenuOpen] = useState(false);
+  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const longMenuOpenRef = useRef(false);
+  const hoveredIndexRef = useRef<number | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fireBtnContainerRef = useRef<View>(null);
+  const fireBtnRectRef = useRef<{ x: number; y: number; w: number; h: number } | null>(null);
+  const menuAnim = useRef(new RNAnimated.Value(0)).current;
+
   const bottomAnim = useRef(new RNAnimated.Value(extraBottomOffset)).current;
   useEffect(() => {
     RNAnimated.spring(bottomAnim, {
@@ -559,6 +575,163 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
     onFire?.();
   };
 
+  const menuItems = useMemo(() => {
+    type MenuItem = {
+      id: string;
+      label: string;
+      sublabel: string;
+      color: string;
+      icon: string;
+      kind: "spot" | "item";
+      spot?: Spot;
+      item?: InventoryItem;
+      qty?: number;
+    };
+    const spotEntries: MenuItem[] = collectedSpots.slice(0, 5).map((s) => ({
+      id: s.id,
+      label: s.title,
+      sublabel: SPOT_LABELS[s.type] ?? s.type,
+      color: SPOT_COLORS[s.type] ?? COLORS.dark.accent,
+      icon: SPOT_ICONS[s.type] ?? "package",
+      kind: "spot",
+      spot: s,
+    }));
+    const itemEntries: MenuItem[] = displayBag
+      .filter((i) => i.quantity > 0 && !SPOT_TYPES.includes(i.type))
+      .slice(0, 5)
+      .map((i) => ({
+        id: i.id,
+        label: i.name,
+        sublabel: ITEM_TYPE_LABELS[i.type] ?? i.type,
+        color: ITEM_COLORS[i.type] ?? COLORS.dark.accent,
+        icon: ITEM_ICONS[i.type] ?? "package",
+        kind: "item",
+        item: i,
+        qty: i.quantity,
+      }));
+    return [...spotEntries, ...itemEntries].slice(0, 5);
+  }, [collectedSpots, displayBag]);
+
+  const menuItemsRef = useRef(menuItems);
+  menuItemsRef.current = menuItems;
+
+  const openLongMenu = useCallback(() => {
+    fireBtnContainerRef.current?.measureInWindow((x, y, w, h) => {
+      fireBtnRectRef.current = { x, y, w, h };
+      longMenuOpenRef.current = true;
+      setLongMenuOpen(true);
+      setHoveredIndex(null);
+      hoveredIndexRef.current = null;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      menuAnim.setValue(0);
+      RNAnimated.spring(menuAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 160,
+        friction: 7,
+      }).start();
+    });
+  }, [menuAnim]);
+
+  const closeLongMenu = useCallback(
+    (selectIdx?: number) => {
+      const items = menuItemsRef.current;
+      if (selectIdx !== undefined && selectIdx >= 0 && selectIdx < items.length) {
+        const menuItem = items[selectIdx];
+        if (menuItem.kind === "spot" && menuItem.spot) handleLongSelectSpot(menuItem.spot);
+        else if (menuItem.kind === "item" && menuItem.item) handleUseItem(menuItem.item);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }
+      RNAnimated.timing(menuAnim, { toValue: 0, duration: 160, useNativeDriver: true }).start(() => {
+        longMenuOpenRef.current = false;
+        setLongMenuOpen(false);
+        setHoveredIndex(null);
+        hoveredIndexRef.current = null;
+      });
+    },
+    [menuAnim, handleLongSelectSpot, handleUseItem]
+  );
+
+  const openLongMenuRef = useRef(openLongMenu);
+  openLongMenuRef.current = openLongMenu;
+  const closeLongMenuRef = useRef(closeLongMenu);
+  closeLongMenuRef.current = closeLongMenu;
+
+  const handleFireRef = useRef(handleFire);
+  handleFireRef.current = handleFire;
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => longMenuOpenRef.current,
+      onShouldBlockNativeResponder: () => longMenuOpenRef.current,
+
+      onPanResponderGrant: () => {
+        if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = setTimeout(() => {
+          longPressTimerRef.current = null;
+          openLongMenuRef.current();
+        }, 480);
+      },
+
+      onPanResponderMove: (evt) => {
+        if (!longMenuOpenRef.current) return;
+        const rect = fireBtnRectRef.current;
+        const items = menuItemsRef.current;
+        if (!rect || items.length === 0) return;
+
+        const touchY = evt.nativeEvent.pageY;
+        const touchX = evt.nativeEvent.pageX;
+
+        const listRight = rect.x - 10;
+        const listLeft = listRight - LONG_MENU_ITEM_WIDTH;
+        const listBottom = rect.y + rect.h;
+        const listTop = listBottom - items.length * LONG_MENU_ITEM_SLOT;
+
+        const inX = touchX >= listLeft - 12 && touchX <= listRight + 12;
+        const inY = touchY >= listTop - 12 && touchY <= listBottom + 12;
+
+        if (inX && inY) {
+          const relY = touchY - listTop;
+          const idx = Math.max(0, Math.min(items.length - 1, Math.floor(relY / LONG_MENU_ITEM_SLOT)));
+          if (hoveredIndexRef.current !== idx) {
+            hoveredIndexRef.current = idx;
+            setHoveredIndex(idx);
+            Haptics.selectionAsync();
+          }
+        } else {
+          if (hoveredIndexRef.current !== null) {
+            hoveredIndexRef.current = null;
+            setHoveredIndex(null);
+          }
+        }
+      },
+
+      onPanResponderRelease: () => {
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+          handleFireRef.current();
+          return;
+        }
+        if (longMenuOpenRef.current) {
+          const idx = hoveredIndexRef.current;
+          closeLongMenuRef.current(idx !== null ? idx : undefined);
+        }
+      },
+
+      onPanResponderTerminate: () => {
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+        if (longMenuOpenRef.current) {
+          closeLongMenuRef.current();
+        }
+      },
+    })
+  ).current;
+
   const invSpotColor = selectedInventorySpot
     ? (SPOT_COLORS[selectedInventorySpot.type] ?? COLORS.dark.accent)
     : COLORS.dark.textMuted;
@@ -624,51 +797,111 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
           </Pressable>
         </View>
 
-        <TouchableOpacity
-          onPress={handleFire}
-          activeOpacity={isFireReady ? 0.8 : 1}
-          style={[
-            styles.fireBtn,
-            isFireActive && { borderColor: invSpotColor + "88", backgroundColor: invSpotColor + "18" },
-            isFireReady && !isFireActive && { borderColor: invSpotColor + "44", backgroundColor: invSpotColor + "0D" },
-          ]}
-        >
-          {selectedInventorySpot ? (
-            <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
-              <Feather
-                name={SPOT_ICONS[selectedInventorySpot.type] as any}
-                size={22}
-                color={invSpotColor}
-              />
-            </RNAnimated.View>
-          ) : (
-            <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
-              <Feather
-                name="zap"
-                size={22}
-                color={COLORS.dark.textMuted}
-              />
-            </RNAnimated.View>
-          )}
-          {isFireReady && miningClicks > 0 && (
-            <View style={[styles.mineProgressBadge, { backgroundColor: invSpotColor }]}>
-              <Text style={styles.mineProgressText}>{miningClicks}x</Text>
-            </View>
-          )}
-          <Text
-            numberOfLines={1}
-            adjustsFontSizeToFit
+        <View ref={fireBtnContainerRef} {...panResponder.panHandlers} style={styles.fireBtnWrapper}>
+          <View
             style={[
-              styles.fireLabel,
-              isFireReady && { color: invSpotColor },
-              selectedInventorySpot && { letterSpacing: 0 },
+              styles.fireBtn,
+              isFireActive && { borderColor: invSpotColor + "88", backgroundColor: invSpotColor + "18" },
+              isFireReady && !isFireActive && { borderColor: invSpotColor + "44", backgroundColor: invSpotColor + "0D" },
+              longMenuOpen && { borderColor: COLORS.dark.accent + "88", backgroundColor: COLORS.dark.accent + "10" },
             ]}
           >
-            {selectedInventorySpot
-              ? SPOT_LABELS[selectedInventorySpot.type] ?? selectedInventorySpot.type.toUpperCase()
-              : isInspecting ? "ATK" : "FIRE"}
-          </Text>
-        </TouchableOpacity>
+            {selectedInventorySpot ? (
+              <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
+                <Feather name={SPOT_ICONS[selectedInventorySpot.type] as any} size={22} color={invSpotColor} />
+              </RNAnimated.View>
+            ) : (
+              <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
+                <Feather name="zap" size={22} color={longMenuOpen ? COLORS.dark.accent : COLORS.dark.textMuted} />
+              </RNAnimated.View>
+            )}
+            {isFireReady && miningClicks > 0 && !longMenuOpen && (
+              <View style={[styles.mineProgressBadge, { backgroundColor: invSpotColor }]}>
+                <Text style={styles.mineProgressText}>{miningClicks}x</Text>
+              </View>
+            )}
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              style={[
+                styles.fireLabel,
+                isFireReady && { color: invSpotColor },
+                selectedInventorySpot && { letterSpacing: 0 },
+                longMenuOpen && { color: COLORS.dark.accent },
+              ]}
+            >
+              {selectedInventorySpot
+                ? SPOT_LABELS[selectedInventorySpot.type] ?? selectedInventorySpot.type.toUpperCase()
+                : isInspecting ? "ATK" : "FIRE"}
+            </Text>
+          </View>
+
+          {longMenuOpen && (
+            <RNAnimated.View
+              pointerEvents="none"
+              style={[
+                styles.longPressMenu,
+                {
+                  opacity: menuAnim,
+                  transform: [
+                    {
+                      scale: menuAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0.88, 1],
+                      }),
+                    },
+                    {
+                      translateY: menuAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [16, 0],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            >
+              {menuItems.map((menuItem, idx) => {
+                const isHovered = hoveredIndex === idx;
+                return (
+                  <View
+                    key={menuItem.id}
+                    style={[
+                      styles.longPressMenuItem,
+                      {
+                        borderColor: menuItem.color + (isHovered ? "CC" : "44"),
+                        backgroundColor: isHovered ? menuItem.color + "26" : COLORS.dark.card,
+                      },
+                      isHovered && styles.longPressMenuItemHovered,
+                    ]}
+                  >
+                    <View style={[styles.longPressMenuItemIcon, { backgroundColor: menuItem.color + "22" }]}>
+                      <Feather name={menuItem.icon as any} size={15} color={menuItem.color} />
+                    </View>
+                    <View style={styles.longPressMenuItemText}>
+                      <Text
+                        style={[styles.longPressMenuItemLabel, { color: isHovered ? menuItem.color : COLORS.dark.text }]}
+                        numberOfLines={1}
+                      >
+                        {menuItem.label}
+                      </Text>
+                      <Text style={styles.longPressMenuItemSub} numberOfLines={1}>
+                        {menuItem.sublabel}
+                      </Text>
+                    </View>
+                    {menuItem.qty !== undefined && menuItem.qty > 1 && (
+                      <View style={[styles.longPressMenuItemQtyBadge, { backgroundColor: menuItem.color + "22", borderColor: menuItem.color + "55" }]}>
+                        <Text style={[styles.longPressMenuItemQtyText, { color: menuItem.color }]}>×{menuItem.qty}</Text>
+                      </View>
+                    )}
+                    {isHovered && (
+                      <View style={[styles.longPressMenuHoverDot, { backgroundColor: menuItem.color }]} />
+                    )}
+                  </View>
+                );
+              })}
+            </RNAnimated.View>
+          )}
+        </View>
 
         <RNAnimated.View
           pointerEvents="none"
@@ -1197,5 +1430,76 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1.5,
     borderColor: COLORS.dark.bg,
+  },
+  fireBtnWrapper: {
+    position: "relative",
+    overflow: "visible",
+  },
+  longPressMenu: {
+    position: "absolute",
+    right: FIRE_BTN_WIDTH + 10,
+    bottom: 0,
+    width: LONG_MENU_ITEM_WIDTH,
+    gap: LONG_MENU_ITEM_GAP,
+    zIndex: 100,
+  },
+  longPressMenuItem: {
+    height: LONG_MENU_ITEM_HEIGHT,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    gap: 9,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.45,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  longPressMenuItemHovered: {
+    shadowOpacity: 0.7,
+    shadowRadius: 14,
+    elevation: 10,
+  },
+  longPressMenuItemIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  longPressMenuItemText: {
+    flex: 1,
+    gap: 1,
+  },
+  longPressMenuItemLabel: {
+    fontSize: 11.5,
+    fontFamily: "Inter_600SemiBold",
+  },
+  longPressMenuItemSub: {
+    fontSize: 9,
+    fontFamily: "Inter_500Medium",
+    color: COLORS.dark.textMuted,
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  longPressMenuItemQtyBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderWidth: 1,
+    flexShrink: 0,
+  },
+  longPressMenuItemQtyText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+  },
+  longPressMenuHoverDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    flexShrink: 0,
   },
 });
