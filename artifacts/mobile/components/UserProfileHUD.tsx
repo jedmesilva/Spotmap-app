@@ -60,13 +60,12 @@ function formatExpiry(ts: number) {
 
 interface MinerCardProps {
   avatar: string;
-  name: string;
   progress: number | null;
   color: string;
   isPlayer?: boolean;
 }
 
-function MinerCard({ avatar, name, progress, color, isPlayer = false }: MinerCardProps) {
+function MinerCard({ avatar, progress, color, isPlayer = false }: MinerCardProps) {
   const pct = progress !== null ? Math.round(progress) : null;
   return (
     <View style={minerStyles.card}>
@@ -77,9 +76,6 @@ function MinerCard({ avatar, name, progress, color, isPlayer = false }: MinerCar
           <Text style={minerStyles.emoji}>{avatar}</Text>
         )}
       </View>
-      <Text style={[minerStyles.name, isPlayer && { color: COLORS.dark.accent }]} numberOfLines={1}>
-        {isPlayer ? "Você" : name}
-      </Text>
       {pct !== null ? (
         <View style={[minerStyles.badge, { borderColor: color + "66" }]}>
           <View style={[minerStyles.badgeFill, { width: `${pct}%` as any, backgroundColor: color + "40" }]} />
@@ -98,14 +94,14 @@ function MinerCard({ avatar, name, progress, color, isPlayer = false }: MinerCar
 
 const minerStyles = StyleSheet.create({
   card: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    width: 56,
+    gap: 6,
   },
   ring: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     borderWidth: 2,
     backgroundColor: COLORS.dark.bgSecondary,
     alignItems: "center",
@@ -113,19 +109,12 @@ const minerStyles = StyleSheet.create({
     overflow: "hidden",
   },
   img: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
   },
   emoji: {
-    fontSize: 16,
-  },
-  name: {
-    fontSize: 9,
-    fontFamily: "Inter_600SemiBold",
-    color: COLORS.dark.textSecondary,
-    textAlign: "center",
-    width: "100%",
+    fontSize: 15,
   },
   badge: {
     flexDirection: "row",
@@ -223,7 +212,6 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
         >
           <MinerCard
             avatar={userProfile.avatar}
-            name={userProfile.name}
             progress={isPlayerMining ? playerProgress : null}
             color={color}
             isPlayer
@@ -232,7 +220,6 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
             <MinerCard
               key={u.id}
               avatar={u.avatar}
-              name={u.name}
               progress={u.collectProgress}
               color={color}
             />
