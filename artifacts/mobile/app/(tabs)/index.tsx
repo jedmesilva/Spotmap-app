@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from "react";
-import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
 import * as Location from "expo-location";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,7 +11,7 @@ import { UserProfileHUD } from "@/components/UserProfileHUD";
 import { MedalsStrip } from "@/components/MedalsStrip";
 import { EmojiBar, EMOJI_BAR_HEIGHT } from "@/components/EmojiBar";
 import { Vignette } from "@/components/Vignette";
-import COLORS from "@/constants/colors";
+import { useColors } from "@/hooks/useColors";
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000;
@@ -28,6 +28,10 @@ function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): nu
 export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const mapRef = useRef<GameMapHandle>(null);
+  const C = useColors();
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === "light" ? "light" : "dark";
+
   const {
     spots,
     nearbyUsers,
@@ -113,7 +117,7 @@ export default function MapScreen() {
   const miningClicks = activeCollection?.clicks ?? 0;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: C.bg }]}>
       <GameMap
         ref={mapRef}
         spots={spots}
@@ -124,6 +128,7 @@ export default function MapScreen() {
         userLocation={userLocation}
         userProfile={userProfile}
         activeCollection={activeCollection ? { spotId: activeCollection.spotId, progress: activeCollection.progress } : null}
+        theme={theme}
         onSpotPress={handleSpotPress}
         onUserPress={handleUserPress}
         onMapPress={handleMapPress}
@@ -142,44 +147,44 @@ export default function MapScreen() {
         {selectedUser ? (
           <>
             <TouchableOpacity
-              style={styles.mapBtn}
+              style={[styles.mapBtn, { backgroundColor: C.card, borderColor: C.accent + "44" }]}
               onPress={() => mapRef.current?.centerOn(selectedUser.latitude, selectedUser.longitude)}
               activeOpacity={0.75}
             >
-              <Ionicons name="locate" size={22} color={COLORS.dark.accent} />
+              <Ionicons name="locate" size={22} color={C.accent} />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.mapBtn, styles.exitBtn]}
+              style={[styles.mapBtn, { backgroundColor: C.card, borderColor: C.danger + "44" }]}
               onPress={() => selectUser(null)}
               activeOpacity={0.75}
             >
-              <Feather name="x" size={20} color={COLORS.dark.danger} />
+              <Feather name="x" size={20} color={C.danger} />
             </TouchableOpacity>
           </>
         ) : selectedSpot ? (
           <>
             <TouchableOpacity
-              style={styles.mapBtn}
+              style={[styles.mapBtn, { backgroundColor: C.card, borderColor: C.accent + "44" }]}
               onPress={() => mapRef.current?.centerOn(selectedSpot.latitude, selectedSpot.longitude)}
               activeOpacity={0.75}
             >
-              <Ionicons name="locate" size={22} color={COLORS.dark.accent} />
+              <Ionicons name="locate" size={22} color={C.accent} />
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.mapBtn, styles.exitBtn]}
+              style={[styles.mapBtn, { backgroundColor: C.card, borderColor: C.danger + "44" }]}
               onPress={() => selectSpot(null)}
               activeOpacity={0.75}
             >
-              <Feather name="x" size={20} color={COLORS.dark.danger} />
+              <Feather name="x" size={20} color={C.danger} />
             </TouchableOpacity>
           </>
         ) : (
           <TouchableOpacity
-            style={styles.mapBtn}
+            style={[styles.mapBtn, { backgroundColor: C.card, borderColor: C.accent + "44" }]}
             onPress={() => mapRef.current?.centerOnUser()}
             activeOpacity={0.75}
           >
-            <Ionicons name="locate" size={22} color={COLORS.dark.accent} />
+            <Ionicons name="locate" size={22} color={C.accent} />
           </TouchableOpacity>
         )}
       </View>
@@ -196,7 +201,6 @@ export default function MapScreen() {
         extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
       />
 
-
       {selectedUser && (
         <EmojiBar
           user={selectedUser}
@@ -206,7 +210,6 @@ export default function MapScreen() {
           }
         />
       )}
-
     </View>
   );
 }
@@ -214,7 +217,6 @@ export default function MapScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.dark.bg,
   },
   rightButtons: {
     position: "absolute",
@@ -227,9 +229,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: COLORS.dark.card,
     borderWidth: 1.5,
-    borderColor: COLORS.dark.accent + "44",
     alignItems: "center",
     justifyContent: "center",
     shadowColor: "#000",
@@ -237,8 +237,5 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 6,
     elevation: 5,
-  },
-  exitBtn: {
-    borderColor: COLORS.dark.danger + "44",
   },
 });

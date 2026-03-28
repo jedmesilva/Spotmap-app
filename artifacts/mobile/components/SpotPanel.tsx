@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import COLORS from "@/constants/colors";
+import { useColors } from "@/hooks/useColors";
 import { Spot, useGame } from "@/context/GameContext";
 
 const SPOT_HITS: Record<string, number> = {
@@ -19,13 +19,6 @@ const SPOT_HITS: Record<string, number> = {
   money: 8,
   product: 12,
   rare: 20,
-};
-
-const SPOT_COLORS: Record<string, string> = {
-  coupon: COLORS.dark.spotCoupon,
-  money: COLORS.dark.spotMoney,
-  product: COLORS.dark.spotProduct,
-  rare: COLORS.dark.spotRare,
 };
 
 const SPOT_ICONS: Record<string, string> = {
@@ -62,9 +55,18 @@ interface SpotPanelProps {
 }
 
 export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, onManipulate, onAbandon }: SpotPanelProps) {
+  const C = useColors();
   const insets = useSafeAreaInsets();
   const { activeCollection } = useGame();
-  const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
+
+  const SPOT_COLORS: Record<string, string> = {
+    coupon: C.spotCoupon,
+    money: C.spotMoney,
+    product: C.spotProduct,
+    rare: C.spotRare,
+  };
+
+  const color = SPOT_COLORS[spot.type] ?? C.accent;
   const [imageError, setImageError] = useState(false);
   const isCollecting = activeCollection?.spotId === spot.id;
   const progress = isCollecting ? activeCollection?.progress ?? 0 : 0;
@@ -90,8 +92,8 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
       enablePanDownToClose
       onDismiss={onClose}
       backdropComponent={renderBackdrop}
-      backgroundStyle={styles.sheetBackground}
-      handleIndicatorStyle={styles.handle}
+      backgroundStyle={{ backgroundColor: C.card, borderWidth: 1, borderColor: C.border }}
+      handleIndicatorStyle={{ backgroundColor: C.border, width: 36 }}
     >
       <BottomSheetScrollView
         contentContainerStyle={[styles.content, { paddingBottom: 32 + insets.bottom }]}
@@ -102,8 +104,11 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
             <Feather name={SPOT_ICONS[spot.type] as any} size={12} color={color} />
             <Text style={[styles.typeLabel, { color }]}>{SPOT_LABELS[spot.type]}</Text>
           </View>
-          <Pressable onPress={onClose} style={styles.closeBtn}>
-            <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
+          <Pressable
+            onPress={onClose}
+            style={[styles.closeBtn, { backgroundColor: C.surface }]}
+          >
+            <Feather name="x" size={18} color={C.textSecondary} />
           </Pressable>
         </View>
 
@@ -120,25 +125,25 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
           </View>
         )}
 
-        <Text style={styles.title}>{spot.title}</Text>
+        <Text style={[styles.title, { color: C.text }]}>{spot.title}</Text>
         <Text style={[styles.value, { color }]}>{spot.value}</Text>
 
         <View style={styles.meta}>
           <View style={styles.metaItem}>
-            <Feather name="map-pin" size={12} color={COLORS.dark.textMuted} />
-            <Text style={styles.metaText}>Raio: {spot.radius}m</Text>
+            <Feather name="map-pin" size={12} color={C.textMuted} />
+            <Text style={[styles.metaText, { color: C.textMuted }]}>Raio: {spot.radius}m</Text>
           </View>
           {spot.expiresAt && (
             <View style={styles.metaItem}>
-              <Feather name="clock" size={12} color={COLORS.dark.textMuted} />
-              <Text style={styles.metaText}>Expira em: {formatExpiry(spot.expiresAt)}</Text>
+              <Feather name="clock" size={12} color={C.textMuted} />
+              <Text style={[styles.metaText, { color: C.textMuted }]}>Expira em: {formatExpiry(spot.expiresAt)}</Text>
             </View>
           )}
         </View>
 
         {isCollecting && (
           <View style={styles.progressSection}>
-            <View style={styles.progressBar}>
+            <View style={[styles.progressBar, { backgroundColor: C.border }]}>
               <View style={[styles.progressFill, { width: `${progress}%` as any, backgroundColor: color }]} />
             </View>
             <Text style={[styles.progressText, { color }]}>{Math.round(progress)}%</Text>
@@ -152,7 +157,7 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
               <Text style={[styles.mineHintTitle, { color }]}>
                 {`${hitsRemaining} picaretada${hitsRemaining !== 1 ? "s" : ""} restante${hitsRemaining !== 1 ? "s" : ""}`}
               </Text>
-              <Text style={styles.mineHintSub}>
+              <Text style={[styles.mineHintSub, { color: C.textMuted }]}>
                 {hitsRequired} picaretada{hitsRequired !== 1 ? "s" : ""} necessária{hitsRequired !== 1 ? "s" : ""}
               </Text>
             </View>
@@ -162,7 +167,7 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
         {isBagView && (
           <View style={styles.actions}>
             <Pressable
-              style={({ pressed }) => [styles.actionBtn, styles.actionUse, { opacity: pressed ? 0.85 : 1 }]}
+              style={({ pressed }) => [styles.actionBtn, { backgroundColor: C.accent, shadowColor: C.accent, opacity: pressed ? 0.85 : 1 }]}
               onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onUse?.(); }}
             >
               <Feather name="check-circle" size={18} color="#fff" />
@@ -171,19 +176,27 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
 
             <View style={styles.actionsRow}>
               <Pressable
-                style={({ pressed }) => [styles.actionBtnSecondary, styles.actionManipulate, { opacity: pressed ? 0.8 : 1 }]}
+                style={({ pressed }) => [styles.actionBtnSecondary, {
+                  borderColor: C.spotMoney + "55",
+                  backgroundColor: C.spotMoney + "10",
+                  opacity: pressed ? 0.8 : 1,
+                }]}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onManipulate?.(); }}
               >
-                <Feather name="tool" size={15} color={COLORS.dark.spotMoney} />
-                <Text style={[styles.actionLabelSecondary, { color: COLORS.dark.spotMoney }]}>Manipular</Text>
+                <Feather name="tool" size={15} color={C.spotMoney} />
+                <Text style={[styles.actionLabelSecondary, { color: C.spotMoney }]}>Manipular</Text>
               </Pressable>
 
               <Pressable
-                style={({ pressed }) => [styles.actionBtnSecondary, styles.actionAbandon, { opacity: pressed ? 0.8 : 1 }]}
+                style={({ pressed }) => [styles.actionBtnSecondary, {
+                  borderColor: C.danger + "55",
+                  backgroundColor: C.danger + "10",
+                  opacity: pressed ? 0.8 : 1,
+                }]}
                 onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy); onAbandon?.(); }}
               >
-                <Feather name="trash-2" size={15} color={COLORS.dark.danger} />
-                <Text style={[styles.actionLabelSecondary, { color: COLORS.dark.danger }]}>Abandonar</Text>
+                <Feather name="trash-2" size={15} color={C.danger} />
+                <Text style={[styles.actionLabelSecondary, { color: C.danger }]}>Abandonar</Text>
               </Pressable>
             </View>
           </View>
@@ -194,15 +207,6 @@ export function SpotPanel({ spot, onClose, isInRange, isBagView = false, onUse, 
 }
 
 const styles = StyleSheet.create({
-  sheetBackground: {
-    backgroundColor: COLORS.dark.card,
-    borderWidth: 1,
-    borderColor: COLORS.dark.border,
-  },
-  handle: {
-    backgroundColor: COLORS.dark.border,
-    width: 36,
-  },
   content: {
     paddingHorizontal: 20,
   },
@@ -231,7 +235,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: COLORS.dark.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -254,7 +257,6 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 22,
     fontFamily: "Inter_700Bold",
-    color: COLORS.dark.text,
     marginBottom: 4,
   },
   value: {
@@ -274,7 +276,6 @@ const styles = StyleSheet.create({
   },
   metaText: {
     fontSize: 12,
-    color: COLORS.dark.textMuted,
     fontFamily: "Inter_400Regular",
   },
   progressSection: {
@@ -284,7 +285,6 @@ const styles = StyleSheet.create({
   progressBar: {
     height: 6,
     borderRadius: 3,
-    backgroundColor: COLORS.dark.border,
     overflow: "hidden",
   },
   progressFill: {
@@ -319,7 +319,6 @@ const styles = StyleSheet.create({
   mineHintSub: {
     fontSize: 11,
     fontFamily: "Inter_400Regular",
-    color: COLORS.dark.textMuted,
   },
   actions: {
     flexDirection: "column",
@@ -337,6 +336,10 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 15,
     borderRadius: 14,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 10,
+    elevation: 6,
   },
   actionBtnSecondary: {
     flex: 1,
@@ -347,23 +350,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 14,
     borderWidth: 1.5,
-    backgroundColor: "transparent",
-  },
-  actionUse: {
-    backgroundColor: COLORS.dark.accent,
-    shadowColor: COLORS.dark.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  actionManipulate: {
-    borderColor: COLORS.dark.spotMoney + "55",
-    backgroundColor: COLORS.dark.spotMoney + "10",
-  },
-  actionAbandon: {
-    borderColor: COLORS.dark.danger + "55",
-    backgroundColor: COLORS.dark.danger + "10",
   },
   actionLabelPrimary: {
     fontSize: 15,

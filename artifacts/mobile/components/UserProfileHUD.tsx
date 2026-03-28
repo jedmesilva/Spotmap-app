@@ -3,8 +3,7 @@ import { router } from "expo-router";
 import React from "react";
 import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-
-import COLORS from "@/constants/colors";
+import { useColors } from "@/hooks/useColors";
 import { useGame, isMonsterMode, STRENGTH_MONSTER_THRESHOLD } from "@/context/GameContext";
 
 const isImageUrl = (v: string) => v.startsWith("http://") || v.startsWith("https://");
@@ -13,27 +12,20 @@ interface UserProfileHUDProps {
   insets: { top: number };
 }
 
-function getHealthColor(health: number, maxHealth: number): string {
+function getHealthColor(health: number, maxHealth: number, C: ReturnType<typeof useColors>): string {
   const ratio = maxHealth > 0 ? health / maxHealth : 1;
-  if (ratio > 0.6) return COLORS.dark.spotMoney;
-  if (ratio > 0.3) return COLORS.dark.warning;
-  return COLORS.dark.danger;
+  if (ratio > 0.6) return C.spotMoney;
+  if (ratio > 0.3) return C.warning;
+  return C.danger;
 }
 
-function getStrengthColor(strength: number): string {
+function getStrengthColor(strength: number, C: ReturnType<typeof useColors>): string {
   if (strength >= STRENGTH_MONSTER_THRESHOLD) return "#ff6b00";
   if (strength >= 150) return "#c084fc";
   if (strength >= 100) return "#60a5fa";
   if (strength >= 50) return "#94a3b8";
-  return COLORS.dark.danger;
+  return C.danger;
 }
-
-const SPOT_COLORS: Record<string, string> = {
-  coupon: COLORS.dark.spotCoupon,
-  money: COLORS.dark.spotMoney,
-  product: COLORS.dark.spotProduct,
-  rare: COLORS.dark.spotRare,
-};
 
 const SPOT_ICONS: Record<string, string> = {
   coupon: "tag",
@@ -58,68 +50,37 @@ function formatExpiry(ts: number) {
   return `${m}m`;
 }
 
-interface MinerCardProps {
-  avatar: string;
-  progress: number | null;
-  isPlayer?: boolean;
-}
-
 function CollectBadge({ progress }: { progress: number | null }) {
+  const C = useColors();
   const pct = progress !== null ? Math.round(progress) : null;
-  const W = COLORS.dark.warning;
   return (
-    <View style={badgeStyles.wrap}>
+    <View style={[
+      styles.badgeWrap,
+      { borderColor: C.warning + "88", backgroundColor: C.bgSecondary },
+    ]}>
       {pct !== null && (
-        <View style={[badgeStyles.fill, { width: `${pct}%` as any }]} />
+        <View style={[styles.badgeFill, { width: `${pct}%` as any, backgroundColor: C.warning + "2A" }]} />
       )}
-      <Text style={badgeStyles.icon}>⛏️</Text>
-      <Text style={[badgeStyles.text, { color: pct !== null ? W : COLORS.dark.textMuted }]}>
+      <Text style={styles.badgeIcon}>⛏️</Text>
+      <Text style={[styles.badgeText, { color: pct !== null ? C.warning : C.textMuted }]}>
         {pct !== null ? `${pct}%` : "—"}
       </Text>
     </View>
   );
 }
 
-const badgeStyles = StyleSheet.create({
-  wrap: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-    borderWidth: 1,
-    borderColor: COLORS.dark.warning + "88",
-    borderRadius: 8,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-    backgroundColor: COLORS.dark.bgSecondary,
-    overflow: "hidden",
-    position: "relative",
-  },
-  fill: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    backgroundColor: COLORS.dark.warning + "2A",
-  },
-  icon: {
-    fontSize: 10,
-    zIndex: 1,
-  },
-  text: {
-    fontSize: 10,
-    fontFamily: "Inter_700Bold",
-    zIndex: 1,
-  },
-});
-
-function MinerCard({ avatar, progress, isPlayer = false }: MinerCardProps) {
+function MinerCard({ avatar, progress, isPlayer = false }: { avatar: string; progress: number | null; isPlayer?: boolean }) {
+  const C = useColors();
   return (
-    <View style={minerStyles.card}>
-      <View style={[minerStyles.ring, { borderColor: isPlayer ? COLORS.dark.accent : COLORS.dark.warning + "88" }]}>
+    <View style={styles.minerCard}>
+      <View style={[styles.minerRing, {
+        borderColor: isPlayer ? C.accent : C.warning + "88",
+        backgroundColor: C.bgSecondary,
+      }]}>
         {isImageUrl(avatar) ? (
-          <Image source={{ uri: avatar }} style={minerStyles.img} />
+          <Image source={{ uri: avatar }} style={styles.minerImg} />
         ) : (
-          <Text style={minerStyles.emoji}>{avatar}</Text>
+          <Text style={styles.minerEmoji}>{avatar}</Text>
         )}
       </View>
       <CollectBadge progress={progress} />
@@ -127,39 +88,21 @@ function MinerCard({ avatar, progress, isPlayer = false }: MinerCardProps) {
   );
 }
 
-const minerStyles = StyleSheet.create({
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  ring: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    borderWidth: 2,
-    backgroundColor: COLORS.dark.bgSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  img: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  emoji: {
-    fontSize: 15,
-  },
-});
-
 export function UserProfileHUD({ insets }: UserProfileHUDProps) {
+  const C = useColors();
   const { userProfile, selectedUser, selectedSpot, nearbyUsers, activeCollection } = useGame();
 
   const top = Math.max(insets.top + 10, 50);
 
+  const SPOT_COLORS: Record<string, string> = {
+    coupon: C.spotCoupon,
+    money: C.spotMoney,
+    product: C.spotProduct,
+    rare: C.spotRare,
+  };
+
   if (selectedSpot) {
-    const color = SPOT_COLORS[selectedSpot.type] ?? COLORS.dark.accent;
+    const color = SPOT_COLORS[selectedSpot.type] ?? C.accent;
     const icon = SPOT_ICONS[selectedSpot.type] ?? "star";
     const label = SPOT_LABELS[selectedSpot.type] ?? selectedSpot.type;
 
@@ -172,7 +115,6 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
 
     return (
       <View style={[styles.spotBlock, { top }]}>
-        {/* Imagem em linha própria */}
         <View style={[styles.spotImage, { borderColor: color, backgroundColor: color + "18" }]}>
           {selectedSpot.imageUrl ? (
             <Image source={{ uri: selectedSpot.imageUrl }} style={styles.spotImageFill} resizeMode="cover" />
@@ -184,25 +126,22 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
           </View>
         </View>
 
-        {/* Nome e valor */}
-        <Text style={styles.spotTitle} numberOfLines={1}>{selectedSpot.title}</Text>
+        <Text style={[styles.spotTitle, { color: C.text }]} numberOfLines={1}>{selectedSpot.title}</Text>
         <Text style={[styles.spotValue, { color }]} numberOfLines={1}>{selectedSpot.value}</Text>
 
-        {/* Metadados discretos */}
         <View style={styles.spotMeta}>
           {selectedSpot.expiresAt && (
             <View style={styles.metaChip}>
-              <Feather name="clock" size={10} color={COLORS.dark.textMuted} />
-              <Text style={styles.metaChipText}>{formatExpiry(selectedSpot.expiresAt)}</Text>
+              <Feather name="clock" size={10} color={C.textMuted} />
+              <Text style={[styles.metaChipText, { color: C.textMuted }]}>{formatExpiry(selectedSpot.expiresAt)}</Text>
             </View>
           )}
           <View style={styles.metaChip}>
-            <Feather name="map-pin" size={10} color={COLORS.dark.textMuted} />
-            <Text style={styles.metaChipText}>{selectedSpot.radius}m</Text>
+            <Feather name="map-pin" size={10} color={C.textMuted} />
+            <Text style={[styles.metaChipText, { color: C.textMuted }]}>{selectedSpot.radius}m</Text>
           </View>
         </View>
 
-        {/* Strip de mineradores — só aparece quem está coletando */}
         {(isPlayerMining || otherMiners.length > 0) && (
           <ScrollView
             horizontal
@@ -210,18 +149,10 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
             contentContainerStyle={styles.minersScroll}
           >
             {isPlayerMining && (
-              <MinerCard
-                avatar={userProfile.avatar}
-                progress={playerProgress}
-                isPlayer
-              />
+              <MinerCard avatar={userProfile.avatar} progress={playerProgress} isPlayer />
             )}
             {otherMiners.map((u) => (
-              <MinerCard
-                key={u.id}
-                avatar={u.avatar}
-                progress={u.collectProgress}
-              />
+              <MinerCard key={u.id} avatar={u.avatar} progress={u.collectProgress} />
             ))}
           </ScrollView>
         )}
@@ -236,34 +167,38 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
   const displayAvatar = isInspecting ? selectedUser.avatar : userProfile.avatar;
   const displayStrength = isInspecting ? selectedUser.strength : userProfile.strength;
 
-  const healthColor = getHealthColor(displayHealth, displayMaxHealth);
-  const strengthColor = getStrengthColor(displayStrength);
+  const healthColor = getHealthColor(displayHealth, displayMaxHealth, C);
+  const strengthColor = getStrengthColor(displayStrength, C);
   const monsterMode = isMonsterMode(displayStrength);
 
   return (
     <View style={[styles.row, { top }]}>
       <TouchableOpacity
-        style={[styles.avatar, monsterMode && !isInspecting && styles.avatarMonster]}
+        style={[
+          styles.avatar,
+          { backgroundColor: C.bgSecondary, borderColor: C.accent },
+          monsterMode && !isInspecting && styles.avatarMonster,
+        ]}
         onPress={() => { if (!isInspecting) router.push("/account"); }}
         activeOpacity={isInspecting ? 1 : 0.8}
       >
         {isImageUrl(displayAvatar) ? (
           <Image source={{ uri: displayAvatar }} style={styles.avatarImage} />
         ) : (
-          <Text style={styles.avatarText}>{displayAvatar}</Text>
+          <Text style={[styles.avatarText, { color: C.text }]}>{displayAvatar}</Text>
         )}
         {monsterMode && !isInspecting && (
           <View style={styles.monsterBadge} />
         )}
       </TouchableOpacity>
 
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: C.card, borderColor: C.border }]}>
         <Ionicons name="heart" size={14} color={healthColor} />
         <Text style={[styles.statText, { color: healthColor }]}>
           {displayHealth}
         </Text>
 
-        <View style={styles.divider} />
+        <View style={[styles.divider, { backgroundColor: C.border }]} />
 
         <Ionicons name="flash" size={14} color={strengthColor} />
         <Text style={[styles.statText, { color: strengthColor }]}>
@@ -272,7 +207,7 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
       </View>
 
       {isInspecting && (
-        <Text style={styles.inspectName} numberOfLines={1}>
+        <Text style={[styles.inspectName, { color: C.textSecondary }]} numberOfLines={1}>
           {selectedUser.name}
         </Text>
       )}
@@ -300,9 +235,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: COLORS.dark.bgSecondary,
     borderWidth: 2,
-    borderColor: COLORS.dark.accent,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
@@ -330,7 +263,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
   },
   avatarText: {
-    color: COLORS.dark.text,
     fontSize: 16,
     fontFamily: "Inter_700Bold",
   },
@@ -338,17 +270,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: COLORS.dark.card,
     borderRadius: 16,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
-    borderColor: COLORS.dark.border,
   },
   divider: {
     width: 1,
     height: 14,
-    backgroundColor: COLORS.dark.border,
     marginHorizontal: 2,
   },
   statText: {
@@ -356,7 +285,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
   },
   inspectName: {
-    color: COLORS.dark.textSecondary,
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
     maxWidth: 100,
@@ -389,19 +317,15 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
   spotTitle: {
-    color: COLORS.dark.text,
     fontSize: 16,
     fontFamily: "Inter_700Bold",
-    textShadowColor: "rgba(0,0,0,0.8)",
+    textShadowColor: "rgba(0,0,0,0.3)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
   spotValue: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
-    textShadowColor: "rgba(0,0,0,0.6)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
   },
   spotMeta: {
     flexDirection: "row",
@@ -416,10 +340,57 @@ const styles = StyleSheet.create({
   metaChipText: {
     fontSize: 10,
     fontFamily: "Inter_400Regular",
-    color: COLORS.dark.textMuted,
   },
   minersScroll: {
     gap: 8,
     paddingVertical: 2,
+  },
+  badgeWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    overflow: "hidden",
+    position: "relative",
+  },
+  badgeFill: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+  },
+  badgeIcon: {
+    fontSize: 10,
+    zIndex: 1,
+  },
+  badgeText: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    zIndex: 1,
+  },
+  minerCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  minerRing: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    overflow: "hidden",
+  },
+  minerImg: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+  },
+  minerEmoji: {
+    fontSize: 15,
   },
 });

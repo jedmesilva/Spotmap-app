@@ -9,7 +9,7 @@ import {
   View,
 } from "react-native";
 
-import COLORS from "@/constants/colors";
+import { useColors } from "@/hooks/useColors";
 import { Medal } from "@/context/GameContext";
 import { useGame } from "@/context/GameContext";
 
@@ -18,6 +18,7 @@ interface MedalsStripProps {
 }
 
 function MedalBadge({ medal, onPress }: { medal: Medal; onPress: () => void }) {
+  const C = useColors();
   const locked = !medal.unlockedAt;
 
   return (
@@ -25,14 +26,19 @@ function MedalBadge({ medal, onPress }: { medal: Medal; onPress: () => void }) {
       <View
         style={[
           styles.badgeCircle,
-          locked && styles.badgeLocked,
+          {
+            backgroundColor: C.bgSecondary,
+            borderColor: C.accent,
+            shadowColor: C.accent,
+          },
+          locked && { opacity: 0.45, borderColor: C.border, shadowColor: "transparent" },
         ]}
       >
         <Text style={[styles.badgeIcon, locked && styles.badgeIconLocked]}>
           {locked ? "🔒" : medal.icon}
         </Text>
       </View>
-      <Text style={[styles.badgeName, { color: locked ? COLORS.dark.textMuted : COLORS.dark.text }]} numberOfLines={1}>
+      <Text style={[styles.badgeName, { color: locked ? C.textMuted : C.text }]} numberOfLines={1}>
         {medal.name}
       </Text>
     </TouchableOpacity>
@@ -40,6 +46,7 @@ function MedalBadge({ medal, onPress }: { medal: Medal; onPress: () => void }) {
 }
 
 export function MedalsStrip({ insets }: MedalsStripProps) {
+  const C = useColors();
   const { userProfile, selectedUser } = useGame();
   const [selected, setSelected] = useState<Medal | null>(null);
 
@@ -77,26 +84,33 @@ export function MedalsStrip({ insets }: MedalsStripProps) {
       >
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setSelected(null)}>
           {selected && (
-            <View style={styles.card}>
-              <View style={[styles.cardCircle, !selected.unlockedAt && styles.cardCircleLocked]}>
+            <View style={[styles.card, { backgroundColor: C.bgSecondary, borderColor: C.border }]}>
+              <View style={[
+                styles.cardCircle,
+                {
+                  backgroundColor: C.bg,
+                  borderColor: selected.unlockedAt ? C.accent : C.textMuted,
+                  shadowColor: selected.unlockedAt ? C.accent : "transparent",
+                },
+              ]}>
                 <Text style={styles.cardIcon}>
                   {selected.unlockedAt ? selected.icon : "🔒"}
                 </Text>
               </View>
 
-              <Text style={styles.cardName}>{selected.name}</Text>
-              <Text style={styles.cardDesc}>{selected.description}</Text>
-              <Text style={styles.cardHolders}>
+              <Text style={[styles.cardName, { color: C.text }]}>{selected.name}</Text>
+              <Text style={[styles.cardDesc, { color: C.textSecondary }]}>{selected.description}</Text>
+              <Text style={[styles.cardHolders, { color: C.textSecondary }]}>
                 {selected.holderCount} {selected.holderCount === 1 ? "jogador possui" : "jogadores possuem"}
               </Text>
 
               {selected.unlockedAt ? (
-                <Text style={styles.cardDate}>
+                <Text style={[styles.cardDate, { color: C.textMuted }]}>
                   Conquistada em{" "}
                   {new Date(selected.unlockedAt).toLocaleDateString("pt-BR")}
                 </Text>
               ) : (
-                <Text style={styles.cardLocked}>Ainda não conquistada</Text>
+                <Text style={[styles.cardLocked, { color: C.textMuted }]}>Ainda não conquistada</Text>
               )}
             </View>
           )}
@@ -119,17 +133,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
   },
-  emptyMedals: {
-    justifyContent: "center",
-    paddingVertical: 8,
-    paddingHorizontal: 4,
-  },
-  emptyMedalsText: {
-    fontSize: 12,
-    color: COLORS.dark.textMuted,
-    fontFamily: "Inter_400Regular",
-    fontStyle: "italic",
-  },
   badgeContainer: {
     alignItems: "center",
     width: 52,
@@ -138,21 +141,13 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: COLORS.dark.bgSecondary,
     borderWidth: 2,
-    borderColor: COLORS.dark.accent,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: COLORS.dark.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 6,
     elevation: 4,
-  },
-  badgeLocked: {
-    opacity: 0.45,
-    borderColor: COLORS.dark.border,
-    shadowColor: "transparent",
   },
   badgeIcon: {
     fontSize: 20,
@@ -174,10 +169,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   card: {
-    backgroundColor: COLORS.dark.bgSecondary,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.dark.border,
     paddingVertical: 28,
     paddingHorizontal: 32,
     alignItems: "center",
@@ -188,50 +181,38 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: COLORS.dark.bg,
     borderWidth: 2.5,
-    borderColor: COLORS.dark.accent,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,
-    shadowColor: COLORS.dark.accent,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 12,
     elevation: 6,
   },
-  cardCircleLocked: {
-    borderColor: COLORS.dark.textMuted,
-    shadowColor: "transparent",
-  },
   cardIcon: {
     fontSize: 32,
   },
   cardName: {
-    color: COLORS.dark.text,
     fontSize: 17,
     fontWeight: "700",
     textAlign: "center",
     marginTop: 2,
   },
   cardDesc: {
-    color: COLORS.dark.textSecondary,
     fontSize: 13,
     textAlign: "center",
     lineHeight: 19,
   },
   cardHolders: {
-    color: COLORS.dark.textSecondary,
     fontSize: 12,
     marginTop: 2,
   },
   cardDate: {
-    color: COLORS.dark.textMuted,
     fontSize: 11,
     marginTop: 4,
   },
   cardLocked: {
-    color: COLORS.dark.textMuted,
     fontSize: 11,
     marginTop: 4,
     fontStyle: "italic",

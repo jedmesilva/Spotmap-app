@@ -10,7 +10,7 @@ import {
   View,
 } from "react-native";
 
-import COLORS from "@/constants/colors";
+import { useColors } from "@/hooks/useColors";
 import { NearbyUser } from "@/context/GameContext";
 
 export const EMOJI_BAR_HEIGHT = 94;
@@ -35,6 +35,7 @@ interface EmojiBarProps {
 }
 
 export function EmojiBar({ user, bottomInset, onSendEmoji }: EmojiBarProps) {
+  const C = useColors();
   const slideAnim = useRef(new Animated.Value(120)).current;
   const [floaters, setFloaters] = useState<FloatingEmoji[]>([]);
   const counterRef = useRef(0);
@@ -103,13 +104,15 @@ export function EmojiBar({ user, bottomInset, onSendEmoji }: EmojiBarProps) {
           styles.container,
           {
             bottom: bottomInset + 10,
+            backgroundColor: C.card,
+            borderColor: C.border,
             transform: [{ translateY: slideAnim }],
           },
         ]}
       >
         <View style={styles.label}>
-          <Text style={styles.labelText}>Enviar para </Text>
-          <Text style={styles.labelName}>{user.name}</Text>
+          <Text style={[styles.labelText, { color: C.textMuted }]}>Enviar para </Text>
+          <Text style={[styles.labelName, { color: C.accent }]}>{user.name}</Text>
         </View>
         <ScrollView
           horizontal
@@ -122,7 +125,11 @@ export function EmojiBar({ user, bottomInset, onSendEmoji }: EmojiBarProps) {
               onPress={() => handleEmojiPress(emoji)}
               style={({ pressed }) => [
                 styles.emojiBtn,
-                pressed && styles.emojiBtnPressed,
+                {
+                  backgroundColor: pressed ? C.accent + "22" : C.surface,
+                  borderColor: pressed ? C.accent + "66" : C.border,
+                  transform: pressed ? [{ scale: 0.88 }] : [],
+                },
               ]}
             >
               <Text style={styles.emoji}>{emoji}</Text>
@@ -139,10 +146,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     left: 16,
     right: 16,
-    backgroundColor: COLORS.dark.card,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.dark.border,
     paddingTop: 10,
     paddingBottom: 10,
     shadowColor: "#000",
@@ -160,12 +165,10 @@ const styles = StyleSheet.create({
   },
   labelText: {
     fontSize: 12,
-    color: COLORS.dark.textMuted,
     fontFamily: "Inter_400Regular",
   },
   labelName: {
     fontSize: 12,
-    color: COLORS.dark.accent,
     fontFamily: "Inter_700Bold",
   },
   scroll: {
@@ -176,16 +179,9 @@ const styles = StyleSheet.create({
     width: 46,
     height: 46,
     borderRadius: 12,
-    backgroundColor: COLORS.dark.surface,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: COLORS.dark.border,
-  },
-  emojiBtnPressed: {
-    backgroundColor: COLORS.dark.accent + "22",
-    borderColor: COLORS.dark.accent + "66",
-    transform: [{ scale: 0.88 }],
   },
   emoji: {
     fontSize: 24,

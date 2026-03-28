@@ -26,7 +26,6 @@ html,body,#map{width:100%;height:100%;background:#050A14;overflow:hidden}
 .leaflet-control-attribution{display:none}
 .leaflet-pane,.leaflet-top,.leaflet-bottom{z-index:1}
 .leaflet-tile-pane{filter:sepia(1) hue-rotate(185deg) saturate(3) brightness(0.55)}
-.leaflet-tile{filter:sepia(1) hue-rotate(185deg) saturate(3) brightness(0.55)}
 @keyframes badgePop{0%{transform:translateX(-50%) scale(0.5);opacity:0}60%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1);opacity:1}}
 @keyframes emojiBurst{0%{transform:translate(-50%,-50%) scale(1.6);opacity:1}100%{transform:translate(-50%,-50%) scale(3);opacity:0}}
 @keyframes mineFloat{0%{transform:translateX(-50%) translateY(0) scale(1);opacity:1}60%{transform:translateX(-50%) translateY(-28px) scale(1.15);opacity:1}100%{transform:translateX(-50%) translateY(-50px) scale(0.9);opacity:0}}
@@ -36,14 +35,29 @@ html,body,#map{width:100%;height:100%;background:#050A14;overflow:hidden}
 <body>
 <div id="map"></div>
 <script>
-var C={
+var C_DARK={
   accent:'#7B68EE',bg:'#08081A',bgSec:'#0D0D24',
   surface:'#13132E',border:'#242450',border33:'#24245033',
   coupon:'#F0A050',money:'#60C878',product:'#50A8F0',rare:'#B87CF0',
   warning:'#F0A050',danger:'#F06565',info:'#50A8F0',spotMoney:'#60C878',
-  text:'#EEEEF8',textMuted:'#484870'
+  text:'#EEEEF8',textMuted:'#484870',
+  shadow:'text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)',
+  mapBg:'#050A14',overlayBg:'#0B1829',overlayOpacity:'0.45',
+  tileFilter:'sepia(1) hue-rotate(185deg) saturate(3) brightness(0.55)',
+  tileUrl:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 };
-function getHColor(health,maxHealth){var r=maxHealth>0?health/maxHealth:1;return r>0.6?C.spotMoney:r>0.3?C.warning:C.danger;}
+var C_LIGHT={
+  accent:'#7B68EE',bg:'#E8ECF5',bgSec:'#F0F3FF',
+  surface:'#FFFFFF',border:'#C8CCDD',border33:'#C8CCDD33',
+  coupon:'#D98A2A',money:'#3EA85A',product:'#3A98E0',rare:'#A86CDE',
+  warning:'#D98A2A',danger:'#E05050',info:'#3A98E0',spotMoney:'#3EA85A',
+  text:'#0D0D2B',textMuted:'#8888A8',
+  shadow:'text-shadow:0 1px 3px rgba(255,255,255,0.85),0 0 6px rgba(255,255,255,0.5)',
+  mapBg:'#E8ECF5',overlayBg:'#DCE4F5',overlayOpacity:'0.18',
+  tileFilter:'sepia(0.15) hue-rotate(185deg) saturate(1.25) brightness(1.02)',
+  tileUrl:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+};
+var C=C_DARK;
 var SPOT_COLOR={coupon:C.coupon,money:C.money,product:C.product,rare:C.rare};
 var ICONS={
   money:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
@@ -54,14 +68,12 @@ var ICONS={
 
 var map=L.map('map',{center:[-23.5505,-46.6333],zoom:17,zoomControl:false,attributionControl:false});
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-  maxZoom:20,subdomains:'abcd'
-}).addTo(map);
+var tileLayer=L.tileLayer(C.tileUrl,{maxZoom:20,subdomains:'abcd'}).addTo(map);
 
 map.on('click',function(){send({type:'MAP_PRESS'})});
 
 var navyOverlay=document.createElement('div');
-navyOverlay.style.cssText='position:absolute;inset:0;background:#0B1829;opacity:0.45;z-index:250;pointer-events:none;';
+navyOverlay.style.cssText='position:absolute;inset:0;background:'+C.overlayBg+';opacity:'+C.overlayOpacity+';z-index:250;pointer-events:none;';
 map.getContainer().querySelector('.leaflet-map-pane').appendChild(navyOverlay);
 
 var spotMarkers={},spotCircles={},userMarkers={};
@@ -69,7 +81,28 @@ var playerDot=null,playerCircle=null;
 var selSpot=null,selUser=null;
 var userCollectingSpot={};
 var playerCollectingSpotId=null;
-var currentSpots=[];var playerLoc=null;var mineableSpotId=null;
+var currentSpots=[];var currentUsers=[];var playerLoc=null;var mineableSpotId=null;
+var playerProfile=null;var playerCollectingData=null;
+
+function updateSpotColorMap(){SPOT_COLOR={coupon:C.coupon,money:C.money,product:C.product,rare:C.rare};}
+
+window.applyTheme=function(isDark){
+  C=isDark?C_DARK:C_LIGHT;
+  updateSpotColorMap();
+  map.removeLayer(tileLayer);
+  tileLayer=L.tileLayer(C.tileUrl,{maxZoom:20,subdomains:'abcd'}).addTo(tileLayer?map:map);
+  var tp=document.querySelector('.leaflet-tile-pane');
+  if(tp)tp.style.filter=C.tileFilter;
+  var mapEl=document.getElementById('map');
+  if(mapEl){mapEl.style.background=C.mapBg;}
+  var lc=document.querySelector('.leaflet-container');
+  if(lc){lc.style.background=C.mapBg;}
+  navyOverlay.style.background=C.overlayBg;
+  navyOverlay.style.opacity=C.overlayOpacity;
+  updateSpots(currentSpots);
+  updateUsers(currentUsers);
+  if(playerProfile&&playerLoc){updatePlayer(playerLoc,null,playerProfile,playerCollectingData);}
+};
 
 function haversineM(lat1,lon1,lat2,lon2){
   var R=6371000,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
@@ -85,6 +118,7 @@ function spotColorForPos(lat,lng){
   }
   return best?(SPOT_COLOR[best.type]||C.accent):null;
 }
+function getHColor(health,maxHealth){var r=maxHealth>0?health/maxHealth:1;return r>0.6?C.spotMoney:r>0.3?C.warning:C.danger;}
 
 function heartSvg(color){
   return '<svg width="13" height="13" viewBox="0 0 24 24" fill="'+color+'" stroke="'+color+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>';
@@ -116,7 +150,7 @@ function spotIcon(spot,selected){
   var color=SPOT_COLOR[spot.type]||C.accent;
   var scale=selected?'transform:scale(1.15);':'';
   var bg=selected?color+'30':color+'18';
-  var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
+  var shadow=C.shadow;
   var html='<div style="display:flex;flex-direction:column;align-items:center;width:100px;">'
     +'<div style="width:44px;height:44px;border-radius:12px;border:2px solid '+color+';background:'+bg+';display:flex;align-items:center;justify-content:center;color:'+color+';'+scale+'">'
     +(ICONS[spot.type]||ICONS.rare)
@@ -127,18 +161,15 @@ function spotIcon(spot,selected){
 }
 
 function userIcon(user,selected,spotColor){
+  var shadow=C.shadow;
   if(selected){
     var hColor=getHColor(user.health,user.maxHealth);
     var bc=spotColor||C.accent;
-    var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
-
     var statusRow=user.collectingSpotId
       ?'<div style="display:flex;justify-content:center;gap:4px;margin-bottom:2px;">'+collectBadge(user.collectProgress)+'</div>'
       :'';
-
     var avatarOffsetY=user.collectingSpotId?19:0;
     var totalH=user.collectingSpotId?141:122;
-
     var html=''
       +'<div style="width:170px;display:flex;flex-direction:column;align-items:center;">'
         +statusRow
@@ -152,13 +183,10 @@ function userIcon(user,selected,spotColor){
           +'<span style="color:'+getStrColor(user.strength||0)+';font-size:11px;font-weight:700;'+shadow+';">'+(user.strength!=null?Math.round(user.strength):100)+'</span>'
         +'</div>'
       +'</div>';
-
     return L.divIcon({html:html,className:'',iconSize:[170,totalH],iconAnchor:[85,avatarOffsetY+27]});
   }
-
   var hColorDim=getHColor(user.health,user.maxHealth);
   var bc=spotColor||hColorDim;
-  var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
   var statsRow=''
     +'<div style="margin-top:2px;display:flex;align-items:center;justify-content:center;gap:3px;">'
       +heartSvg(hColorDim)
@@ -177,7 +205,6 @@ function userIcon(user,selected,spotColor){
       +'</div>';
     return L.divIcon({html:html,className:'',iconSize:[130,94],iconAnchor:[65,36]});
   }
-
   var html='<div style="display:flex;flex-direction:column;align-items:center;width:130px;">'
     +'<div style="width:40px;height:40px;border-radius:50%;border:2.5px solid '+bc+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;">'+avatarHtml(user.avatar,36)+'</div>'
     +'<div style="margin-top:3px;color:'+C.text+';font-size:11px;font-weight:700;letter-spacing:0.3px;text-align:center;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+shadow+';">'+user.name+'</div>'
@@ -324,6 +351,7 @@ function updateSpots(spots){
 }
 
 function updateUsers(users){
+  currentUsers=users;
   var ids=users.map(function(u){return u.id});
   Object.keys(userMarkers).forEach(function(id){
     if(ids.indexOf(id)<0){map.removeLayer(userMarkers[id]);delete userMarkers[id];delete userCollectingSpot[id];}
@@ -345,7 +373,7 @@ function updateUsers(users){
 }
 
 function playerIcon(profile,collecting){
-  var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
+  var shadow=C.shadow;
   var hColor=getHColor(profile.health,profile.maxHealth);
   var badgeRow=collecting
     ?'<div style="display:flex;justify-content:center;margin-bottom:2px;">'+collectBadge(Math.round(collecting.progress))+'</div>'
@@ -372,6 +400,8 @@ var lastPlayerLat=null,lastPlayerLng=null;
 
 function updatePlayer(loc,radius,profile,collecting){
   if(!loc)return;
+  if(profile)playerProfile=profile;
+  if(collecting!==undefined)playerCollectingData=collecting;
   playerCollectingSpotId=collecting?collecting.spotId:null;
   var ll=[loc.latitude,loc.longitude];
   var isFirst=!playerDot&&!playerCircle;
@@ -423,6 +453,8 @@ window.receiveFromRN=function(jsonStr){
       showEmojiReaction(d.userId,d.emoji,d.fromUserId||null);
     } else if(d.type==='MINE_HIT'){
       showMineHit(d.spotId,d.clicks);
+    } else if(d.type==='SET_THEME'){
+      window.applyTheme(d.isDark);
     }
   }catch(e){}
 };
@@ -481,6 +513,7 @@ interface GameMapProps {
   userLocation?: { latitude: number; longitude: number } | null;
   userProfile?: { name: string; avatar: string; health: number; maxHealth: number; strength: number } | null;
   activeCollection?: { spotId: string; progress: number } | null;
+  theme?: "light" | "dark";
   onSpotPress: (spotId: string) => void;
   onUserPress: (userId: string) => void;
   onMapPress: () => void;
@@ -495,6 +528,7 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
   userLocation,
   userProfile,
   activeCollection,
+  theme = "dark",
   onSpotPress,
   onUserPress,
   onMapPress,
@@ -522,12 +556,17 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
       inject({ type: "CENTER", lat, lng, zoom: 17 });
     },
     sendEmojiReaction: (userId: string, emoji: string, fromUserId?: string) => {
-      inject({ type: "EMOJI_REACTION", userId, emoji, fromUserId: fromUserId ?? null });
+      inject({ type: "EMOJI_REACTION", userId, emoji, fromUserId });
     },
     mineHit: (spotId: string, clickCount: number) => {
       inject({ type: "MINE_HIT", spotId, clicks: clickCount });
     },
-  }), [inject]);
+  }));
+
+  useEffect(() => {
+    if (!mapReady) return;
+    inject({ type: "SET_THEME", isDark: theme === "dark" });
+  }, [theme, mapReady]);
 
   useEffect(() => {
     if (!mapReady) return;
@@ -535,49 +574,51 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
       type: "UPDATE",
       spots,
       users: nearbyUsers,
-      userLocation,
-      userRadius: USER_RADIUS,
       selectedSpotId: selectedSpotId ?? null,
       selectedUserId: selectedUserId ?? null,
       mineableSpotId: mineableSpotId ?? null,
-      userProfile: userProfile
-        ? { name: userProfile.name, avatar: userProfile.avatar, health: userProfile.health, maxHealth: userProfile.maxHealth, strength: userProfile.strength }
-        : null,
-      playerCollecting: activeCollection
-        ? { spotId: activeCollection.spotId, progress: activeCollection.progress }
-        : null,
+      userLocation: userLocation ?? null,
+      userRadius: USER_RADIUS,
+      userProfile: userProfile ?? null,
+      playerCollecting: activeCollection ?? null,
     });
-  }, [mapReady, spots, nearbyUsers, userLocation, userProfile, activeCollection, selectedSpotId, selectedUserId, mineableSpotId, inject]);
+  }, [mapReady, spots, nearbyUsers, selectedSpotId, selectedUserId, mineableSpotId, userLocation, userProfile, activeCollection]);
 
-  const handleMessage = useCallback(
-    (event: any) => {
-      try {
-        const data = JSON.parse(event.nativeEvent.data);
-        if (data.type === "MAP_READY") setMapReady(true);
-        else if (data.type === "SPOT_PRESS") onSpotPress(data.spotId);
-        else if (data.type === "USER_PRESS") onUserPress(data.userId);
-        else if (data.type === "MAP_PRESS") onMapPress();
-      } catch (_) {}
-    },
-    [onSpotPress, onUserPress, onMapPress]
-  );
+  const handleMessage = useCallback((event: { nativeEvent: { data: string } }) => {
+    try {
+      const data = JSON.parse(event.nativeEvent.data);
+      if (data.type === "MAP_READY") {
+        setMapReady(true);
+      } else if (data.type === "SPOT_PRESS") {
+        onSpotPress(data.spotId);
+      } else if (data.type === "USER_PRESS") {
+        onUserPress(data.userId);
+      } else if (data.type === "MAP_PRESS") {
+        onMapPress();
+      }
+    } catch {}
+  }, [onSpotPress, onUserPress, onMapPress]);
 
   return (
     <WebView
       ref={webViewRef}
+      style={styles.webView}
       source={{ html: MAP_HTML }}
-      style={StyleSheet.absoluteFill}
-      originWhitelist={["*"]}
+      onMessage={handleMessage}
+      scrollEnabled={false}
+      bounces={false}
+      overScrollMode="never"
       javaScriptEnabled
       domStorageEnabled
-      scrollEnabled={false}
-      overScrollMode="never"
-      bounces={false}
-      onLoadStart={() => setMapReady(false)}
-      onMessage={handleMessage}
-      mixedContentMode="always"
-      allowFileAccess
-      cacheEnabled
+      allowsInlineMediaPlayback
+      mediaPlaybackRequiresUserAction={false}
+      originWhitelist={["*"]}
     />
   );
+});
+
+const styles = StyleSheet.create({
+  webView: {
+    flex: 1,
+  },
 });

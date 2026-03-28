@@ -18,6 +18,7 @@ import Svg, { Rect } from "react-native-svg";
 const AnimatedRect = RNAnimated.createAnimatedComponent(Rect);
 
 import COLORS from "@/constants/colors";
+import { useColors } from "@/hooks/useColors";
 import { InventoryItem, Spot, SPOT_BADGE_CONFIGS, SubstanceType, useGame } from "@/context/GameContext";
 import { SpotPanel } from "@/components/SpotPanel";
 
@@ -63,13 +64,6 @@ const SUBSTANCE_TYPES: SubstanceType[] = [
 
 const SPOT_TYPES = ["coupon", "money", "product", "rare"];
 
-const SPOT_COLORS: Record<string, string> = {
-  coupon: COLORS.dark.spotCoupon,
-  money: COLORS.dark.spotMoney,
-  product: COLORS.dark.spotProduct,
-  rare: COLORS.dark.spotRare,
-};
-
 const SPOT_ICONS: Record<string, string> = {
   coupon: "tag",
   money: "dollar-sign",
@@ -100,15 +94,11 @@ const ITEM_TYPE_LABELS: Record<string, string> = {
   rare: "RARO",
 };
 
-
-
 const CARD_RADIUS = 14;
-
 const LONG_MENU_ITEM_HEIGHT = 50;
 const LONG_MENU_ITEM_GAP = 6;
 const LONG_MENU_ITEM_SLOT = LONG_MENU_ITEM_HEIGHT + LONG_MENU_ITEM_GAP;
 const LONG_MENU_ITEM_WIDTH = 168;
-const FIRE_BTN_WIDTH = 68;
 const FIRE_BTN_HEIGHT = 68;
 const LONG_MENU_GAP_FROM_BTN = 16;
 
@@ -125,7 +115,14 @@ function GridSpotItem({
   onLongSelect: (spot: Spot) => void;
   cardWidth: number;
 }) {
-  const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
+  const C = useColors();
+  const SPOT_COLORS: Record<string, string> = {
+    coupon: C.spotCoupon,
+    money: C.spotMoney,
+    product: C.spotProduct,
+    rare: C.spotRare,
+  };
+  const color = SPOT_COLORS[spot.type] ?? C.accent;
   const isManipulated = spot.badges?.includes("manipulated");
 
   const [cardSize, setCardSize] = useState({ width: 0, height: 0 });
@@ -173,7 +170,7 @@ function GridSpotItem({
     onPress(spot);
   };
 
-  const borderColor = isFireSelected ? color + "88" : "#ffffff14";
+  const borderColor = isFireSelected ? color + "88" : C.border + "44";
 
   return (
     <View style={{ width: cardWidth, position: "relative" }}>
@@ -189,7 +186,7 @@ function GridSpotItem({
           styles.newGridCard,
           {
             width: cardWidth,
-            backgroundColor: COLORS.dark.surface,
+            backgroundColor: C.surface,
             borderColor,
             opacity: pressed ? 0.8 : 1,
           },
@@ -223,7 +220,7 @@ function GridSpotItem({
           <Feather name={SPOT_ICONS[spot.type] as any ?? "package"} size={22} color={color} />
         </View>
 
-        <Text style={styles.newGridCardName} numberOfLines={2}>{spot.title}</Text>
+        <Text style={[styles.newGridCardName, { color: C.text }]} numberOfLines={2}>{spot.title}</Text>
 
         <View style={[styles.newGridCardTypePill, { backgroundColor: color + "18", borderColor: color + "33" }]}>
           <Text style={[styles.newGridCardTypeText, { color }]}>{SPOT_LABELS[spot.type] ?? spot.type.toUpperCase()}</Text>
@@ -264,7 +261,8 @@ function GridFullItem({
   readOnly?: boolean;
   cardWidth: number;
 }) {
-  const color = ITEM_COLORS[item.type] ?? COLORS.dark.accent;
+  const C = useColors();
+  const color = ITEM_COLORS[item.type] ?? C.accent;
 
   return (
     <View style={{ width: cardWidth, position: "relative" }}>
@@ -274,8 +272,8 @@ function GridFullItem({
           styles.newGridCard,
           {
             width: cardWidth,
-            backgroundColor: COLORS.dark.surface,
-            borderColor: "#ffffff14",
+            backgroundColor: C.surface,
+            borderColor: C.border + "44",
             opacity: pressed && !readOnly ? 0.8 : readOnly ? 0.6 : 1,
           },
         ]}
@@ -284,7 +282,7 @@ function GridFullItem({
           <Feather name={ITEM_ICONS[item.type] as any ?? "package"} size={22} color={color} />
         </View>
 
-        <Text style={styles.newGridCardName} numberOfLines={2}>{item.name}</Text>
+        <Text style={[styles.newGridCardName, { color: C.text }]} numberOfLines={2}>{item.name}</Text>
 
         <View style={[styles.newGridCardTypePill, { backgroundColor: color + "18", borderColor: color + "33" }]}>
           <Text style={[styles.newGridCardTypeText, { color }]}>{ITEM_TYPE_LABELS[item.type] ?? item.type.toUpperCase()}</Text>
@@ -311,7 +309,14 @@ function QuickSpotItem({
   onPress: (spot: Spot) => void;
   onLongSelect: (spot: Spot) => void;
 }) {
-  const color = SPOT_COLORS[spot.type] ?? COLORS.dark.accent;
+  const C = useColors();
+  const SPOT_COLORS: Record<string, string> = {
+    coupon: C.spotCoupon,
+    money: C.spotMoney,
+    product: C.spotProduct,
+    rare: C.spotRare,
+  };
+  const color = SPOT_COLORS[spot.type] ?? C.accent;
   const icon = SPOT_ICONS[spot.type] ?? "package";
   const scale = useRef(new RNAnimated.Value(1)).current;
   const holdProgress = useRef(new RNAnimated.Value(0)).current;
@@ -374,7 +379,7 @@ function QuickSpotItem({
         >
           <Feather name={icon as any} size={16} color={color} />
           {isSelected && (
-            <View style={[styles.selectedDot, { backgroundColor: color }]} />
+            <View style={[styles.selectedDot, { backgroundColor: color, borderColor: C.bg }]} />
           )}
           {spot.badges && spot.badges.length > 0 && (
             <View style={styles.quickBadgeGroup}>
@@ -382,7 +387,7 @@ function QuickSpotItem({
                 const cfg = SPOT_BADGE_CONFIGS[badge];
                 if (!cfg) return null;
                 return (
-                  <View key={badge} style={[styles.quickBadgeDot, { backgroundColor: cfg.color }]}>
+                  <View key={badge} style={[styles.quickBadgeDot, { backgroundColor: cfg.color, borderColor: C.bg }]}>
                     <Ionicons name={cfg.icon as any} size={6} color="#fff" />
                   </View>
                 );
@@ -404,7 +409,8 @@ function QuickItem({
   onUse: (item: InventoryItem) => void;
   readOnly?: boolean;
 }) {
-  const color = ITEM_COLORS[item.type] ?? COLORS.dark.accent;
+  const C = useColors();
+  const color = ITEM_COLORS[item.type] ?? C.accent;
   const icon = ITEM_ICONS[item.type] ?? "package";
   const scale = useRef(new RNAnimated.Value(1)).current;
 
@@ -432,8 +438,8 @@ function QuickItem({
         ]}
       >
         <Feather name={icon as any} size={16} color={color} />
-        <View style={[styles.qtyDot, { backgroundColor: color }]}>
-          <Text style={styles.qtyDotText}>{item.quantity}</Text>
+        <View style={[styles.qtyDot, { backgroundColor: color, borderColor: C.bg }]}>
+          <Text style={[styles.qtyDotText, { color: C.bg }]}>{item.quantity}</Text>
         </View>
       </RNAnimated.View>
     </Pressable>
@@ -450,6 +456,7 @@ interface BagSidebarProps {
 }
 
 export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0, miningClicks = 0, extraBottomOffset = 0 }: BagSidebarProps) {
+  const C = useColors();
   const { userProfile, useSubstance, selectedUser, collectedSpots, abandonSpot, useSpot, selectedInventorySpot, selectInventorySpot } = useGame();
   const sheetInsets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
@@ -459,6 +466,13 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
   const cardWidth = (screenWidth - SHEET_PADDING * 2 - GRID_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
   const [selectedBagSpot, setSelectedBagSpot] = useState<Spot | null>(null);
   const sheetRef = useRef<BottomSheetModal>(null);
+
+  const SPOT_COLORS: Record<string, string> = {
+    coupon: C.spotCoupon,
+    money: C.spotMoney,
+    product: C.spotProduct,
+    rare: C.spotRare,
+  };
 
   const renderBackdrop = useCallback(
     (props: any) => (
@@ -494,6 +508,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
   const isInspecting = selectedUser !== null;
   const displayBag = isInspecting ? (selectedUser.bag ?? []) : userProfile.bag;
   const displayCoins = isInspecting ? (selectedUser.coins ?? 0) : userProfile.coins;
+
   const handleUseItem = (item: InventoryItem) => {
     if (isInspecting) return;
     if (SUBSTANCE_TYPES.includes(item.type as SubstanceType)) {
@@ -556,7 +571,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
       id: s.id,
       label: s.title,
       sublabel: SPOT_LABELS[s.type] ?? s.type,
-      color: SPOT_COLORS[s.type] ?? COLORS.dark.accent,
+      color: SPOT_COLORS[s.type] ?? C.accent,
       icon: SPOT_ICONS[s.type] ?? "package",
       kind: "spot",
       spot: s,
@@ -568,14 +583,14 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
         id: i.id,
         label: i.name,
         sublabel: ITEM_TYPE_LABELS[i.type] ?? i.type,
-        color: ITEM_COLORS[i.type] ?? COLORS.dark.accent,
+        color: ITEM_COLORS[i.type] ?? C.accent,
         icon: ITEM_ICONS[i.type] ?? "package",
         kind: "item",
         item: i,
         qty: i.quantity,
       }));
     return [...spotEntries, ...itemEntries].slice(0, 5);
-  }, [collectedSpots, displayBag]);
+  }, [collectedSpots, displayBag, C]);
 
   const menuItemsRef = useRef(menuItems);
   menuItemsRef.current = menuItems;
@@ -648,7 +663,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
         const touchY = evt.nativeEvent.pageY;
         const touchX = evt.nativeEvent.pageX;
 
-        // List is above the button, items ordered top→bottom (index 0 = top, n-1 = bottom/closest to btn)
         const listBottom = rect.y - LONG_MENU_GAP_FROM_BTN;
         const listTop = listBottom - items.length * LONG_MENU_ITEM_SLOT;
         const listRight = rect.x + rect.w;
@@ -699,10 +713,9 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
   ).current;
 
   const invSpotColor = selectedInventorySpot
-    ? (SPOT_COLORS[selectedInventorySpot.type] ?? COLORS.dark.accent)
-    : COLORS.dark.textMuted;
+    ? (SPOT_COLORS[selectedInventorySpot.type] ?? C.accent)
+    : C.textMuted;
 
-  const isFireActive = !!selectedInventorySpot && canFire;
   const isFireReady = !!selectedInventorySpot;
 
   const isEmpty = (isInspecting
@@ -720,17 +733,17 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
           <View
             style={[
               styles.fireBtn,
-              isInspecting && { borderColor: COLORS.dark.warning + "55", backgroundColor: COLORS.dark.warning + "18" },
+              {
+                backgroundColor: isInspecting ? C.warning + "18" : C.card,
+                borderColor: isInspecting ? C.warning + "55" : C.border,
+              },
             ]}
           >
-            <Feather name="briefcase" size={22} color={isInspecting ? COLORS.dark.warning : "#fff"} />
+            <Feather name="briefcase" size={22} color={isInspecting ? C.warning : C.text} />
             <Text
               numberOfLines={1}
               adjustsFontSizeToFit
-              style={[
-                styles.fireLabel,
-                { color: isInspecting ? COLORS.dark.warning : "#fff" },
-              ]}
+              style={[styles.fireLabel, { color: isInspecting ? C.warning : C.textMuted }]}
             >
               BAG
             </Text>
@@ -760,20 +773,23 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
           <View
             style={[
               styles.fireBtn,
-
-              isFireReady && { backgroundColor: invSpotColor, borderColor: invSpotColor, shadowColor: invSpotColor, shadowOpacity: 0.5, shadowRadius: 12, elevation: 10 },
-              longMenuOpen && !isFireReady && { backgroundColor: COLORS.dark.accentDim, borderColor: COLORS.dark.accent, opacity: 1 },
+              {
+                backgroundColor: isFireReady ? invSpotColor : C.card,
+                borderColor: isFireReady ? invSpotColor : C.border,
+              },
+              isFireReady && { shadowColor: invSpotColor, shadowOpacity: 0.5, shadowRadius: 12, elevation: 10 },
+              longMenuOpen && !isFireReady && { backgroundColor: C.accentDim, borderColor: C.accent, opacity: 1 },
             ]}
           >
             <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
               <Feather
                 name={selectedInventorySpot ? (SPOT_ICONS[selectedInventorySpot.type] as any) : "zap"}
                 size={24}
-                color={isFireReady ? "#fff" : COLORS.dark.textMuted}
+                color={isFireReady ? "#fff" : C.textMuted}
               />
             </RNAnimated.View>
             {isFireReady && miningClicks > 0 && !longMenuOpen && (
-              <View style={[styles.mineProgressBadge, { borderColor: invSpotColor }]}>
+              <View style={[styles.mineProgressBadge, { backgroundColor: C.bg, borderColor: invSpotColor }]}>
                 <Text style={[styles.mineProgressText, { color: invSpotColor }]}>{miningClicks}x</Text>
               </View>
             )}
@@ -782,7 +798,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
               adjustsFontSizeToFit
               style={[
                 styles.fireLabel,
-                { color: isFireReady ? "#fff" : COLORS.dark.textMuted },
+                { color: isFireReady ? "#fff" : C.textMuted },
                 selectedInventorySpot && { letterSpacing: 0 },
               ]}
             >
@@ -817,12 +833,12 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
               ]}
             >
               {menuItems.length === 0 ? (
-                <View style={styles.longPressMenuEmpty}>
-                  <View style={styles.longPressMenuEmptyIcon}>
-                    <Feather name="map-pin" size={20} color={COLORS.dark.textMuted} />
+                <View style={[styles.longPressMenuEmpty, { backgroundColor: C.card, borderColor: C.border }]}>
+                  <View style={[styles.longPressMenuEmptyIcon, { backgroundColor: C.surface }]}>
+                    <Feather name="map-pin" size={20} color={C.textMuted} />
                   </View>
-                  <Text style={styles.longPressMenuEmptyTitle}>Nenhum spot</Text>
-                  <Text style={styles.longPressMenuEmptySub}>
+                  <Text style={[styles.longPressMenuEmptyTitle, { color: C.text }]}>Nenhum spot</Text>
+                  <Text style={[styles.longPressMenuEmptySub, { color: C.textMuted }]}>
                     Explore o mapa e colete spots para usá-los aqui
                   </Text>
                 </View>
@@ -835,7 +851,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
                       styles.longPressMenuItem,
                       {
                         borderColor: menuItem.color + (isHovered ? "CC" : "44"),
-                        backgroundColor: isHovered ? menuItem.color + "26" : COLORS.dark.card,
+                        backgroundColor: isHovered ? menuItem.color + "26" : C.card,
                       },
                       isHovered && styles.longPressMenuItemHovered,
                     ]}
@@ -845,12 +861,12 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
                     </View>
                     <View style={styles.longPressMenuItemText}>
                       <Text
-                        style={[styles.longPressMenuItemLabel, { color: isHovered ? menuItem.color : COLORS.dark.text }]}
+                        style={[styles.longPressMenuItemLabel, { color: isHovered ? menuItem.color : C.text }]}
                         numberOfLines={1}
                       >
                         {menuItem.label}
                       </Text>
-                      <Text style={styles.longPressMenuItemSub} numberOfLines={1}>
+                      <Text style={[styles.longPressMenuItemSub, { color: C.textMuted }]} numberOfLines={1}>
                         {menuItem.sublabel}
                       </Text>
                     </View>
@@ -878,23 +894,22 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
         ref={sheetRef}
         enablePanDownToClose
         backdropComponent={renderBackdrop}
-        backgroundStyle={styles.sheetBackground}
-        handleIndicatorStyle={styles.handle}
+        backgroundStyle={{ backgroundColor: C.card, borderWidth: 1, borderColor: C.border }}
+        handleIndicatorStyle={{ backgroundColor: C.border, width: 36 }}
       >
         <BottomSheetScrollView
           contentContainerStyle={[styles.sheetContent, { paddingBottom: 32 + sheetInsets.bottom }]}
           showsVerticalScrollIndicator={false}
         >
-          {/* Header */}
           <View style={styles.bagHeader}>
             <View style={styles.bagTitleRow}>
-              <Text style={styles.bagTitle}>
+              <Text style={[styles.bagTitle, { color: C.text }]}>
                 {isInspecting ? `SpotBag de ${selectedUser.name}` : "SpotBag"}
               </Text>
               {isInspecting && (
-                <View style={styles.readOnlyBadge}>
-                  <Feather name="eye" size={10} color={COLORS.dark.warning} />
-                  <Text style={styles.readOnlyText}>somente leitura</Text>
+                <View style={[styles.readOnlyBadge, { backgroundColor: C.warning + "18", borderColor: C.warning + "44" }]}>
+                  <Feather name="eye" size={10} color={C.warning} />
+                  <Text style={[styles.readOnlyText, { color: C.warning }]}>somente leitura</Text>
                 </View>
               )}
             </View>
@@ -906,29 +921,30 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
                   <Text style={styles.labBtnText}>Lab</Text>
                 </View>
               )}
-              <Pressable onPress={() => sheetRef.current?.dismiss()} style={styles.closeBtn}>
-                <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
+              <Pressable
+                onPress={() => sheetRef.current?.dismiss()}
+                style={[styles.closeBtn, { backgroundColor: C.surface }]}
+              >
+                <Feather name="x" size={18} color={C.textSecondary} />
               </Pressable>
             </View>
           </View>
 
-          {/* Legend */}
-          <View style={styles.legendRow}>
+          <View style={[styles.legendRow, { borderColor: C.border + "22" }]}>
             <View style={styles.legendItem}>
               <View style={styles.legendManipulatedDot}>
                 <Ionicons name="flask-outline" size={9} color="#7eefc4" />
               </View>
-              <Text style={styles.legendText}>Manipulado</Text>
+              <Text style={[styles.legendText, { color: C.textMuted }]}>Manipulado</Text>
             </View>
             <View style={styles.legendItem}>
-              <View style={styles.legendQtyDot}>
-                <Text style={styles.legendQtyText}>×N</Text>
+              <View style={[styles.legendQtyDot, { backgroundColor: C.border + "55" }]}>
+                <Text style={[styles.legendQtyText, { color: C.text }]}>×N</Text>
               </View>
-              <Text style={styles.legendText}>Quantidade</Text>
+              <Text style={[styles.legendText, { color: C.textMuted }]}>Quantidade</Text>
             </View>
           </View>
 
-          {/* Grid */}
           <View style={styles.gridContainer}>
             {collectedSpots.map((spot) => (
               <GridSpotItem
@@ -955,11 +971,10 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
 
           {isEmpty && (
             <View style={styles.emptyBag}>
-              <Feather name="inbox" size={32} color={COLORS.dark.textMuted} />
-              <Text style={styles.emptyText}>Bag vazia</Text>
+              <Feather name="inbox" size={32} color={C.textMuted} />
+              <Text style={[styles.emptyText, { color: C.textMuted }]}>Bag vazia</Text>
             </View>
           )}
-
         </BottomSheetScrollView>
       </BottomSheetModal>
 
@@ -994,31 +1009,6 @@ const styles = StyleSheet.create({
     zIndex: 51,
     overflow: "visible",
   },
-  bagSection: {
-    alignItems: "center",
-    backgroundColor: COLORS.dark.card,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: COLORS.dark.accent + "33",
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 8,
-    overflow: "visible",
-  },
-  bagSectionInspecting: {
-    borderColor: COLORS.dark.warning + "44",
-  },
-  itemsDivider: {
-    width: 28,
-    height: 1.5,
-    backgroundColor: COLORS.dark.border,
-    borderRadius: 1,
-  },
   quickItem: {
     width: 44,
     height: 44,
@@ -1038,80 +1028,158 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
-    borderColor: COLORS.dark.bg,
   },
   qtyDotText: {
     fontSize: 9,
     fontFamily: "Inter_700Bold",
-    color: COLORS.dark.bg,
   },
-  expandBtn: {
-    width: 36,
-    height: 22,
-    borderRadius: 8,
-    backgroundColor: COLORS.dark.surface,
-    borderWidth: 1,
-    borderColor: COLORS.dark.border,
+  selectedDot: {
+    position: "absolute",
+    bottom: -3,
+    right: -3,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1.5,
+  },
+  floatIcon: {
+    position: "absolute",
+    bottom: 30,
+    left: 0,
+    right: 0,
     alignItems: "center",
-    justifyContent: "center",
+    zIndex: 20,
   },
-  bagBtn: {
+  fireBtnWrapper: {
+    position: "relative",
+    overflow: "visible",
+  },
+  fireBtn: {
     alignItems: "center",
     gap: 4,
-  },
-  bagBtnInner: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: COLORS.dark.accent + "18",
-    borderWidth: 1.5,
-    borderColor: COLORS.dark.accent + "55",
-    alignItems: "center",
+    width: 68,
+    height: 68,
+    borderRadius: 20,
+    borderWidth: 2,
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
+    position: "relative",
   },
-  bagBtnInnerInspecting: {
-    backgroundColor: COLORS.dark.warning + "18",
-    borderColor: COLORS.dark.warning + "55",
+  fireLabel: {
+    fontSize: 8,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1.5,
   },
-  coinBadge: {
+  mineProgressBadge: {
     position: "absolute",
-    bottom: -5,
-    right: -5,
-    backgroundColor: COLORS.dark.bg,
+    top: -6,
+    right: -6,
     borderWidth: 1,
-    borderColor: COLORS.dark.spotMoney,
     borderRadius: 8,
     paddingHorizontal: 4,
     paddingVertical: 1,
   },
-  coinBadgeInspecting: {
-    borderColor: COLORS.dark.warning,
-  },
-  coinText: {
+  mineProgressText: {
     fontSize: 8,
     fontFamily: "Inter_700Bold",
-    color: COLORS.dark.spotMoney,
+    color: "#F5C518",
   },
-  coinTextInspecting: {
-    color: COLORS.dark.warning,
+  longPressMenu: {
+    position: "absolute",
+    right: 0,
+    bottom: FIRE_BTN_HEIGHT + LONG_MENU_GAP_FROM_BTN,
+    width: LONG_MENU_ITEM_WIDTH,
+    gap: LONG_MENU_ITEM_GAP,
+    zIndex: 100,
   },
-  bagLabel: {
-    fontSize: 7,
-    fontFamily: "Inter_700Bold",
-    color: COLORS.dark.accent,
-    letterSpacing: 1,
+  longPressMenuItem: {
+    height: LONG_MENU_ITEM_HEIGHT,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    gap: 9,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.45,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  bagLabelInspecting: {
-    color: COLORS.dark.warning,
+  longPressMenuItemHovered: {
+    shadowOpacity: 0.7,
+    shadowRadius: 14,
+    elevation: 10,
   },
-  sheetBackground: {
-    backgroundColor: COLORS.dark.card,
+  longPressMenuItemIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+  },
+  longPressMenuItemText: {
+    flex: 1,
+    gap: 1,
+  },
+  longPressMenuItemLabel: {
+    fontSize: 11.5,
+    fontFamily: "Inter_600SemiBold",
+  },
+  longPressMenuItemSub: {
+    fontSize: 9,
+    fontFamily: "Inter_500Medium",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+  },
+  longPressMenuItemQtyBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.dark.border,
+    flexShrink: 0,
   },
-  handle: {
-    backgroundColor: COLORS.dark.border,
-    width: 36,
+  longPressMenuItemQtyText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+  },
+  longPressMenuEmpty: {
+    width: LONG_MENU_ITEM_WIDTH,
+    paddingVertical: 18,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    gap: 7,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.45,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  longPressMenuEmptyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  longPressMenuEmptyTitle: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.2,
+  },
+  longPressMenuEmptySub: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    lineHeight: 14,
   },
   sheetContent: {
     paddingHorizontal: 20,
@@ -1129,7 +1197,6 @@ const styles = StyleSheet.create({
   bagTitle: {
     fontSize: 22,
     fontFamily: "Inter_700Bold",
-    color: COLORS.dark.text,
   },
   headerRight: {
     flexDirection: "row",
@@ -1160,24 +1227,20 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 3,
     alignSelf: "flex-start",
-    backgroundColor: COLORS.dark.warning + "18",
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderWidth: 1,
-    borderColor: COLORS.dark.warning + "44",
   },
   readOnlyText: {
     fontSize: 9,
     fontFamily: "Inter_600SemiBold",
-    color: COLORS.dark.warning,
     letterSpacing: 0.3,
   },
   closeBtn: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: COLORS.dark.surface,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1188,7 +1251,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: "#ffffff08",
     marginBottom: 14,
   },
   legendItem: {
@@ -1207,18 +1269,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   legendQtyDot: {
-    backgroundColor: "#0008",
     borderRadius: 4,
     paddingHorizontal: 4,
     paddingVertical: 1,
   },
   legendQtyText: {
-    color: COLORS.dark.text,
     fontSize: 9,
     fontFamily: "Inter_700Bold",
   },
   legendText: {
-    color: COLORS.dark.textMuted,
     fontSize: 10,
     fontFamily: "Inter_400Regular",
     letterSpacing: 0.3,
@@ -1280,7 +1339,6 @@ const styles = StyleSheet.create({
   newGridCardName: {
     fontSize: 11.5,
     fontFamily: "Inter_600SemiBold",
-    color: COLORS.dark.text,
     textAlign: "center",
     lineHeight: 15,
     letterSpacing: 0.2,
@@ -1304,65 +1362,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 15,
-    color: COLORS.dark.textMuted,
     fontFamily: "Inter_400Regular",
-  },
-  fireBtn: {
-    alignItems: "center",
-    gap: 4,
-    width: 68,
-    height: 68,
-    borderRadius: 20,
-    backgroundColor: COLORS.dark.card,
-    borderWidth: 2,
-    borderColor: COLORS.dark.border,
-    justifyContent: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-    position: "relative",
-  },
-  fireLabel: {
-    fontSize: 8,
-    fontFamily: "Inter_700Bold",
-    color: COLORS.dark.textMuted,
-    letterSpacing: 1.5,
-  },
-  selectedDot: {
-    position: "absolute",
-    bottom: -3,
-    right: -3,
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: COLORS.dark.bg,
-  },
-  floatIcon: {
-    position: "absolute",
-    bottom: 30,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    zIndex: 20,
-  },
-  mineProgressBadge: {
-    position: "absolute",
-    top: -6,
-    right: -6,
-    backgroundColor: COLORS.dark.bg,
-    borderWidth: 1,
-    borderColor: "#F5C518",
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-  },
-  mineProgressText: {
-    fontSize: 8,
-    fontFamily: "Inter_700Bold",
-    color: "#F5C518",
   },
   spotBadgeStrip: {
     flexDirection: "row",
@@ -1394,115 +1394,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1.5,
-    borderColor: COLORS.dark.bg,
-  },
-  fireBtnWrapper: {
-    position: "relative",
-    overflow: "visible",
-  },
-  longPressMenu: {
-    position: "absolute",
-    right: 0,
-    bottom: FIRE_BTN_HEIGHT + LONG_MENU_GAP_FROM_BTN,
-    width: LONG_MENU_ITEM_WIDTH,
-    gap: LONG_MENU_ITEM_GAP,
-    zIndex: 100,
-  },
-  longPressMenuItem: {
-    height: LONG_MENU_ITEM_HEIGHT,
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 10,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    gap: 9,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.45,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  longPressMenuItemHovered: {
-    shadowOpacity: 0.7,
-    shadowRadius: 14,
-    elevation: 10,
-  },
-  longPressMenuItemIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 9,
-    alignItems: "center",
-    justifyContent: "center",
-    flexShrink: 0,
-  },
-  longPressMenuItemText: {
-    flex: 1,
-    gap: 1,
-  },
-  longPressMenuItemLabel: {
-    fontSize: 11.5,
-    fontFamily: "Inter_600SemiBold",
-  },
-  longPressMenuItemSub: {
-    fontSize: 9,
-    fontFamily: "Inter_500Medium",
-    color: COLORS.dark.textMuted,
-    letterSpacing: 0.8,
-    textTransform: "uppercase",
-  },
-  longPressMenuItemQtyBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    borderWidth: 1,
-    flexShrink: 0,
-  },
-  longPressMenuItemQtyText: {
-    fontSize: 9,
-    fontFamily: "Inter_700Bold",
-  },
-  longPressMenuHoverDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    flexShrink: 0,
-  },
-  longPressMenuEmpty: {
-    width: LONG_MENU_ITEM_WIDTH,
-    paddingVertical: 18,
-    paddingHorizontal: 14,
-    alignItems: "center",
-    gap: 7,
-    backgroundColor: COLORS.dark.card,
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: COLORS.dark.border,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.45,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  longPressMenuEmptyIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: COLORS.dark.surface,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 2,
-  },
-  longPressMenuEmptyTitle: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    color: COLORS.dark.text,
-    letterSpacing: 0.2,
-  },
-  longPressMenuEmptySub: {
-    fontSize: 10,
-    fontFamily: "Inter_400Regular",
-    color: COLORS.dark.textMuted,
-    textAlign: "center",
-    lineHeight: 14,
   },
 });
