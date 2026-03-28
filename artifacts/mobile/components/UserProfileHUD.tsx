@@ -129,54 +129,47 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
 
     return (
       <View style={[styles.spotBlock, { top }]}>
-        <View style={[styles.spotCard, { borderColor: color + "44" }]}>
-          {/* Imagem retangular igual ao marcador do mapa */}
-          <View style={[styles.spotThumb, { borderColor: color, backgroundColor: color + "18" }]}>
-            {selectedSpot.imageUrl ? (
-              <Image
-                source={{ uri: selectedSpot.imageUrl }}
-                style={styles.spotThumbImg}
-                resizeMode="cover"
-              />
-            ) : (
-              <Feather name={icon as any} size={20} color={color} />
-            )}
-            <View style={[styles.spotTypePill, { backgroundColor: color + "22", borderColor: color + "55" }]}>
-              <Text style={[styles.spotTypeText, { color }]}>{label}</Text>
-            </View>
-          </View>
-
-          {/* Info à direita */}
-          <View style={styles.spotInfo}>
-            <Text style={styles.spotTitle} numberOfLines={1}>{selectedSpot.title}</Text>
-            <Text style={[styles.spotValue, { color }]} numberOfLines={1}>{selectedSpot.value}</Text>
-
-            <View style={styles.spotMeta}>
-              {selectedSpot.expiresAt && (
-                <View style={styles.metaChip}>
-                  <Feather name="clock" size={10} color={COLORS.dark.textMuted} />
-                  <Text style={styles.metaChipText}>{formatExpiry(selectedSpot.expiresAt)}</Text>
-                </View>
-              )}
-              <View style={styles.metaChip}>
-                <Feather name="map-pin" size={10} color={COLORS.dark.textMuted} />
-                <Text style={styles.metaChipText}>{selectedSpot.radius}m</Text>
-              </View>
-            </View>
+        {/* Imagem em linha própria */}
+        <View style={[styles.spotImage, { borderColor: color, backgroundColor: color + "18" }]}>
+          {selectedSpot.imageUrl ? (
+            <Image source={{ uri: selectedSpot.imageUrl }} style={styles.spotImageFill} resizeMode="cover" />
+          ) : (
+            <Feather name={icon as any} size={28} color={color} />
+          )}
+          <View style={[styles.spotLabelBadge, { backgroundColor: color + "22", borderColor: color + "55" }]}>
+            <Text style={[styles.spotLabelText, { color }]}>{label}</Text>
           </View>
         </View>
 
-        {isPlayerMining && (
-          <View style={styles.progressSection}>
-            <View style={styles.progressRow}>
-              <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${playerProgress}%` as any, backgroundColor: color }]} />
-              </View>
-              <Text style={[styles.progressLabel, { color }]}>{Math.round(playerProgress)}%</Text>
+        {/* Nome e valor */}
+        <Text style={styles.spotTitle} numberOfLines={1}>{selectedSpot.title}</Text>
+        <Text style={[styles.spotValue, { color }]} numberOfLines={1}>{selectedSpot.value}</Text>
+
+        {/* Metadados discretos */}
+        <View style={styles.spotMeta}>
+          {selectedSpot.expiresAt && (
+            <View style={styles.metaChip}>
+              <Feather name="clock" size={10} color={COLORS.dark.textMuted} />
+              <Text style={styles.metaChipText}>{formatExpiry(selectedSpot.expiresAt)}</Text>
             </View>
+          )}
+          <View style={styles.metaChip}>
+            <Feather name="map-pin" size={10} color={COLORS.dark.textMuted} />
+            <Text style={styles.metaChipText}>{selectedSpot.radius}m</Text>
+          </View>
+        </View>
+
+        {/* Progresso do player */}
+        {isPlayerMining && (
+          <View style={styles.progressRow}>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${playerProgress}%` as any, backgroundColor: color }]} />
+            </View>
+            <Text style={[styles.progressLabel, { color }]}>{Math.round(playerProgress)}%</Text>
           </View>
         )}
 
+        {/* Outros mineradores */}
         {otherMiners.length > 0 && (
           <View style={styles.minersRow}>
             <Text style={styles.minersLabel}>Minerando:</Text>
@@ -321,70 +314,52 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     maxWidth: 100,
   },
-  spotCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    backgroundColor: COLORS.dark.card,
-    borderRadius: 16,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 10,
-    elevation: 8,
-  },
-  spotThumb: {
-    width: 52,
-    height: 52,
+  spotImage: {
+    width: "100%",
+    height: 80,
     borderRadius: 12,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
-    position: "relative",
   },
-  spotThumbImg: {
+  spotImageFill: {
     width: "100%",
     height: "100%",
   },
-  spotTypePill: {
+  spotLabelBadge: {
     position: "absolute",
-    bottom: 2,
-    left: 2,
-    right: 2,
-    borderRadius: 4,
+    bottom: 6,
+    left: 6,
+    borderRadius: 6,
     borderWidth: 1,
-    paddingVertical: 1,
-    alignItems: "center",
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
-  spotTypeText: {
-    fontSize: 7,
+  spotLabelText: {
+    fontSize: 9,
     fontFamily: "Inter_700Bold",
-    letterSpacing: 0.5,
-  },
-  spotInfo: {
-    flex: 1,
-    gap: 2,
+    letterSpacing: 0.8,
   },
   spotTitle: {
     color: COLORS.dark.text,
-    fontSize: 15,
+    fontSize: 16,
     fontFamily: "Inter_700Bold",
-    lineHeight: 18,
+    textShadowColor: "rgba(0,0,0,0.8)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   spotValue: {
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
-    lineHeight: 16,
+    textShadowColor: "rgba(0,0,0,0.6)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   spotMeta: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginTop: 2,
+    gap: 10,
   },
   metaChip: {
     flexDirection: "row",
@@ -395,9 +370,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontFamily: "Inter_400Regular",
     color: COLORS.dark.textMuted,
-  },
-  progressSection: {
-    gap: 4,
   },
   progressRow: {
     flexDirection: "row",
