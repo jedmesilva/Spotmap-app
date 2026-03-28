@@ -63,15 +63,9 @@ export function MedalsStrip({ insets }: MedalsStripProps) {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.scroll}
         >
-          {unlockedFirst.length > 0 ? (
-            unlockedFirst.map((medal) => (
-              <MedalBadge key={medal.id} medal={medal} onPress={() => setSelected(medal)} />
-            ))
-          ) : (
-            <View style={styles.emptyMedals}>
-              <Text style={styles.emptyMedalsText}>Sem medalhas</Text>
-            </View>
-          )}
+          {unlockedFirst.map((medal) => (
+            <MedalBadge key={medal.id} medal={medal} onPress={() => setSelected(medal)} />
+          ))}
         </ScrollView>
       </View>
 
