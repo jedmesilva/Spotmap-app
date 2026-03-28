@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   spotBlock: {
     position: "absolute",
     left: 16,
-    right: 80,
+    right: 128,
     zIndex: 10,
     gap: 8,
   },
