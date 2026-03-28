@@ -749,20 +749,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
 
   return (
     <>
-      {longMenuOpen && (
-        <RNAnimated.View
-          pointerEvents="none"
-          style={[
-            StyleSheet.absoluteFill,
-            {
-              backgroundColor: "rgba(0,0,0,0.62)",
-              opacity: menuAnim,
-              zIndex: 50,
-            },
-          ]}
-        />
-      )}
-
       <RNAnimated.View style={[styles.column, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}>
         <View style={[styles.bagSection, isInspecting && styles.bagSectionInspecting]}>
           <TouchableOpacity
@@ -813,6 +799,21 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
             <Text style={[styles.bagLabel, isInspecting && styles.bagLabelInspecting]}>SPOTBAG</Text>
           </Pressable>
         </View>
+
+        {longMenuOpen && (
+          <RNAnimated.View
+            pointerEvents="none"
+            style={{
+              position: "absolute",
+              top: -3000,
+              left: -3000,
+              width: 6000,
+              height: 6000,
+              backgroundColor: "rgba(0,0,0,0.62)",
+              opacity: menuAnim,
+            }}
+          />
+        )}
 
         <View ref={fireBtnContainerRef} {...panResponder.panHandlers} style={styles.fireBtnWrapper}>
           <View
