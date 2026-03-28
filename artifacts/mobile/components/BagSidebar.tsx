@@ -775,19 +775,23 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
           />
         )}
 
-        <View ref={fireBtnContainerRef} {...panResponder.panHandlers} style={styles.fireBtnWrapper}>
+        <View
+          ref={fireBtnContainerRef}
+          {...panResponder.panHandlers}
+          style={[styles.fireBtnWrapper, !isFireReady && !longMenuOpen && { opacity: 0.45 }]}
+        >
           <View
             style={[
               styles.fireBtn,
-              isFireReady && { backgroundColor: invSpotColor, borderColor: invSpotColor },
-              longMenuOpen && !isFireReady && { backgroundColor: COLORS.dark.accentDim, borderColor: COLORS.dark.accent },
+              isFireReady && { backgroundColor: invSpotColor, borderColor: invSpotColor, shadowColor: invSpotColor, shadowOpacity: 0.5, shadowRadius: 12, elevation: 10 },
+              longMenuOpen && !isFireReady && { backgroundColor: COLORS.dark.accentDim, borderColor: COLORS.dark.accent, opacity: 1 },
             ]}
           >
             <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
               <Feather
                 name={selectedInventorySpot ? (SPOT_ICONS[selectedInventorySpot.type] as any) : "zap"}
                 size={24}
-                color="#fff"
+                color={isFireReady ? "#fff" : COLORS.dark.textMuted}
               />
             </RNAnimated.View>
             {isFireReady && miningClicks > 0 && !longMenuOpen && (
@@ -800,7 +804,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
               adjustsFontSizeToFit
               style={[
                 styles.fireLabel,
-                { color: "#fff" },
+                { color: isFireReady ? "#fff" : COLORS.dark.textMuted },
                 selectedInventorySpot && { letterSpacing: 0 },
               ]}
             >
@@ -1321,15 +1325,15 @@ const styles = StyleSheet.create({
     width: 68,
     height: 68,
     borderRadius: 20,
-    backgroundColor: COLORS.dark.accent,
+    backgroundColor: COLORS.dark.card,
     borderWidth: 2,
-    borderColor: COLORS.dark.accentDim,
+    borderColor: COLORS.dark.border,
     justifyContent: "center",
-    shadowColor: COLORS.dark.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.55,
-    shadowRadius: 12,
-    elevation: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 4,
     position: "relative",
   },
   fireLabel: {
