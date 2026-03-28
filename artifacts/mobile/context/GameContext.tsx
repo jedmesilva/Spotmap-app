@@ -37,8 +37,17 @@ export interface Medal {
   icon: string;
   name: string;
   description: string;
-  rarity: MedalRarity;
+  holderCount: number;
   unlockedAt?: number;
+}
+
+export function computeMedalRarity(holderCount: number, totalUsers: number): MedalRarity {
+  if (totalUsers === 0) return "legendary";
+  const pct = holderCount / totalUsers;
+  if (pct <= 0.01) return "legendary";
+  if (pct <= 0.05) return "epic";
+  if (pct <= 0.20) return "rare";
+  return "common";
 }
 
 export interface Spot {
@@ -114,6 +123,7 @@ interface ActiveCollection {
 
 interface GameState {
   userProfile: UserProfile;
+  totalUsers: number;
   spots: Spot[];
   collectedSpots: Spot[];
   nearbyUsers: NearbyUser[];
@@ -217,13 +227,13 @@ const DEFAULT_PROFILE: UserProfile = {
   coins: 0,
   bag: [],
   medals: [
-    { id: "m1", icon: "🎯", name: "Primeiro Passo", description: "Realizou sua primeira coleta.", rarity: "common", unlockedAt: Date.now() - 86400000 * 10 },
-    { id: "m2", icon: "🏹", name: "Caçador", description: "Completou 5 coletas no mapa.", rarity: "common", unlockedAt: Date.now() - 86400000 * 7 },
-    { id: "m3", icon: "⚔️", name: "Guerreiro", description: "Atacou 10 jogadores diferentes.", rarity: "rare", unlockedAt: Date.now() - 86400000 * 3 },
-    { id: "m4", icon: "💀", name: "Sobrevivente", description: "Sobreviveu com menos de 20% de vida.", rarity: "rare", unlockedAt: Date.now() - 86400000 },
-    { id: "m5", icon: "🗺️", name: "Explorador", description: "Visite 20 spots diferentes.", rarity: "epic" },
-    { id: "m6", icon: "🛡️", name: "Intocável", description: "Bloqueie 5 ataques seguidos.", rarity: "epic" },
-    { id: "m7", icon: "👑", name: "Lendário", description: "Alcance o nível 10.", rarity: "legendary" },
+    { id: "m1", icon: "🎯", name: "Primeiro Passo", description: "Realizou sua primeira coleta.", holderCount: 850, unlockedAt: Date.now() - 86400000 * 10 },
+    { id: "m2", icon: "🏹", name: "Caçador", description: "Completou 5 coletas no mapa.", holderCount: 420, unlockedAt: Date.now() - 86400000 * 7 },
+    { id: "m3", icon: "⚔️", name: "Guerreiro", description: "Atacou 10 jogadores diferentes.", holderCount: 180, unlockedAt: Date.now() - 86400000 * 3 },
+    { id: "m4", icon: "💀", name: "Sobrevivente", description: "Sobreviveu com menos de 20% de vida.", holderCount: 95, unlockedAt: Date.now() - 86400000 },
+    { id: "m5", icon: "🗺️", name: "Explorador", description: "Visite 20 spots diferentes.", holderCount: 40 },
+    { id: "m6", icon: "🛡️", name: "Intocável", description: "Bloqueie 5 ataques seguidos.", holderCount: 8 },
+    { id: "m7", icon: "👑", name: "Lendário", description: "Alcance o nível 10.", holderCount: 3 },
   ],
 };
 
@@ -260,6 +270,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   );
   const collectedSpots = useCollectedSpots(session?.user?.id ?? null);
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>([]);
+  const [totalUsers, setTotalUsers] = useState<number>(0);
   const [activeCollection, setActiveCollection] = useState<ActiveCollection | null>(null);
   const [selectedSpot, setSelectedSpot] = useState<Spot | null>(null);
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
