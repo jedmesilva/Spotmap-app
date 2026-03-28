@@ -784,7 +784,7 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
           <View
             style={[
               styles.fireBtn,
-              !isFireReady && !longMenuOpen && { borderColor: COLORS.dark.accent + "99", backgroundColor: COLORS.dark.accent + "22" },
+              !isFireReady && !longMenuOpen && { borderColor: COLORS.dark.accent + "99" },
               isFireActive && { borderColor: invSpotColor + "88", backgroundColor: invSpotColor + "18" },
               isFireReady && !isFireActive && { borderColor: invSpotColor + "44", backgroundColor: invSpotColor + "0D" },
               longMenuOpen && { borderColor: COLORS.dark.accent + "CC", backgroundColor: COLORS.dark.accent + "18" },
