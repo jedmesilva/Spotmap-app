@@ -1067,8 +1067,8 @@ const styles = StyleSheet.create({
   },
   manipulatedBadge: {
     position: "absolute",
-    top: -6,
-    right: -6,
+    top: 4,
+    right: 4,
     width: 22,
     height: 22,
     borderRadius: 11,
@@ -1081,8 +1081,8 @@ const styles = StyleSheet.create({
   },
   qtyBadge: {
     position: "absolute",
-    top: -6,
-    left: -6,
+    top: 4,
+    left: 4,
     backgroundColor: "#1e1b4b",
     borderWidth: 1.5,
     borderColor: "#6366f1",
