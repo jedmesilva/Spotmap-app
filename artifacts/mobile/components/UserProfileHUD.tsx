@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
+
 import COLORS from "@/constants/colors";
 import { useGame, isMonsterMode, STRENGTH_MONSTER_THRESHOLD } from "@/context/GameContext";
 
@@ -117,6 +118,7 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
   if (selectedSpot) {
     const color = SPOT_COLORS[selectedSpot.type] ?? COLORS.dark.accent;
     const icon = SPOT_ICONS[selectedSpot.type] ?? "star";
+    const label = SPOT_LABELS[selectedSpot.type] ?? selectedSpot.type;
 
     const isPlayerMining = activeCollection?.spotId === selectedSpot.id;
     const playerProgress = isPlayerMining ? (activeCollection?.progress ?? 0) : 0;
@@ -127,31 +129,40 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
 
     return (
       <View style={[styles.spotBlock, { top }]}>
-        <View style={styles.spotInfoRow}>
-          <View style={[styles.avatar, { borderColor: color }]}>
-            <View style={[styles.spotIconBg, { backgroundColor: color + "22" }]}>
-              <Feather name={icon as any} size={18} color={color} />
+        <View style={[styles.spotCard, { borderColor: color + "44" }]}>
+          {/* Imagem retangular igual ao marcador do mapa */}
+          <View style={[styles.spotThumb, { borderColor: color, backgroundColor: color + "18" }]}>
+            {selectedSpot.imageUrl ? (
+              <Image
+                source={{ uri: selectedSpot.imageUrl }}
+                style={styles.spotThumbImg}
+                resizeMode="cover"
+              />
+            ) : (
+              <Feather name={icon as any} size={20} color={color} />
+            )}
+            <View style={[styles.spotTypePill, { backgroundColor: color + "22", borderColor: color + "55" }]}>
+              <Text style={[styles.spotTypeText, { color }]}>{label}</Text>
             </View>
           </View>
 
-          <View style={[styles.card, { borderColor: color + "44" }]}>
-            <Feather name="map-pin" size={13} color={color} />
-            <Text style={[styles.statText, { color }]}>{selectedSpot.radius}m</Text>
+          {/* Info à direita */}
+          <View style={styles.spotInfo}>
+            <Text style={styles.spotTitle} numberOfLines={1}>{selectedSpot.title}</Text>
+            <Text style={[styles.spotValue, { color }]} numberOfLines={1}>{selectedSpot.value}</Text>
 
-            {selectedSpot.expiresAt && (
-              <>
-                <View style={styles.divider} />
-                <Feather name="clock" size={13} color={COLORS.dark.textMuted} />
-                <Text style={[styles.statText, { color: COLORS.dark.textMuted }]}>
-                  {formatExpiry(selectedSpot.expiresAt)}
-                </Text>
-              </>
-            )}
-          </View>
-
-          <View style={styles.spotNameBlock}>
-            <Text style={styles.spotName} numberOfLines={1}>{selectedSpot.title}</Text>
-            <Text style={[styles.spotValue, { color }]}>{selectedSpot.value}</Text>
+            <View style={styles.spotMeta}>
+              {selectedSpot.expiresAt && (
+                <View style={styles.metaChip}>
+                  <Feather name="clock" size={10} color={COLORS.dark.textMuted} />
+                  <Text style={styles.metaChipText}>{formatExpiry(selectedSpot.expiresAt)}</Text>
+                </View>
+              )}
+              <View style={styles.metaChip}>
+                <Feather name="map-pin" size={10} color={COLORS.dark.textMuted} />
+                <Text style={styles.metaChipText}>{selectedSpot.radius}m</Text>
+              </View>
+            </View>
           </View>
         </View>
 
@@ -159,16 +170,9 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
           <View style={styles.progressSection}>
             <View style={styles.progressRow}>
               <View style={styles.progressBar}>
-                <View
-                  style={[
-                    styles.progressFill,
-                    { width: `${playerProgress}%` as any, backgroundColor: color },
-                  ]}
-                />
+                <View style={[styles.progressFill, { width: `${playerProgress}%` as any, backgroundColor: color }]} />
               </View>
-              <Text style={[styles.progressLabel, { color }]}>
-                {Math.round(playerProgress)}%
-              </Text>
+              <Text style={[styles.progressLabel, { color }]}>{Math.round(playerProgress)}%</Text>
             </View>
           </View>
         )}
@@ -177,12 +181,7 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
           <View style={styles.minersRow}>
             <Text style={styles.minersLabel}>Minerando:</Text>
             {otherMiners.map((u) => (
-              <MinerAvatar
-                key={u.id}
-                avatar={u.avatar}
-                progress={u.collectProgress}
-                color={color}
-              />
+              <MinerAvatar key={u.id} avatar={u.avatar} progress={u.collectProgress} color={color} />
             ))}
           </View>
         )}
@@ -257,11 +256,6 @@ const styles = StyleSheet.create({
     gap: 8,
     zIndex: 10,
   },
-  spotInfoRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
   avatar: {
     width: 40,
     height: 40,
@@ -327,28 +321,80 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     maxWidth: 100,
   },
-  spotIconBg: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  spotCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: COLORS.dark.card,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  spotThumb: {
+    width: 52,
+    height: 52,
+    borderRadius: 12,
+    borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+    position: "relative",
   },
-  spotNameBlock: {
-    flexDirection: "column",
-    gap: 1,
-    maxWidth: 140,
+  spotThumbImg: {
+    width: "100%",
+    height: "100%",
   },
-  spotName: {
-    color: COLORS.dark.text,
-    fontSize: 13,
+  spotTypePill: {
+    position: "absolute",
+    bottom: 2,
+    left: 2,
+    right: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    paddingVertical: 1,
+    alignItems: "center",
+  },
+  spotTypeText: {
+    fontSize: 7,
     fontFamily: "Inter_700Bold",
-    lineHeight: 16,
+    letterSpacing: 0.5,
+  },
+  spotInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  spotTitle: {
+    color: COLORS.dark.text,
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    lineHeight: 18,
   },
   spotValue: {
-    fontSize: 12,
+    fontSize: 13,
     fontFamily: "Inter_600SemiBold",
-    lineHeight: 15,
+    lineHeight: 16,
+  },
+  spotMeta: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 2,
+  },
+  metaChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
+  metaChipText: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: COLORS.dark.textMuted,
   },
   progressSection: {
     gap: 4,
