@@ -494,18 +494,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
   const fireY = useRef(new RNAnimated.Value(0)).current;
   const floatY = useRef(new RNAnimated.Value(0)).current;
   const floatOpacity = useRef(new RNAnimated.Value(0)).current;
-  const pulseAnim = useRef(new RNAnimated.Value(0)).current;
-
-  useEffect(() => {
-    const loop = RNAnimated.loop(
-      RNAnimated.sequence([
-        RNAnimated.timing(pulseAnim, { toValue: 1, duration: 1400, useNativeDriver: true }),
-        RNAnimated.timing(pulseAnim, { toValue: 0, duration: 1400, useNativeDriver: true }),
-      ])
-    );
-    loop.start();
-    return () => loop.stop();
-  }, []);
 
   const [longMenuOpen, setLongMenuOpen] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
@@ -793,18 +781,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
         )}
 
         <View ref={fireBtnContainerRef} {...panResponder.panHandlers} style={styles.fireBtnWrapper}>
-          {!isFireReady && !longMenuOpen && (
-            <RNAnimated.View
-              pointerEvents="none"
-              style={[
-                styles.fireBtnGlow,
-                {
-                  opacity: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [0.0, 0.5] }),
-                  transform: [{ scale: pulseAnim.interpolate({ inputRange: [0, 1], outputRange: [1, 1.22] }) }],
-                },
-              ]}
-            />
-          )}
           <View
             style={[
               styles.fireBtn,
@@ -1366,13 +1342,6 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 10,
     position: "relative",
-  },
-  fireBtnGlow: {
-    position: "absolute",
-    width: 68,
-    height: 68,
-    borderRadius: 20,
-    backgroundColor: COLORS.dark.accent,
   },
   fireLabel: {
     fontSize: 8,
