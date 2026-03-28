@@ -18,8 +18,6 @@ import { useAuth } from "@/context/AuthContext";
 export type SpotType = "coupon" | "money" | "product" | "rare";
 export type ArtifactType = "fire" | "ice" | "lightning" | "poison" | "shield";
 export type SubstanceType = "flame_shield" | "cryo_armor" | "volt_ward" | "antidote" | "barrier";
-export type MedalRarity = "common" | "rare" | "epic" | "legendary";
-
 export type SpotBadge = "manipulated" | (string & {});
 
 export interface SpotBadgeConfig {
@@ -37,7 +35,6 @@ export interface Medal {
   icon: string;
   name: string;
   description: string;
-  rarity: MedalRarity;
   holderCount: number;
   unlockedAt?: number;
 }
@@ -1065,16 +1062,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (!userId) return;
 
     async function loadMedals() {
-      const [{ data: userMedals }, { data: allHolders }, { count: usersTotal }] = await Promise.all([
+      const [{ data: userMedals }, { data: allHolders }] = await Promise.all([
         supabase
           .from("user_medals")
           .select("medal_id, unlocked_at, medal_definitions(id, key, name, description, image_url)")
           .eq("user_id", userId),
         supabase.from("user_medals").select("medal_id"),
-        supabase.from("users").select("*", { count: "exact", head: true }),
       ]);
-
-      if (usersTotal !== null) setTotalUsers(usersTotal);
 
       if (!userMedals || !allHolders) return;
 
@@ -1105,7 +1099,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const value: GameState & GameActions = {
     userProfile,
-    totalUsers,
     spots,
     collectedSpots,
     nearbyUsers,

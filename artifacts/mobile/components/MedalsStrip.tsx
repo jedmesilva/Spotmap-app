@@ -10,46 +10,21 @@ import {
 } from "react-native";
 
 import COLORS from "@/constants/colors";
-import { Medal, MedalRarity, computeMedalRarity } from "@/context/GameContext";
+import { Medal } from "@/context/GameContext";
 import { useGame } from "@/context/GameContext";
 
 interface MedalsStripProps {
   insets: { top: number };
 }
 
-const RARITY_COLOR: Record<MedalRarity, string> = {
-  common: COLORS.dark.border,
-  rare: COLORS.dark.purple,
-  epic: COLORS.dark.info,
-  legendary: COLORS.dark.warning,
-};
-
-const RARITY_GLOW: Record<MedalRarity, string> = {
-  common: "transparent",
-  rare: COLORS.dark.purpleGlow,
-  epic: COLORS.dark.infoGlow,
-  legendary: COLORS.dark.warningGlow,
-};
-
-const RARITY_LABEL: Record<MedalRarity, string> = {
-  common: "Comum",
-  rare: "Raro",
-  epic: "Épico",
-  legendary: "Lendário",
-};
-
-function MedalBadge({ medal, totalUsers, onPress }: { medal: Medal; totalUsers: number; onPress: () => void }) {
+function MedalBadge({ medal, onPress }: { medal: Medal; onPress: () => void }) {
   const locked = !medal.unlockedAt;
-  const rarity = computeMedalRarity(medal.holderCount, totalUsers);
-  const color = locked ? COLORS.dark.textMuted : RARITY_COLOR[rarity];
-  const glow = locked ? "transparent" : RARITY_GLOW[rarity];
 
   return (
     <TouchableOpacity style={styles.badgeContainer} onPress={onPress} activeOpacity={0.75}>
       <View
         style={[
           styles.badgeCircle,
-          { borderColor: color, shadowColor: glow },
           locked && styles.badgeLocked,
         ]}
       >
@@ -57,7 +32,7 @@ function MedalBadge({ medal, totalUsers, onPress }: { medal: Medal; totalUsers: 
           {locked ? "🔒" : medal.icon}
         </Text>
       </View>
-      <Text style={[styles.badgeName, { color: locked ? COLORS.dark.textMuted : color }]} numberOfLines={1}>
+      <Text style={[styles.badgeName, { color: locked ? COLORS.dark.textMuted : COLORS.dark.text }]} numberOfLines={1}>
         {medal.name}
       </Text>
     </TouchableOpacity>
@@ -65,7 +40,7 @@ function MedalBadge({ medal, totalUsers, onPress }: { medal: Medal; totalUsers: 
 }
 
 export function MedalsStrip({ insets }: MedalsStripProps) {
-  const { userProfile, selectedUser, totalUsers } = useGame();
+  const { userProfile, selectedUser } = useGame();
   const [selected, setSelected] = useState<Medal | null>(null);
 
   const isInspecting = selectedUser !== null;
@@ -90,7 +65,7 @@ export function MedalsStrip({ insets }: MedalsStripProps) {
         >
           {unlockedFirst.length > 0 ? (
             unlockedFirst.map((medal) => (
-              <MedalBadge key={medal.id} medal={medal} totalUsers={totalUsers} onPress={() => setSelected(medal)} />
+              <MedalBadge key={medal.id} medal={medal} onPress={() => setSelected(medal)} />
             ))
           ) : (
             <View style={styles.emptyMedals}>
@@ -107,49 +82,30 @@ export function MedalsStrip({ insets }: MedalsStripProps) {
         onRequestClose={() => setSelected(null)}
       >
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setSelected(null)}>
-          {selected && (() => {
-            const rarity = computeMedalRarity(selected.holderCount, totalUsers);
-            const rarityColor = selected.unlockedAt ? RARITY_COLOR[rarity] : COLORS.dark.textMuted;
-            const rarityGlow = selected.unlockedAt ? RARITY_GLOW[rarity] : "transparent";
-            return (
-              <View style={styles.card}>
-                <View style={[styles.cardCircle, { borderColor: rarityColor, shadowColor: rarityGlow }]}>
-                  <Text style={styles.cardIcon}>
-                    {selected.unlockedAt ? selected.icon : "🔒"}
-                  </Text>
-                </View>
-
-                <View
-                  style={[
-                    styles.rarityBadge,
-                    {
-                      backgroundColor: rarityColor + "22",
-                      borderColor: rarityColor + "66",
-                    },
-                  ]}
-                >
-                  <Text style={[styles.rarityText, { color: rarityColor }]}>
-                    {RARITY_LABEL[rarity]}
-                  </Text>
-                </View>
-
-                <Text style={styles.cardName}>{selected.name}</Text>
-                <Text style={styles.cardDesc}>{selected.description}</Text>
-                <Text style={styles.cardHolders}>
-                  {selected.holderCount} {selected.holderCount === 1 ? "jogador possui" : "jogadores possuem"}
+          {selected && (
+            <View style={styles.card}>
+              <View style={[styles.cardCircle, !selected.unlockedAt && styles.cardCircleLocked]}>
+                <Text style={styles.cardIcon}>
+                  {selected.unlockedAt ? selected.icon : "🔒"}
                 </Text>
-
-                {selected.unlockedAt ? (
-                  <Text style={styles.cardDate}>
-                    Conquistada em{" "}
-                    {new Date(selected.unlockedAt).toLocaleDateString("pt-BR")}
-                  </Text>
-                ) : (
-                  <Text style={styles.cardLocked}>Ainda não conquistada</Text>
-                )}
               </View>
-            );
-          })()}
+
+              <Text style={styles.cardName}>{selected.name}</Text>
+              <Text style={styles.cardDesc}>{selected.description}</Text>
+              <Text style={styles.cardHolders}>
+                {selected.holderCount} {selected.holderCount === 1 ? "jogador possui" : "jogadores possuem"}
+              </Text>
+
+              {selected.unlockedAt ? (
+                <Text style={styles.cardDate}>
+                  Conquistada em{" "}
+                  {new Date(selected.unlockedAt).toLocaleDateString("pt-BR")}
+                </Text>
+              ) : (
+                <Text style={styles.cardLocked}>Ainda não conquistada</Text>
+              )}
+            </View>
+          )}
         </TouchableOpacity>
       </Modal>
     </>
@@ -190,15 +146,19 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     backgroundColor: COLORS.dark.bgSecondary,
     borderWidth: 2,
+    borderColor: COLORS.dark.accent,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: COLORS.dark.accent,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.7,
-    shadowRadius: 8,
+    shadowOpacity: 0.5,
+    shadowRadius: 6,
     elevation: 4,
   },
   badgeLocked: {
     opacity: 0.45,
+    borderColor: COLORS.dark.border,
+    shadowColor: "transparent",
   },
   badgeIcon: {
     fontSize: 20,
@@ -236,29 +196,22 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     backgroundColor: COLORS.dark.bg,
     borderWidth: 2.5,
+    borderColor: COLORS.dark.accent,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,
+    shadowColor: COLORS.dark.accent,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.8,
+    shadowOpacity: 0.6,
     shadowRadius: 12,
     elevation: 6,
   },
+  cardCircleLocked: {
+    borderColor: COLORS.dark.textMuted,
+    shadowColor: "transparent",
+  },
   cardIcon: {
     fontSize: 32,
-  },
-  rarityBadge: {
-    borderRadius: 8,
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  rarityText: {
-    fontSize: 11,
-    fontFamily: Platform.OS === "ios" ? "System" : "sans-serif-medium",
-    fontWeight: "700",
-    letterSpacing: 0.5,
-    textTransform: "uppercase",
   },
   cardName: {
     color: COLORS.dark.text,
