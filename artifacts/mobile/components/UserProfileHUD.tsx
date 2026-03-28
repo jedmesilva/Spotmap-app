@@ -1,7 +1,7 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 
 import COLORS from "@/constants/colors";
@@ -58,55 +58,111 @@ function formatExpiry(ts: number) {
   return `${m}m`;
 }
 
-function MinerAvatar({ avatar, progress, color }: { avatar: string; progress: number; color: string }) {
+interface MinerCardProps {
+  avatar: string;
+  name: string;
+  progress: number | null;
+  color: string;
+  isPlayer?: boolean;
+}
+
+function MinerCard({ avatar, name, progress, color, isPlayer = false }: MinerCardProps) {
+  const pct = progress !== null ? Math.round(progress) : null;
   return (
-    <View style={minerStyles.wrapper}>
-      <View style={[minerStyles.ring, { borderColor: color + "99" }]}>
+    <View style={minerStyles.card}>
+      <View style={[minerStyles.ring, { borderColor: isPlayer ? COLORS.dark.accent : color + "88" }]}>
         {isImageUrl(avatar) ? (
           <Image source={{ uri: avatar }} style={minerStyles.img} />
         ) : (
           <Text style={minerStyles.emoji}>{avatar}</Text>
         )}
       </View>
-      <View style={[minerStyles.badge, { backgroundColor: color + "22", borderColor: color + "66" }]}>
-        <Text style={[minerStyles.badgeText, { color }]}>{Math.round(progress)}%</Text>
-      </View>
+      <Text style={[minerStyles.name, isPlayer && { color: COLORS.dark.accent }]} numberOfLines={1}>
+        {isPlayer ? "Você" : name}
+      </Text>
+      {pct !== null ? (
+        <View style={[minerStyles.badge, { borderColor: color + "66" }]}>
+          <View style={[minerStyles.badgeFill, { width: `${pct}%` as any, backgroundColor: color + "40" }]} />
+          <Text style={minerStyles.badgeIcon}>⛏️</Text>
+          <Text style={[minerStyles.badgeText, { color }]}>{pct}%</Text>
+        </View>
+      ) : (
+        <View style={[minerStyles.badge, { borderColor: COLORS.dark.border }]}>
+          <Text style={minerStyles.badgeIconDim}>⛏️</Text>
+          <Text style={minerStyles.badgeTextDim}>—</Text>
+        </View>
+      )}
     </View>
   );
 }
 
 const minerStyles = StyleSheet.create({
-  wrapper: {
+  card: {
     alignItems: "center",
-    gap: 3,
+    gap: 4,
+    width: 56,
   },
   ring: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1.5,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 2,
     backgroundColor: COLORS.dark.bgSecondary,
     alignItems: "center",
     justifyContent: "center",
     overflow: "hidden",
   },
   img: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   emoji: {
-    fontSize: 14,
+    fontSize: 16,
+  },
+  name: {
+    fontSize: 9,
+    fontFamily: "Inter_600SemiBold",
+    color: COLORS.dark.textSecondary,
+    textAlign: "center",
+    width: "100%",
   },
   badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
     borderRadius: 6,
     borderWidth: 1,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    overflow: "hidden",
+    position: "relative",
+    backgroundColor: COLORS.dark.bgSecondary,
+  },
+  badgeFill: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    borderRadius: 6,
+  },
+  badgeIcon: {
+    fontSize: 9,
+    zIndex: 1,
   },
   badgeText: {
     fontSize: 9,
     fontFamily: "Inter_700Bold",
+    zIndex: 1,
+  },
+  badgeIconDim: {
+    fontSize: 9,
+    opacity: 0.4,
+  },
+  badgeTextDim: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    color: COLORS.dark.textMuted,
   },
 });
 
@@ -159,25 +215,29 @@ export function UserProfileHUD({ insets }: UserProfileHUDProps) {
           </View>
         </View>
 
-        {/* Progresso do player */}
-        {isPlayerMining && (
-          <View style={styles.progressRow}>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: `${playerProgress}%` as any, backgroundColor: color }]} />
-            </View>
-            <Text style={[styles.progressLabel, { color }]}>{Math.round(playerProgress)}%</Text>
-          </View>
-        )}
-
-        {/* Outros mineradores */}
-        {otherMiners.length > 0 && (
-          <View style={styles.minersRow}>
-            <Text style={styles.minersLabel}>Minerando:</Text>
-            {otherMiners.map((u) => (
-              <MinerAvatar key={u.id} avatar={u.avatar} progress={u.collectProgress} color={color} />
-            ))}
-          </View>
-        )}
+        {/* Strip de mineradores — player sempre primeiro */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.minersScroll}
+        >
+          <MinerCard
+            avatar={userProfile.avatar}
+            name={userProfile.name}
+            progress={isPlayerMining ? playerProgress : null}
+            color={color}
+            isPlayer
+          />
+          {otherMiners.map((u) => (
+            <MinerCard
+              key={u.id}
+              avatar={u.avatar}
+              name={u.name}
+              progress={u.collectProgress}
+              color={color}
+            />
+          ))}
+        </ScrollView>
       </View>
     );
   }
@@ -371,37 +431,8 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: COLORS.dark.textMuted,
   },
-  progressRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  minersScroll: {
     gap: 8,
-  },
-  progressBar: {
-    flex: 1,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: COLORS.dark.border,
-    overflow: "hidden",
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 3,
-  },
-  progressLabel: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    minWidth: 30,
-    textAlign: "right",
-  },
-  minersRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  minersLabel: {
-    fontSize: 10,
-    fontFamily: "Inter_400Regular",
-    color: COLORS.dark.textMuted,
+    paddingVertical: 2,
   },
 });
