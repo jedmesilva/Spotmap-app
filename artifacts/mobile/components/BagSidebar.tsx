@@ -232,12 +232,6 @@ function GridSpotItem({
         </Svg>
       )}
 
-      {isManipulated && (
-        <View style={styles.manipulatedBadge}>
-          <Ionicons name="flask-outline" size={10} color="#7eefc4" />
-        </View>
-      )}
-
       <View style={styles.newGridCardIcon}>
         <Feather name={SPOT_ICONS[spot.type] as any ?? "package"} size={22} color={color} />
       </View>
@@ -259,6 +253,12 @@ function GridSpotItem({
               </View>
             );
           })}
+        </View>
+      )}
+
+      {isManipulated && (
+        <View style={styles.manipulatedBadge}>
+          <Ionicons name="flask-outline" size={10} color="#7eefc4" />
         </View>
       )}
     </Pressable>
@@ -291,12 +291,6 @@ function GridFullItem({
         },
       ]}
     >
-      {item.quantity > 1 && (
-        <View style={styles.qtyBadge}>
-          <Text style={styles.qtyBadgeText}>×{item.quantity}</Text>
-        </View>
-      )}
-
       <View style={styles.newGridCardIcon}>
         <Feather name={ITEM_ICONS[item.type] as any ?? "package"} size={22} color={color} />
       </View>
@@ -306,6 +300,12 @@ function GridFullItem({
       <View style={[styles.newGridCardTypePill, { backgroundColor: color + "18", borderColor: color + "33" }]}>
         <Text style={[styles.newGridCardTypeText, { color }]}>{ITEM_TYPE_LABELS[item.type] ?? item.type.toUpperCase()}</Text>
       </View>
+
+      {item.quantity > 1 && (
+        <View style={styles.qtyBadge}>
+          <Text style={styles.qtyBadgeText}>×{item.quantity}</Text>
+        </View>
+      )}
     </Pressable>
   );
 }
