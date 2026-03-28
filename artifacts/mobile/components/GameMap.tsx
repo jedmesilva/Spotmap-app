@@ -116,11 +116,14 @@ function spotIcon(spot,selected){
   var color=SPOT_COLOR[spot.type]||C.accent;
   var scale=selected?'transform:scale(1.15);':'';
   var bg=selected?color+'30':color+'18';
-  var html='<div style="position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;'+scale+'">'
-    +'<div style="width:44px;height:44px;border-radius:12px;border:2px solid '+color+';background:'+bg+';display:flex;align-items:center;justify-content:center;color:'+color+'">'
+  var shadow='text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)';
+  var html='<div style="display:flex;flex-direction:column;align-items:center;width:100px;">'
+    +'<div style="width:44px;height:44px;border-radius:12px;border:2px solid '+color+';background:'+bg+';display:flex;align-items:center;justify-content:center;color:'+color+';'+scale+'">'
     +(ICONS[spot.type]||ICONS.rare)
-    +'</div></div>';
-  return L.divIcon({html:html,className:'',iconSize:[44,44],iconAnchor:[22,22]});
+    +'</div>'
+    +'<div style="margin-top:3px;color:'+C.text+';font-size:11px;font-weight:700;letter-spacing:0.3px;text-align:center;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+shadow+';">'+spot.title+'</div>'
+    +'</div>';
+  return L.divIcon({html:html,className:'',iconSize:[100,62],iconAnchor:[50,22]});
 }
 
 function userIcon(user,selected,spotColor){
