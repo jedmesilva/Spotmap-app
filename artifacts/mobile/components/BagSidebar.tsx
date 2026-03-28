@@ -816,7 +816,17 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
                 },
               ]}
             >
-              {menuItems.map((menuItem, idx) => {
+              {menuItems.length === 0 ? (
+                <View style={styles.longPressMenuEmpty}>
+                  <View style={styles.longPressMenuEmptyIcon}>
+                    <Feather name="map-pin" size={20} color={COLORS.dark.textMuted} />
+                  </View>
+                  <Text style={styles.longPressMenuEmptyTitle}>Nenhum spot</Text>
+                  <Text style={styles.longPressMenuEmptySub}>
+                    Explore o mapa e colete spots para usá-los aqui
+                  </Text>
+                </View>
+              ) : menuItems.map((menuItem, idx) => {
                 const isHovered = hoveredIndex === idx;
                 return (
                   <View
@@ -1456,5 +1466,43 @@ const styles = StyleSheet.create({
     height: 6,
     borderRadius: 3,
     flexShrink: 0,
+  },
+  longPressMenuEmpty: {
+    width: LONG_MENU_ITEM_WIDTH,
+    paddingVertical: 18,
+    paddingHorizontal: 14,
+    alignItems: "center",
+    gap: 7,
+    backgroundColor: COLORS.dark.card,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: COLORS.dark.border,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.45,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  longPressMenuEmptyIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.dark.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  longPressMenuEmptyTitle: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: COLORS.dark.text,
+    letterSpacing: 0.2,
+  },
+  longPressMenuEmptySub: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: COLORS.dark.textMuted,
+    textAlign: "center",
+    lineHeight: 14,
   },
 });
