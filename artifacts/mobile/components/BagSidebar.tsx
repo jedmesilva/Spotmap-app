@@ -202,7 +202,7 @@ function GridSpotItem({
         styles.newGridCard,
         {
           width: cardWidth,
-          backgroundColor: "transparent",
+          backgroundColor: COLORS.dark.surface,
           borderColor,
           opacity: pressed ? 0.8 : 1,
         },
@@ -285,7 +285,7 @@ function GridFullItem({
         styles.newGridCard,
         {
           width: cardWidth,
-          backgroundColor: "transparent",
+          backgroundColor: COLORS.dark.surface,
           borderColor: "#ffffff14",
           opacity: pressed && !readOnly ? 0.8 : readOnly ? 0.6 : 1,
         },
@@ -1059,14 +1059,10 @@ const styles = StyleSheet.create({
   newGridCard: {
     borderRadius: 12,
     padding: 12,
-    paddingTop: 12,
     alignItems: "center",
     gap: 6,
     position: "relative",
     borderWidth: 1.5,
-    shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 8,
-    elevation: 4,
   },
   manipulatedBadge: {
     position: "absolute",
