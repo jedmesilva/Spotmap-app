@@ -116,7 +116,7 @@ function spotIcon(spot,selected){
   var scale=selected?'transform:scale(1.15);':'';
   var bg=selected?color+'30':color+'18';
   var html='<div style="position:relative;width:44px;height:44px;display:flex;align-items:center;justify-content:center;'+scale+'">'
-    +'<div style="width:44px;height:44px;border-radius:50%;border:2px solid '+color+';background:'+bg+';display:flex;align-items:center;justify-content:center;color:'+color+'">'
+    +'<div style="width:44px;height:44px;border-radius:12px;border:2px solid '+color+';background:'+bg+';display:flex;align-items:center;justify-content:center;color:'+color+'">'
     +(ICONS[spot.type]||ICONS.rare)
     +'</div></div>';
   return L.divIcon({html:html,className:'',iconSize:[44,44],iconAnchor:[22,22]});
