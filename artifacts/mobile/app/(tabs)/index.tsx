@@ -10,6 +10,7 @@ import { BagSidebar } from "@/components/BagSidebar";
 import { UserProfileHUD } from "@/components/UserProfileHUD";
 import { MedalsStrip } from "@/components/MedalsStrip";
 import { EmojiBar, EMOJI_BAR_HEIGHT } from "@/components/EmojiBar";
+import { Vignette } from "@/components/Vignette";
 import COLORS from "@/constants/colors";
 
 function getDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -126,6 +127,12 @@ export default function MapScreen() {
         onSpotPress={handleSpotPress}
         onUserPress={handleUserPress}
         onMapPress={handleMapPress}
+      />
+
+      <Vignette
+        isFocused={!!(selectedSpot || selectedUser)}
+        health={userProfile.health}
+        maxHealth={userProfile.maxHealth}
       />
 
       <UserProfileHUD insets={{ top: topInset }} />
