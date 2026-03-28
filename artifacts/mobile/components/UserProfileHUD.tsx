@@ -1,4 +1,4 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Feather, Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
@@ -27,10 +27,77 @@ function getStrengthColor(strength: number): string {
   return COLORS.dark.danger;
 }
 
+const SPOT_COLORS: Record<string, string> = {
+  coupon: COLORS.dark.spotCoupon,
+  money: COLORS.dark.spotMoney,
+  product: COLORS.dark.spotProduct,
+  rare: COLORS.dark.spotRare,
+};
+
+const SPOT_ICONS: Record<string, string> = {
+  coupon: "tag",
+  money: "dollar-sign",
+  product: "box",
+  rare: "star",
+};
+
+const SPOT_LABELS: Record<string, string> = {
+  coupon: "Cupom",
+  money: "Dinheiro",
+  product: "Produto",
+  rare: "Raro",
+};
+
+function formatExpiry(ts: number) {
+  const diff = ts - Date.now();
+  if (diff <= 0) return "Expirado";
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
 export function UserProfileHUD({ insets }: UserProfileHUDProps) {
-  const { userProfile, selectedUser } = useGame();
+  const { userProfile, selectedUser, selectedSpot } = useGame();
 
   const top = Math.max(insets.top + 10, 50);
+
+  if (selectedSpot) {
+    const color = SPOT_COLORS[selectedSpot.type] ?? COLORS.dark.accent;
+    const icon = SPOT_ICONS[selectedSpot.type] ?? "star";
+    const label = SPOT_LABELS[selectedSpot.type] ?? selectedSpot.type;
+
+    return (
+      <View style={[styles.row, { top }]}>
+        <View style={[styles.avatar, { borderColor: color }]}>
+          <View style={[styles.spotIconBg, { backgroundColor: color + "22" }]}>
+            <Feather name={icon as any} size={18} color={color} />
+          </View>
+        </View>
+
+        <View style={[styles.card, { borderColor: color + "44" }]}>
+          <Feather name="map-pin" size={13} color={color} />
+          <Text style={[styles.statText, { color }]}>{selectedSpot.radius}m</Text>
+
+          {selectedSpot.expiresAt && (
+            <>
+              <View style={styles.divider} />
+              <Feather name="clock" size={13} color={COLORS.dark.textMuted} />
+              <Text style={[styles.statText, { color: COLORS.dark.textMuted }]}>
+                {formatExpiry(selectedSpot.expiresAt)}
+              </Text>
+            </>
+          )}
+        </View>
+
+        <View style={styles.spotNameBlock}>
+          <Text style={styles.spotName} numberOfLines={1}>{selectedSpot.title}</Text>
+          <Text style={[styles.spotValue, { color }]}>{selectedSpot.value}</Text>
+        </View>
+      </View>
+    );
+  }
+
   const isInspecting = selectedUser !== null;
 
   const displayHealth = isInspecting ? selectedUser.health : userProfile.health;
@@ -100,6 +167,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.dark.accent,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
   },
   avatarMonster: {
     borderColor: "#ff6b00",
@@ -154,5 +222,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_600SemiBold",
     maxWidth: 100,
+  },
+  spotIconBg: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  spotNameBlock: {
+    flexDirection: "column",
+    gap: 1,
+    maxWidth: 140,
+  },
+  spotName: {
+    color: COLORS.dark.text,
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    lineHeight: 16,
+  },
+  spotValue: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    lineHeight: 15,
   },
 });
