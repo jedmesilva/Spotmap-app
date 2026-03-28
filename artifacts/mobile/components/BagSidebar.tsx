@@ -190,78 +190,80 @@ function GridSpotItem({
   const borderColor = isFireSelected ? color + "88" : "#ffffff14";
 
   return (
-    <Pressable
-      onPress={handlePress}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      onLayout={(e) => {
-        const { width, height } = e.nativeEvent.layout;
-        setCardSize({ width, height });
-      }}
-      style={({ pressed }) => [
-        styles.newGridCard,
-        {
-          width: cardWidth,
-          backgroundColor: COLORS.dark.surface,
-          borderColor,
-          opacity: pressed ? 0.8 : 1,
-        },
-      ]}
-    >
-      {cardSize.width > 0 && (
-        <Svg
-          style={StyleSheet.absoluteFill}
-          width="100%"
-          height="100%"
-          pointerEvents="none"
-        >
-          <AnimatedRect
-            x={2}
-            y={2}
-            width={cardSize.width - 4}
-            height={cardSize.height - 4}
-            rx={CARD_RADIUS - 2}
-            ry={CARD_RADIUS - 2}
-            fill="none"
-            stroke={color}
-            strokeWidth={2}
-            strokeDasharray={perimeter}
-            strokeDashoffset={strokeDashoffset}
-            strokeLinecap="round"
-          />
-        </Svg>
-      )}
+    <View style={{ width: cardWidth, position: "relative" }}>
+      <Pressable
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        onLayout={(e) => {
+          const { width, height } = e.nativeEvent.layout;
+          setCardSize({ width, height });
+        }}
+        style={({ pressed }) => [
+          styles.newGridCard,
+          {
+            width: cardWidth,
+            backgroundColor: COLORS.dark.surface,
+            borderColor,
+            opacity: pressed ? 0.8 : 1,
+          },
+        ]}
+      >
+        {cardSize.width > 0 && (
+          <Svg
+            style={StyleSheet.absoluteFill}
+            width="100%"
+            height="100%"
+            pointerEvents="none"
+          >
+            <AnimatedRect
+              x={2}
+              y={2}
+              width={cardSize.width - 4}
+              height={cardSize.height - 4}
+              rx={CARD_RADIUS - 2}
+              ry={CARD_RADIUS - 2}
+              fill="none"
+              stroke={color}
+              strokeWidth={2}
+              strokeDasharray={perimeter}
+              strokeDashoffset={strokeDashoffset}
+              strokeLinecap="round"
+            />
+          </Svg>
+        )}
 
-      <View style={styles.newGridCardIcon}>
-        <Feather name={SPOT_ICONS[spot.type] as any ?? "package"} size={22} color={color} />
-      </View>
-
-      <Text style={styles.newGridCardName} numberOfLines={2}>{spot.title}</Text>
-
-      <View style={[styles.newGridCardTypePill, { backgroundColor: color + "18", borderColor: color + "33" }]}>
-        <Text style={[styles.newGridCardTypeText, { color }]}>{SPOT_LABELS[spot.type] ?? spot.type.toUpperCase()}</Text>
-      </View>
-
-      {spot.badges && spot.badges.length > 0 && (
-        <View style={styles.spotBadgeStrip}>
-          {spot.badges.filter(b => b !== "manipulated").map((badge) => {
-            const cfg = SPOT_BADGE_CONFIGS[badge];
-            if (!cfg) return null;
-            return (
-              <View key={badge} style={[styles.spotBadgePill, { backgroundColor: cfg.color + "22", borderColor: cfg.color + "66" }]}>
-                <Ionicons name={cfg.icon as any} size={10} color={cfg.color} />
-              </View>
-            );
-          })}
+        <View style={styles.newGridCardIcon}>
+          <Feather name={SPOT_ICONS[spot.type] as any ?? "package"} size={22} color={color} />
         </View>
-      )}
+
+        <Text style={styles.newGridCardName} numberOfLines={2}>{spot.title}</Text>
+
+        <View style={[styles.newGridCardTypePill, { backgroundColor: color + "18", borderColor: color + "33" }]}>
+          <Text style={[styles.newGridCardTypeText, { color }]}>{SPOT_LABELS[spot.type] ?? spot.type.toUpperCase()}</Text>
+        </View>
+
+        {spot.badges && spot.badges.length > 0 && (
+          <View style={styles.spotBadgeStrip}>
+            {spot.badges.filter(b => b !== "manipulated").map((badge) => {
+              const cfg = SPOT_BADGE_CONFIGS[badge];
+              if (!cfg) return null;
+              return (
+                <View key={badge} style={[styles.spotBadgePill, { backgroundColor: cfg.color + "22", borderColor: cfg.color + "66" }]}>
+                  <Ionicons name={cfg.icon as any} size={10} color={cfg.color} />
+                </View>
+              );
+            })}
+          </View>
+        )}
+      </Pressable>
 
       {isManipulated && (
-        <View style={styles.manipulatedBadge}>
+        <View style={styles.manipulatedBadge} pointerEvents="none">
           <Ionicons name="flask" size={12} color="#ffffff" />
         </View>
       )}
-    </Pressable>
+    </View>
   );
 }
 
@@ -279,34 +281,36 @@ function GridFullItem({
   const color = ITEM_COLORS[item.type] ?? COLORS.dark.accent;
 
   return (
-    <Pressable
-      onPress={() => { if (!readOnly) onUse(item); }}
-      style={({ pressed }) => [
-        styles.newGridCard,
-        {
-          width: cardWidth,
-          backgroundColor: COLORS.dark.surface,
-          borderColor: "#ffffff14",
-          opacity: pressed && !readOnly ? 0.8 : readOnly ? 0.6 : 1,
-        },
-      ]}
-    >
-      <View style={styles.newGridCardIcon}>
-        <Feather name={ITEM_ICONS[item.type] as any ?? "package"} size={22} color={color} />
-      </View>
+    <View style={{ width: cardWidth, position: "relative" }}>
+      <Pressable
+        onPress={() => { if (!readOnly) onUse(item); }}
+        style={({ pressed }) => [
+          styles.newGridCard,
+          {
+            width: cardWidth,
+            backgroundColor: COLORS.dark.surface,
+            borderColor: "#ffffff14",
+            opacity: pressed && !readOnly ? 0.8 : readOnly ? 0.6 : 1,
+          },
+        ]}
+      >
+        <View style={styles.newGridCardIcon}>
+          <Feather name={ITEM_ICONS[item.type] as any ?? "package"} size={22} color={color} />
+        </View>
 
-      <Text style={styles.newGridCardName} numberOfLines={2}>{item.name}</Text>
+        <Text style={styles.newGridCardName} numberOfLines={2}>{item.name}</Text>
 
-      <View style={[styles.newGridCardTypePill, { backgroundColor: color + "18", borderColor: color + "33" }]}>
-        <Text style={[styles.newGridCardTypeText, { color }]}>{ITEM_TYPE_LABELS[item.type] ?? item.type.toUpperCase()}</Text>
-      </View>
+        <View style={[styles.newGridCardTypePill, { backgroundColor: color + "18", borderColor: color + "33" }]}>
+          <Text style={[styles.newGridCardTypeText, { color }]}>{ITEM_TYPE_LABELS[item.type] ?? item.type.toUpperCase()}</Text>
+        </View>
+      </Pressable>
 
       {item.quantity > 1 && (
-        <View style={styles.qtyBadge}>
+        <View style={styles.qtyBadge} pointerEvents="none">
           <Text style={styles.qtyBadgeText}>×{item.quantity}</Text>
         </View>
       )}
-    </Pressable>
+    </View>
   );
 }
 
