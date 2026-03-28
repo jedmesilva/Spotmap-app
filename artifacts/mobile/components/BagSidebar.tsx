@@ -747,11 +747,6 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
             ]}
           >
             <Feather name="briefcase" size={22} color={isInspecting ? COLORS.dark.warning : "#fff"} />
-            <View style={[styles.coinBadge, isInspecting && styles.coinBadgeInspecting]}>
-              <Text style={[styles.coinText, isInspecting && styles.coinTextInspecting]}>
-                {displayCoins}
-              </Text>
-            </View>
             <Text
               numberOfLines={1}
               adjustsFontSizeToFit
