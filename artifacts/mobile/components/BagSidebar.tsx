@@ -784,23 +784,20 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
           <View
             style={[
               styles.fireBtn,
-              isFireActive && { borderColor: invSpotColor + "88", backgroundColor: invSpotColor + "18" },
-              isFireReady && !isFireActive && { borderColor: invSpotColor + "44", backgroundColor: invSpotColor + "0D" },
-              longMenuOpen && { borderColor: COLORS.dark.accent + "CC", backgroundColor: COLORS.dark.accent + "18" },
+              isFireReady && { backgroundColor: invSpotColor, borderColor: invSpotColor },
+              longMenuOpen && !isFireReady && { backgroundColor: COLORS.dark.accentDim, borderColor: COLORS.dark.accent },
             ]}
           >
-            {selectedInventorySpot ? (
-              <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
-                <Feather name={SPOT_ICONS[selectedInventorySpot.type] as any} size={24} color={invSpotColor} />
-              </RNAnimated.View>
-            ) : (
-              <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
-                <Feather name="zap" size={24} color="#fff" />
-              </RNAnimated.View>
-            )}
+            <RNAnimated.View style={{ transform: [{ scale: fireScale }, { translateY: fireY }] }}>
+              <Feather
+                name={selectedInventorySpot ? (SPOT_ICONS[selectedInventorySpot.type] as any) : "zap"}
+                size={24}
+                color="#fff"
+              />
+            </RNAnimated.View>
             {isFireReady && miningClicks > 0 && !longMenuOpen && (
-              <View style={[styles.mineProgressBadge, { backgroundColor: invSpotColor }]}>
-                <Text style={styles.mineProgressText}>{miningClicks}x</Text>
+              <View style={[styles.mineProgressBadge, { borderColor: invSpotColor }]}>
+                <Text style={[styles.mineProgressText, { color: invSpotColor }]}>{miningClicks}x</Text>
               </View>
             )}
             <Text
@@ -808,10 +805,8 @@ export function BagSidebar({ insets, onFire, canFire = false, miningProgress = 0
               adjustsFontSizeToFit
               style={[
                 styles.fireLabel,
-                !isFireReady && !longMenuOpen && { color: "#fff" },
-                isFireReady && { color: invSpotColor },
+                { color: "#fff" },
                 selectedInventorySpot && { letterSpacing: 0 },
-                longMenuOpen && { color: COLORS.dark.accent },
               ]}
             >
               {selectedInventorySpot
