@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef } from "react";
 import { Platform, StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
 import * as Location from "expo-location";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -47,6 +47,11 @@ export default function MapScreen() {
     activeCollection,
   } = useGame();
 
+  // Tracks the spot the user manually exited focus on (prevents auto-refocus until they leave+re-enter radius)
+  const manuallyUnfocusedRef = useRef<string | null>(null);
+  // Tracks which spot IDs were in range on the previous location update
+  const prevInRangeSetRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
     let sub: Location.LocationSubscription | null = null;
     (async () => {
@@ -70,9 +75,60 @@ export default function MapScreen() {
     return () => { sub?.remove(); };
   }, []);
 
+  const isSpotInRange = useCallback(
+    (spot: { latitude: number; longitude: number; radius: number }) => {
+      if (!userLocation) return false;
+      return (
+        getDistance(
+          userLocation.latitude,
+          userLocation.longitude,
+          spot.latitude,
+          spot.longitude
+        ) <= spot.radius
+      );
+    },
+    [userLocation]
+  );
+
+  const spotsInRange = useMemo(
+    () => spots.filter((s) => isSpotInRange(s)),
+    [spots, isSpotInRange]
+  );
+
+  // Auto-focus when entering a spot radius; reset manual-unfocus when exiting radius
+  useEffect(() => {
+    const currentIds = new Set(spotsInRange.map((s) => s.id));
+    const prevIds = prevInRangeSetRef.current;
+
+    for (const spot of spotsInRange) {
+      if (!prevIds.has(spot.id)) {
+        // Entered this spot's radius
+        if (!selectedSpot && manuallyUnfocusedRef.current !== spot.id) {
+          selectSpot(spot);
+          selectUser(null);
+        }
+      }
+    }
+
+    for (const id of prevIds) {
+      if (!currentIds.has(id)) {
+        // Exited this spot's radius — reset manual-unfocus so next entry auto-focuses
+        if (manuallyUnfocusedRef.current === id) {
+          manuallyUnfocusedRef.current = null;
+        }
+      }
+    }
+
+    prevInRangeSetRef.current = currentIds;
+  }, [spotsInRange]);
+
   const handleSpotPress = useCallback(
     (spotId: string) => {
       const spot = spots.find((s) => s.id === spotId);
+      // Explicit click always focuses, even if previously manually unfocused
+      if (manuallyUnfocusedRef.current === spotId) {
+        manuallyUnfocusedRef.current = null;
+      }
       selectSpot(spot ?? null);
       selectUser(null);
     },
@@ -93,25 +149,18 @@ export default function MapScreen() {
     selectUser(null);
   }, [selectSpot, selectUser]);
 
-  const isSpotInRange = (spot: { latitude: number; longitude: number; radius: number }) => {
-    if (!userLocation) return false;
-    return (
-      getDistance(
-        userLocation.latitude,
-        userLocation.longitude,
-        spot.latitude,
-        spot.longitude
-      ) <= spot.radius
-    );
-  };
+  // X button on a spot: mark as manually unfocused to suppress auto-refocus until next radius exit+entry
+  const handleUnfocusSpot = useCallback(() => {
+    manuallyUnfocusedRef.current = selectedSpot?.id ?? null;
+    selectSpot(null);
+  }, [selectedSpot, selectSpot]);
 
   const topInset = Platform.OS === "web" ? 67 : insets.top;
   const bottomInset = Platform.OS === "web" ? 34 : insets.bottom;
 
-  const spotsInRange = spots.filter((s) => isSpotInRange(s));
+  // canMine requires a focused (selected) spot that is in range, or an active collection already running
   const mineableSpotId = activeCollection?.spotId
-    ?? (selectedSpot && isSpotInRange(selectedSpot) ? selectedSpot.id : null)
-    ?? (spotsInRange.length > 0 ? spotsInRange[0].id : null);
+    ?? (selectedSpot && isSpotInRange(selectedSpot) ? selectedSpot.id : null);
   const canMine = mineableSpotId !== null;
   const miningProgress = activeCollection?.progress ?? 0;
   const miningClicks = activeCollection?.clicks ?? 0;
@@ -172,7 +221,7 @@ export default function MapScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.mapBtn, { backgroundColor: C.card, borderColor: C.danger + "44" }]}
-              onPress={() => selectSpot(null)}
+              onPress={handleUnfocusSpot}
               activeOpacity={0.75}
             >
               <Feather name="x" size={20} color={C.danger} />
