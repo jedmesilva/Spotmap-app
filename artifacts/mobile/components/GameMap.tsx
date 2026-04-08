@@ -87,7 +87,7 @@ var currentSpots=[];var currentUsers=[];var playerLoc=null;var mineableSpotId=nu
 var playerProfile=null;var playerCollectingData=null;
 var USER_VIRTUAL_RADIUS=40;
 function radiusToZoom(lat,radiusMeters){
-  var zoom=Math.log2(156543.03392*Math.cos(lat*Math.PI/180)*80/radiusMeters);
+  var zoom=Math.log2(156543.03392*Math.cos(lat*Math.PI/180)*200/radiusMeters);
   return Math.min(Math.max(Math.round(zoom),12),19);
 }
 
