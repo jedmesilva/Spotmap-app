@@ -3,13 +3,11 @@ import * as Haptics from "expo-haptics";
 import React, { useCallback, useRef, useState } from "react";
 import {
   Animated as RNAnimated,
-  Modal,
   PanResponder,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TouchableWithoutFeedback,
   View,
   useWindowDimensions,
 } from "react-native";
@@ -187,11 +185,23 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
 
   const snapOpenRef = useRef(screenHeight * SNAP_RATIO);
   snapOpenRef.current = screenHeight * SNAP_RATIO;
+  const screenHeightRef = useRef(screenHeight);
+  screenHeightRef.current = screenHeight;
 
   const [sheetVisible, setSheetVisible] = useState(false);
   const sheetVisibleRef = useRef(false);
+
+  // Sheet position: screenHeight = hidden below, snapOpen = visible
   const sheetY = useRef(new RNAnimated.Value(screenHeight)).current;
   const backdropOpacity = useRef(new RNAnimated.Value(0)).current;
+
+  // Pill button lift animation
+  const btnDragY = useRef(new RNAnimated.Value(0)).current;
+
+  // Track scroll position inside the sheet so we know when it's at top
+  const scrollYRef = useRef(0);
+  const [scrollEnabled, setScrollEnabled] = useState(true);
+
   const isDragging = useRef(false);
 
   const openSheet = useCallback(() => {
@@ -206,7 +216,8 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
   }, []);
 
   const closeSheet = useCallback(() => {
-    const sh = screenHeight;
+    const sh = screenHeightRef.current;
+    setScrollEnabled(true);
     RNAnimated.parallel([
       RNAnimated.spring(sheetY, { toValue: sh, useNativeDriver: true, tension: 65, friction: 11 }),
       RNAnimated.timing(backdropOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
@@ -214,13 +225,14 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
       sheetVisibleRef.current = false;
       setSheetVisible(false);
     });
-  }, [screenHeight]);
+  }, []);
 
   const openSheetRef = useRef(openSheet);
   openSheetRef.current = openSheet;
   const closeSheetRef = useRef(closeSheet);
   closeSheetRef.current = closeSheet;
 
+  // PanResponder on the pill button
   const buttonPan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -228,27 +240,32 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
 
       onPanResponderGrant: () => {
         isDragging.current = false;
-        sheetY.setValue(screenHeight);
+        sheetY.setValue(screenHeightRef.current);
         backdropOpacity.setValue(0);
+        btnDragY.setValue(0);
       },
 
       onPanResponderMove: (_, gs) => {
         if (gs.dy < -8) {
           const snapOpen = snapOpenRef.current;
-          const sh = screenHeight;
+          const sh = screenHeightRef.current;
           if (!sheetVisibleRef.current) {
             sheetVisibleRef.current = true;
             setSheetVisible(true);
           }
           isDragging.current = true;
+          // Sheet follows finger
           const newY = Math.max(snapOpen, sh + gs.dy);
           sheetY.setValue(newY);
           const progress = Math.min(1, (sh - newY) / (sh - snapOpen));
           backdropOpacity.setValue(progress);
+          // Button lifts up with the drag (clamped at -60)
+          btnDragY.setValue(Math.max(gs.dy, -60));
         }
       },
 
       onPanResponderRelease: (_, gs) => {
+        RNAnimated.spring(btnDragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 8 }).start();
         if (isDragging.current) {
           if (gs.dy < -50 || gs.vy < -0.3) {
             openSheetRef.current();
@@ -262,29 +279,37 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
       },
 
       onPanResponderTerminate: () => {
+        RNAnimated.spring(btnDragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 8 }).start();
         if (isDragging.current) closeSheetRef.current();
         isDragging.current = false;
       },
     })
   ).current;
 
+  // PanResponder on the full sheet — activates on downward drag when scroll is at top
   const sheetPan = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gs) => gs.dy > 5,
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_, gs) => {
+        return gs.dy > 8 && scrollYRef.current < 4;
+      },
+
+      onPanResponderGrant: () => {
+        setScrollEnabled(false);
+      },
 
       onPanResponderMove: (_, gs) => {
         if (gs.dy > 0) {
           const snapOpen = snapOpenRef.current;
-          const sh = screenHeight;
-          const newY = snapOpen + gs.dy;
-          sheetY.setValue(newY);
+          const sh = screenHeightRef.current;
+          sheetY.setValue(snapOpen + gs.dy);
           const progress = Math.max(0, 1 - gs.dy / (sh - snapOpen));
           backdropOpacity.setValue(progress);
         }
       },
 
       onPanResponderRelease: (_, gs) => {
+        setScrollEnabled(true);
         if (gs.dy > 100 || gs.vy > 0.5) {
           closeSheetRef.current();
         } else {
@@ -297,6 +322,7 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
       },
 
       onPanResponderTerminate: () => {
+        setScrollEnabled(true);
         const snapOpen = snapOpenRef.current;
         RNAnimated.spring(sheetY, { toValue: snapOpen, useNativeDriver: true, tension: 65, friction: 11 }).start();
         backdropOpacity.setValue(1);
@@ -312,64 +338,36 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
 
   return (
     <>
-      {/* Pill button */}
-      <RNAnimated.View
-        style={[styles.container, { bottom: bottomOffset }]}
-        {...buttonPan.panHandlers}
-      >
-        <View style={[styles.pill, { backgroundColor: C.card, borderColor: C.border }]}>
-          <View style={styles.pillContent}>
-            <View style={[styles.pillIconWrap, { backgroundColor: C.accent + "18" }]}>
-              <Feather name="briefcase" size={18} color={C.accent} />
-              {totalItems > 0 && (
-                <View style={[styles.pillBadge, { backgroundColor: C.accent, borderColor: C.bg }]}>
-                  <Text style={[styles.pillBadgeText, { color: "#fff" }]}>{totalItems}</Text>
-                </View>
-              )}
-            </View>
-            <View>
-              <Text style={[styles.pillLabel, { color: C.text }]}>INVENTÁRIO</Text>
-              <Text style={[styles.pillSub, { color: C.textMuted }]}>
-                {totalItems === 0 ? "Vazio" : `${totalItems} ${totalItems === 1 ? "item" : "itens"}`}
-              </Text>
-            </View>
-          </View>
-          <Feather name="chevron-up" size={16} color={C.textMuted} />
-        </View>
-      </RNAnimated.View>
-
-      {/* Custom animated sheet + backdrop */}
-      <Modal
-        visible={sheetVisible}
-        transparent
-        animationType="none"
-        onRequestClose={closeSheet}
-        statusBarTranslucent
-      >
-        {/* Backdrop */}
-        <TouchableWithoutFeedback onPress={closeSheet}>
+      {/* Backdrop — absolute over MapScreen, no Modal so nav bar is untouched */}
+      {sheetVisible && (
+        <Pressable
+          style={[StyleSheet.absoluteFillObject, { zIndex: 998 }]}
+          onPress={closeSheet}
+        >
           <RNAnimated.View
-            style={[styles.backdrop, { opacity: backdropOpacity }]}
+            style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.65)", opacity: backdropOpacity }]}
           />
-        </TouchableWithoutFeedback>
+        </Pressable>
+      )}
 
-        {/* Sheet */}
+      {/* Sheet */}
+      {sheetVisible && (
         <RNAnimated.View
           style={[
             styles.sheet,
-            { backgroundColor: C.bg, transform: [{ translateY: sheetY }] },
+            { backgroundColor: C.bg, zIndex: 999, transform: [{ translateY: sheetY }] },
           ]}
+          {...sheetPan.panHandlers}
         >
-          {/* Draggable handle */}
-          <View {...sheetPan.panHandlers} style={styles.sheetHandleArea}>
+          <View style={styles.sheetHandleArea}>
             <View style={[styles.sheetHandleBar, { backgroundColor: C.border }]} />
           </View>
 
           <ScrollView
-            contentContainerStyle={[
-              styles.sheetContent,
-              { paddingBottom: sheetInsets.bottom + 24 },
-            ]}
+            scrollEnabled={scrollEnabled}
+            onScroll={e => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+            scrollEventThrottle={16}
+            contentContainerStyle={[styles.sheetContent, { paddingBottom: sheetInsets.bottom + 24 }]}
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.sheetHeader}>
@@ -434,7 +432,33 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
             )}
           </ScrollView>
         </RNAnimated.View>
-      </Modal>
+      )}
+
+      {/* Pill button */}
+      <RNAnimated.View
+        style={[styles.container, { bottom: bottomOffset, transform: [{ translateY: btnDragY }] }]}
+        {...buttonPan.panHandlers}
+      >
+        <View style={[styles.pill, { backgroundColor: C.card, borderColor: C.border }]}>
+          <View style={styles.pillContent}>
+            <View style={[styles.pillIconWrap, { backgroundColor: C.accent + "18" }]}>
+              <Feather name="briefcase" size={18} color={C.accent} />
+              {totalItems > 0 && (
+                <View style={[styles.pillBadge, { backgroundColor: C.accent, borderColor: C.bg }]}>
+                  <Text style={[styles.pillBadgeText, { color: "#fff" }]}>{totalItems}</Text>
+                </View>
+              )}
+            </View>
+            <View>
+              <Text style={[styles.pillLabel, { color: C.text }]}>INVENTÁRIO</Text>
+              <Text style={[styles.pillSub, { color: C.textMuted }]}>
+                {totalItems === 0 ? "Vazio" : `${totalItems} ${totalItems === 1 ? "item" : "itens"}`}
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-up" size={16} color={C.textMuted} />
+        </View>
+      </RNAnimated.View>
     </>
   );
 }
@@ -501,10 +525,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "500",
     marginTop: 1,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.65)",
   },
   sheet: {
     position: "absolute",
