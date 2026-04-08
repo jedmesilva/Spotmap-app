@@ -7,6 +7,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useGame } from "@/context/GameContext";
 import { GameMap, GameMapHandle } from "@/components/GameMap";
 import { BagSidebar } from "@/components/BagSidebar";
+import { CombatButtons } from "@/components/CombatButtons";
+import { InventoryButton } from "@/components/InventoryButton";
 import { UserProfileHUD } from "@/components/UserProfileHUD";
 import { MedalsStrip } from "@/components/MedalsStrip";
 import { EmojiBar, EMOJI_BAR_HEIGHT } from "@/components/EmojiBar";
@@ -237,6 +239,28 @@ export default function MapScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      <CombatButtons
+        insets={{ bottom: bottomInset }}
+        canAttack={!!selectedInventorySpot && (canMine || !!selectedUser)}
+        onAttack={() => {
+          fireInventorySpot(mineableSpotId);
+          const itemType = selectedInventorySpot?.type ?? "rare";
+          if (selectedUser) {
+            mapRef.current?.fireAtUser(selectedUser.id, itemType);
+          } else if (mineableSpotId) {
+            mapRef.current?.mineHit(mineableSpotId, miningClicks + 1);
+            mapRef.current?.fireAtSpot(mineableSpotId, itemType);
+          }
+        }}
+        onDefend={() => {}}
+        extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
+      />
+
+      <InventoryButton
+        insets={{ bottom: bottomInset }}
+        extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
+      />
 
       <BagSidebar
         insets={{ top: topInset, bottom: bottomInset }}
