@@ -192,8 +192,11 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
   const [isOpen, setIsOpen] = useState(false);
   const isOpenRef = useRef(false);
 
-  // Sheet position: screenHeight = hidden below, snapOpen = visible
-  const sheetY = useRef(new RNAnimated.Value(screenHeight)).current;
+  // +200 extra to guarantee the sheet is fully off-screen regardless of system bar differences
+  const HIDDEN_Y = () => screenHeightRef.current + 200;
+
+  // Sheet position: HIDDEN_Y = hidden below, snapOpen = visible
+  const sheetY = useRef(new RNAnimated.Value(screenHeight + 200)).current;
   const backdropOpacity = useRef(new RNAnimated.Value(0)).current;
 
   // Pill button lift animation
@@ -217,10 +220,9 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
   }, []);
 
   const closeSheet = useCallback(() => {
-    const sh = screenHeightRef.current;
     setScrollEnabled(true);
     RNAnimated.parallel([
-      RNAnimated.spring(sheetY, { toValue: sh, useNativeDriver: true, tension: 65, friction: 11 }),
+      RNAnimated.spring(sheetY, { toValue: HIDDEN_Y(), useNativeDriver: true, tension: 65, friction: 11 }),
       RNAnimated.timing(backdropOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
     ]).start(() => {
       isOpenRef.current = false;
