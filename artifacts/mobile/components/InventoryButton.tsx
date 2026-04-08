@@ -188,8 +188,9 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
   const screenHeightRef = useRef(screenHeight);
   screenHeightRef.current = screenHeight;
 
-  const [sheetVisible, setSheetVisible] = useState(false);
-  const sheetVisibleRef = useRef(false);
+  // isOpen controls only pointer events — sheet is always rendered to avoid mount/unmount freeze
+  const [isOpen, setIsOpen] = useState(false);
+  const isOpenRef = useRef(false);
 
   // Sheet position: screenHeight = hidden below, snapOpen = visible
   const sheetY = useRef(new RNAnimated.Value(screenHeight)).current;
@@ -206,8 +207,8 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
 
   const openSheet = useCallback(() => {
     const snapOpen = snapOpenRef.current;
-    sheetVisibleRef.current = true;
-    setSheetVisible(true);
+    isOpenRef.current = true;
+    setIsOpen(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     RNAnimated.parallel([
       RNAnimated.spring(sheetY, { toValue: snapOpen, useNativeDriver: true, tension: 65, friction: 11 }),
@@ -222,8 +223,8 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
       RNAnimated.spring(sheetY, { toValue: sh, useNativeDriver: true, tension: 65, friction: 11 }),
       RNAnimated.timing(backdropOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
     ]).start(() => {
-      sheetVisibleRef.current = false;
-      setSheetVisible(false);
+      isOpenRef.current = false;
+      setIsOpen(false);
     });
   }, []);
 
@@ -249,10 +250,6 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
         if (gs.dy < -8) {
           const snapOpen = snapOpenRef.current;
           const sh = screenHeightRef.current;
-          if (!sheetVisibleRef.current) {
-            sheetVisibleRef.current = true;
-            setSheetVisible(true);
-          }
           isDragging.current = true;
           // Sheet follows finger
           const newY = Math.max(snapOpen, sh + gs.dy);
@@ -338,27 +335,26 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
 
   return (
     <>
-      {/* Backdrop — absolute over MapScreen, no Modal so nav bar is untouched */}
-      {sheetVisible && (
-        <Pressable
-          style={[StyleSheet.absoluteFillObject, { zIndex: 998 }]}
-          onPress={closeSheet}
-        >
-          <RNAnimated.View
-            style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.65)", opacity: backdropOpacity }]}
-          />
-        </Pressable>
-      )}
-
-      {/* Sheet */}
-      {sheetVisible && (
+      {/* Backdrop — always rendered, pointer events controlled by isOpen */}
+      <Pressable
+        style={[StyleSheet.absoluteFillObject, { zIndex: 998 }]}
+        onPress={closeSheet}
+        pointerEvents={isOpen ? "auto" : "none"}
+      >
         <RNAnimated.View
-          style={[
-            styles.sheet,
-            { backgroundColor: C.bg, zIndex: 999, transform: [{ translateY: sheetY }] },
-          ]}
-          {...sheetPan.panHandlers}
-        >
+          style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.65)", opacity: backdropOpacity }]}
+        />
+      </Pressable>
+
+      {/* Sheet — always rendered, slides in/out via sheetY transform */}
+      <RNAnimated.View
+        style={[
+          styles.sheet,
+          { backgroundColor: C.bg, zIndex: 999, transform: [{ translateY: sheetY }] },
+        ]}
+        pointerEvents={isOpen ? "auto" : "none"}
+        {...sheetPan.panHandlers}
+      >
           <View style={styles.sheetHandleArea}>
             <View style={[styles.sheetHandleBar, { backgroundColor: C.border }]} />
           </View>
@@ -431,8 +427,7 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
               </View>
             )}
           </ScrollView>
-        </RNAnimated.View>
-      )}
+      </RNAnimated.View>
 
       {/* Pill button */}
       <RNAnimated.View
