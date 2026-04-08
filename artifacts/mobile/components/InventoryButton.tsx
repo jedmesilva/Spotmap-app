@@ -266,7 +266,6 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
         {...panResponder.panHandlers}
       >
         <View style={[styles.pill, { backgroundColor: C.card, borderColor: C.border }]}>
-          <View style={[styles.pillHandle, { backgroundColor: C.border }]} />
           <View style={styles.pillContent}>
             <View style={[styles.pillIconWrap, { backgroundColor: C.accent + "18" }]}>
               <Feather name="briefcase" size={18} color={C.accent} />
@@ -387,22 +386,11 @@ const styles = StyleSheet.create({
     elevation: 8,
     minWidth: 200,
   },
-  pillHandle: {
-    position: "absolute",
-    top: 5,
-    left: "50%",
-    marginLeft: -16,
-    width: 32,
-    height: 3,
-    borderRadius: 2,
-    opacity: 0.5,
-  },
   pillContent: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
     flex: 1,
-    marginTop: 2,
   },
   pillIconWrap: {
     width: 36,
