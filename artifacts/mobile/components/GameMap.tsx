@@ -85,6 +85,11 @@ var userCollectingSpot={};
 var playerCollectingSpotId=null;
 var currentSpots=[];var currentUsers=[];var playerLoc=null;var mineableSpotId=null;
 var playerProfile=null;var playerCollectingData=null;
+var USER_VIRTUAL_RADIUS=40;
+function radiusToZoom(lat,radiusMeters){
+  var zoom=Math.log2(156543.03392*Math.cos(lat*Math.PI/180)*80/radiusMeters);
+  return Math.min(Math.max(Math.round(zoom),12),19);
+}
 
 function updateSpotColorMap(){SPOT_COLOR={coupon:C.coupon,money:C.money,product:C.product,rare:C.rare};}
 
@@ -445,9 +450,14 @@ window.receiveFromRN=function(jsonStr){
       updatePlayer(d.userLocation,d.userRadius,d.userProfile||null,d.playerCollecting||null);
       applyPlayerVisibility();
       if(selUser&&selUser!==prevSelUser&&userMarkers[selUser]){
-        map.flyTo(userMarkers[selUser].getLatLng(),18,{animate:true,duration:0.6,easeLinearity:0.5});
+        var uLatLng=userMarkers[selUser].getLatLng();
+        var uZoom=radiusToZoom(uLatLng.lat,USER_VIRTUAL_RADIUS);
+        map.flyTo(uLatLng,uZoom,{animate:true,duration:0.6,easeLinearity:0.5});
       } else if(selSpot&&selSpot!==prevSelSpot&&spotMarkers[selSpot]){
-        map.flyTo(spotMarkers[selSpot].getLatLng(),18,{animate:true,duration:0.6,easeLinearity:0.5});
+        var sData=currentSpots.find(function(s){return s.id===selSpot});
+        var sLatLng=spotMarkers[selSpot].getLatLng();
+        var sZoom=sData?radiusToZoom(sLatLng.lat,sData.radius):18;
+        map.flyTo(sLatLng,sZoom,{animate:true,duration:0.6,easeLinearity:0.5});
       }
     } else if(d.type==='CENTER'){
       map.setView([d.lat,d.lng],d.zoom||17);
