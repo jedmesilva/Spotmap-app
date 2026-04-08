@@ -170,7 +170,7 @@ interface InventoryButtonProps {
   extraBottomOffset?: number;
 }
 
-const SNAP_RATIO = 0.45;
+const SNAP_RATIO = 0; // full screen
 
 export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButtonProps) {
   const C = useColors();
@@ -335,27 +335,16 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
 
   return (
     <>
-      {/* Backdrop — always rendered, pointer events controlled by isOpen */}
-      <Pressable
-        style={[StyleSheet.absoluteFillObject, { zIndex: 998 }]}
-        onPress={closeSheet}
-        pointerEvents={isOpen ? "auto" : "none"}
-      >
-        <RNAnimated.View
-          style={[StyleSheet.absoluteFillObject, { backgroundColor: "rgba(0,0,0,0.65)", opacity: backdropOpacity }]}
-        />
-      </Pressable>
-
-      {/* Sheet — always rendered, slides in/out via sheetY transform */}
+      {/* Full-screen sheet — always rendered, slides in/out via sheetY */}
       <RNAnimated.View
         style={[
           styles.sheet,
-          { backgroundColor: C.bg, zIndex: 999, transform: [{ translateY: sheetY }] },
+          { backgroundColor: C.overlay, zIndex: 999, transform: [{ translateY: sheetY }] },
         ]}
         pointerEvents={isOpen ? "auto" : "none"}
         {...sheetPan.panHandlers}
       >
-          <View style={styles.sheetHandleArea}>
+          <View style={[styles.sheetHandleArea, { paddingTop: sheetInsets.top + 8 }]}>
             <View style={[styles.sheetHandleBar, { backgroundColor: C.border }]} />
           </View>
 
@@ -527,13 +516,6 @@ const styles = StyleSheet.create({
     right: 0,
     top: 0,
     bottom: 0,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 20,
   },
   sheetHandleArea: {
     width: "100%",
