@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   avatar: {
     width: 40,
     height: 40,
-    borderRadius: 20,
+    borderRadius: 4,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    borderRadius: 16,
+    borderRadius: 4,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderWidth: 1,
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
   spotImage: {
     width: 72,
     height: 72,
-    borderRadius: 12,
+    borderRadius: 3,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",

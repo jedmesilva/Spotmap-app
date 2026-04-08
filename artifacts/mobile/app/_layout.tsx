@@ -1,10 +1,10 @@
 import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
+  Rajdhani_400Regular,
+  Rajdhani_500Medium,
+  Rajdhani_600SemiBold,
+  Rajdhani_700Bold,
   useFonts,
-} from "@expo-google-fonts/inter";
+} from "@expo-google-fonts/rajdhani";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -55,10 +55,10 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
+    Inter_400Regular: Rajdhani_400Regular,
+    Inter_500Medium: Rajdhani_500Medium,
+    Inter_600SemiBold: Rajdhani_600SemiBold,
+    Inter_700Bold: Rajdhani_700Bold,
   });
 
   useEffect(() => {

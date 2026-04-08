@@ -23,11 +23,11 @@ const MAP_HTML = `<!DOCTYPE html>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html,body,#map{width:100%;height:100%;background:#050A14;overflow:hidden}
-.leaflet-container{background:#050A14}
+html,body,#map{width:100%;height:100%;background:#040801;overflow:hidden}
+.leaflet-container{background:#040801}
 .leaflet-control-attribution{display:none}
 .leaflet-pane,.leaflet-top,.leaflet-bottom{z-index:1}
-.leaflet-tile-pane{filter:sepia(1) hue-rotate(185deg) saturate(3) brightness(0.55)}
+.leaflet-tile-pane{filter:sepia(1) hue-rotate(62deg) saturate(4) brightness(0.38)}
 @keyframes badgePop{0%{transform:translateX(-50%) scale(0.5);opacity:0}60%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1);opacity:1}}
 @keyframes emojiBurst{0%{transform:translate(-50%,-50%) scale(1.6);opacity:1}100%{transform:translate(-50%,-50%) scale(3);opacity:0}}
 @keyframes mineFloat{0%{transform:translateX(-50%) translateY(0) scale(1);opacity:1}60%{transform:translateX(-50%) translateY(-28px) scale(1.15);opacity:1}100%{transform:translateX(-50%) translateY(-50px) scale(0.9);opacity:0}}
@@ -38,14 +38,14 @@ html,body,#map{width:100%;height:100%;background:#050A14;overflow:hidden}
 <div id="map"></div>
 <script>
 var C_DARK={
-  accent:'#7B68EE',bg:'#08081A',bgSec:'#0D0D24',
-  surface:'#13132E',border:'#242450',border33:'#24245033',
-  coupon:'#F0A050',money:'#60C878',product:'#50A8F0',rare:'#B87CF0',
-  warning:'#F0A050',danger:'#F06565',info:'#50A8F0',spotMoney:'#60C878',
-  text:'#EEEEF8',textMuted:'#484870',
-  shadow:'text-shadow:0 1px 5px rgba(0,0,0,0.9),0 0 10px rgba(0,0,0,0.6)',
-  mapBg:'#050A14',overlayBg:'#0B1829',overlayOpacity:'0.45',
-  tileFilter:'sepia(1) hue-rotate(185deg) saturate(3) brightness(0.55)',
+  accent:'#5D8A20',bg:'#070A04',bgSec:'#0C1008',
+  surface:'#131A09',border:'#2A3B18',border33:'#2A3B1833',
+  coupon:'#C97400',money:'#5D8A20',product:'#1A6B9A',rare:'#7A5CB0',
+  warning:'#C97400',danger:'#CC1A00',info:'#1A6B9A',spotMoney:'#5D8A20',
+  text:'#D4E6C3',textMuted:'#3D5025',
+  shadow:'text-shadow:0 1px 5px rgba(0,0,0,0.95),0 0 10px rgba(0,0,0,0.7)',
+  mapBg:'#040801',overlayBg:'#051200',overlayOpacity:'0.30',
+  tileFilter:'sepia(1) hue-rotate(62deg) saturate(4) brightness(0.38)',
   tileUrl:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 };
 var C_LIGHT={
@@ -159,10 +159,10 @@ function spotIcon(spot,selected){
   var bg=selected?color+'30':color+'18';
   var shadow=C.shadow;
   var html='<div style="display:flex;flex-direction:column;align-items:center;width:100px;">'
-    +'<div style="width:44px;height:44px;border-radius:12px;border:2px solid '+color+';background:'+bg+';display:flex;align-items:center;justify-content:center;color:'+color+';'+scale+'">'
+    +'<div style="width:44px;height:44px;border-radius:3px;border:2px solid '+color+';background:'+bg+';display:flex;align-items:center;justify-content:center;color:'+color+';'+scale+'">'
     +(ICONS[spot.type]||ICONS.rare)
     +'</div>'
-    +'<div style="margin-top:3px;color:'+C.text+';font-size:11px;font-weight:700;letter-spacing:0.3px;text-align:center;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+shadow+';">'+spot.title+'</div>'
+    +'<div style="margin-top:3px;color:'+C.text+';font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;text-align:center;max-width:96px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+shadow+';">'+spot.title+'</div>'
     +'</div>';
   return L.divIcon({html:html,className:'',iconSize:[100,62],iconAnchor:[50,22]});
 }
