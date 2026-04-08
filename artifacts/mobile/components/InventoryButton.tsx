@@ -341,7 +341,7 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
       <RNAnimated.View
         style={[
           styles.sheet,
-          { backgroundColor: C.overlay, zIndex: 999, transform: [{ translateY: sheetY }], opacity: backdropOpacity },
+          { backgroundColor: C.card, zIndex: 999, transform: [{ translateY: sheetY }], opacity: backdropOpacity },
         ]}
         pointerEvents={isOpen ? "auto" : "none"}
         {...sheetPan.panHandlers}
