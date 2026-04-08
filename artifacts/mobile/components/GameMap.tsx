@@ -445,9 +445,9 @@ window.receiveFromRN=function(jsonStr){
       updatePlayer(d.userLocation,d.userRadius,d.userProfile||null,d.playerCollecting||null);
       applyPlayerVisibility();
       if(selUser&&selUser!==prevSelUser&&userMarkers[selUser]){
-        map.panTo(userMarkers[selUser].getLatLng(),{animate:true,duration:0.5,easeLinearity:0.5});
+        map.flyTo(userMarkers[selUser].getLatLng(),18,{animate:true,duration:0.6,easeLinearity:0.5});
       } else if(selSpot&&selSpot!==prevSelSpot&&spotMarkers[selSpot]){
-        map.panTo(spotMarkers[selSpot].getLatLng(),{animate:true,duration:0.5,easeLinearity:0.5});
+        map.flyTo(spotMarkers[selSpot].getLatLng(),18,{animate:true,duration:0.6,easeLinearity:0.5});
       }
     } else if(d.type==='CENTER'){
       map.setView([d.lat,d.lng],d.zoom||17);
