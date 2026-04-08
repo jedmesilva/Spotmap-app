@@ -1,13 +1,15 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { BottomSheetBackdrop, BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
 import * as Haptics from "expo-haptics";
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   Animated as RNAnimated,
+  Modal,
   PanResponder,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TouchableWithoutFeedback,
   View,
   useWindowDimensions,
 } from "react-native";
@@ -133,7 +135,7 @@ function SpotCard({
           </View>
         )}
         {isSelected && (
-          <View style={[styles.selectedCheck, { backgroundColor: color, borderColor: C.bg }]}>
+          <View style={[styles.selectedCheck, { backgroundColor: color, borderColor: "#fff" }]}>
             <Feather name="check" size={9} color="#fff" />
           </View>
         )}
@@ -146,19 +148,21 @@ function ItemCard({ item, cardWidth }: { item: InventoryItem; cardWidth: number 
   const C = useColors();
   const color = ITEM_COLORS[item.type] ?? C.accent;
   return (
-    <View style={[styles.gridCard, { width: cardWidth, backgroundColor: C.surface, borderColor: C.border + "44" }]}>
-      <View style={[styles.gridCardIcon, { backgroundColor: color + "18" }]}>
-        <Feather name={ITEM_ICONS[item.type] as any ?? "package"} size={20} color={color} />
-      </View>
-      <Text style={[styles.gridCardName, { color: C.text }]} numberOfLines={2}>{item.name}</Text>
-      <View style={[styles.gridCardPill, { backgroundColor: color + "18", borderColor: color + "33" }]}>
-        <Text style={[styles.gridCardPillText, { color }]}>{ITEM_TYPE_LABELS[item.type] ?? item.type.toUpperCase()}</Text>
-      </View>
-      {item.quantity > 1 && (
-        <View style={[styles.qtyBadge, { backgroundColor: color, borderColor: C.bg }]}>
-          <Text style={[styles.qtyBadgeText, { color: C.bg }]}>×{item.quantity}</Text>
+    <View style={{ width: cardWidth }}>
+      <View style={[styles.gridCard, { backgroundColor: C.surface, borderColor: C.border + "44", borderWidth: 1.5 }]}>
+        <View style={[styles.gridCardIcon, { backgroundColor: color + "18" }]}>
+          <Feather name={ITEM_ICONS[item.type] as any ?? "package"} size={20} color={color} />
         </View>
-      )}
+        <Text style={[styles.gridCardName, { color: C.text }]} numberOfLines={2}>{item.name}</Text>
+        <View style={[styles.gridCardPill, { backgroundColor: color + "18", borderColor: color + "33" }]}>
+          <Text style={[styles.gridCardPillText, { color }]}>{ITEM_TYPE_LABELS[item.type] ?? item.type.toUpperCase()}</Text>
+        </View>
+        {item.quantity > 1 && (
+          <View style={[styles.qtyBadge, { backgroundColor: color, borderColor: "#fff" }]}>
+            <Text style={[styles.qtyBadgeText, { color: "#fff" }]}>×{item.quantity}</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
 }
@@ -168,102 +172,150 @@ interface InventoryButtonProps {
   extraBottomOffset?: number;
 }
 
-const DRAG_THRESHOLD = 40;
+const SNAP_RATIO = 0.45;
 
 export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButtonProps) {
   const C = useColors();
-  const sheetRef = useRef<BottomSheetModal>(null);
   const { userProfile, collectedSpots, selectedInventorySpot, selectInventorySpot } = useGame();
   const sheetInsets = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
 
   const NUM_COLUMNS = 3;
   const GRID_GAP = 10;
   const SHEET_PADDING = 20;
   const cardWidth = (screenWidth - SHEET_PADDING * 2 - GRID_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
 
-  const dragY = useRef(new RNAnimated.Value(0)).current;
+  const snapOpenRef = useRef(screenHeight * SNAP_RATIO);
+  snapOpenRef.current = screenHeight * SNAP_RATIO;
+
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const sheetVisibleRef = useRef(false);
+  const sheetY = useRef(new RNAnimated.Value(screenHeight)).current;
+  const backdropOpacity = useRef(new RNAnimated.Value(0)).current;
   const isDragging = useRef(false);
-  const dragTriggered = useRef(false);
 
   const openSheet = useCallback(() => {
+    const snapOpen = snapOpenRef.current;
+    sheetVisibleRef.current = true;
+    setSheetVisible(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    sheetRef.current?.present();
+    RNAnimated.parallel([
+      RNAnimated.spring(sheetY, { toValue: snapOpen, useNativeDriver: true, tension: 65, friction: 11 }),
+      RNAnimated.timing(backdropOpacity, { toValue: 1, duration: 220, useNativeDriver: true }),
+    ]).start();
   }, []);
 
-  const panResponder = useRef(
+  const closeSheet = useCallback(() => {
+    const sh = screenHeight;
+    RNAnimated.parallel([
+      RNAnimated.spring(sheetY, { toValue: sh, useNativeDriver: true, tension: 65, friction: 11 }),
+      RNAnimated.timing(backdropOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+    ]).start(() => {
+      sheetVisibleRef.current = false;
+      setSheetVisible(false);
+    });
+  }, [screenHeight]);
+
+  const openSheetRef = useRef(openSheet);
+  openSheetRef.current = openSheet;
+  const closeSheetRef = useRef(closeSheet);
+  closeSheetRef.current = closeSheet;
+
+  const buttonPan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 4,
+      onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 6,
 
       onPanResponderGrant: () => {
         isDragging.current = false;
-        dragTriggered.current = false;
-        dragY.setValue(0);
+        sheetY.setValue(screenHeight);
+        backdropOpacity.setValue(0);
       },
 
       onPanResponderMove: (_, gs) => {
-        if (gs.dy < 0) {
-          isDragging.current = true;
-          const clampedDy = Math.max(gs.dy, -80);
-          dragY.setValue(clampedDy);
-          if (!dragTriggered.current && gs.dy < -DRAG_THRESHOLD) {
-            dragTriggered.current = true;
+        if (gs.dy < -8) {
+          const snapOpen = snapOpenRef.current;
+          const sh = screenHeight;
+          if (!sheetVisibleRef.current) {
+            sheetVisibleRef.current = true;
+            setSheetVisible(true);
           }
+          isDragging.current = true;
+          const newY = Math.max(snapOpen, sh + gs.dy);
+          sheetY.setValue(newY);
+          const progress = Math.min(1, (sh - newY) / (sh - snapOpen));
+          backdropOpacity.setValue(progress);
         }
       },
 
       onPanResponderRelease: (_, gs) => {
-        if (dragTriggered.current) {
-          RNAnimated.spring(dragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 8 }).start();
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          sheetRef.current?.present();
-        } else {
-          RNAnimated.spring(dragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 8 }).start();
-          if (!isDragging.current || Math.abs(gs.dy) < 6) {
-            sheetRef.current?.present();
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        if (isDragging.current) {
+          if (gs.dy < -50 || gs.vy < -0.3) {
+            openSheetRef.current();
+          } else {
+            closeSheetRef.current();
           }
+        } else {
+          openSheetRef.current();
         }
         isDragging.current = false;
-        dragTriggered.current = false;
       },
 
       onPanResponderTerminate: () => {
-        RNAnimated.spring(dragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 8 }).start();
+        if (isDragging.current) closeSheetRef.current();
         isDragging.current = false;
-        dragTriggered.current = false;
       },
     })
   ).current;
 
-  const renderBackdrop = useCallback(
-    (props: any) => (
-      <BottomSheetBackdrop {...props} disappearsOnIndex={-1} appearsOnIndex={0} pressBehavior="close" />
-    ),
-    []
+  const sheetPan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gs) => gs.dy > 5,
+
+      onPanResponderMove: (_, gs) => {
+        if (gs.dy > 0) {
+          const snapOpen = snapOpenRef.current;
+          const sh = screenHeight;
+          const newY = snapOpen + gs.dy;
+          sheetY.setValue(newY);
+          const progress = Math.max(0, 1 - gs.dy / (sh - snapOpen));
+          backdropOpacity.setValue(progress);
+        }
+      },
+
+      onPanResponderRelease: (_, gs) => {
+        if (gs.dy > 100 || gs.vy > 0.5) {
+          closeSheetRef.current();
+        } else {
+          const snapOpen = snapOpenRef.current;
+          RNAnimated.parallel([
+            RNAnimated.spring(sheetY, { toValue: snapOpen, useNativeDriver: true, tension: 65, friction: 11 }),
+            RNAnimated.timing(backdropOpacity, { toValue: 1, duration: 150, useNativeDriver: true }),
+          ]).start();
+        }
+      },
+
+      onPanResponderTerminate: () => {
+        const snapOpen = snapOpenRef.current;
+        RNAnimated.spring(sheetY, { toValue: snapOpen, useNativeDriver: true, tension: 65, friction: 11 }).start();
+        backdropOpacity.setValue(1);
+      },
+    })
+  ).current;
+
+  const bagItems = userProfile.bag.filter(
+    (i) => i.quantity > 0 && !["coupon", "money", "product", "rare"].includes(i.type)
   );
-
-  const bagItems = userProfile.bag.filter((i) => i.quantity > 0 && !["coupon", "money", "product", "rare"].includes(i.type));
   const totalItems = collectedSpots.length + bagItems.length;
-
-  const progressPercent = userProfile.maxHealth > 0
-    ? Math.round((userProfile.health / userProfile.maxHealth) * 100)
-    : 100;
-
   const bottomOffset = insets.bottom + 16 + extraBottomOffset;
 
   return (
     <>
+      {/* Pill button */}
       <RNAnimated.View
-        style={[
-          styles.container,
-          {
-            bottom: bottomOffset,
-            transform: [{ translateY: dragY }],
-          },
-        ]}
-        {...panResponder.panHandlers}
+        style={[styles.container, { bottom: bottomOffset }]}
+        {...buttonPan.panHandlers}
       >
         <View style={[styles.pill, { backgroundColor: C.card, borderColor: C.border }]}>
           <View style={styles.pillContent}>
@@ -286,78 +338,103 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
         </View>
       </RNAnimated.View>
 
-      <BottomSheetModal
-        ref={sheetRef}
-        snapPoints={["55%", "90%"]}
-        backdropComponent={renderBackdrop}
-        backgroundStyle={{ backgroundColor: C.bg }}
-        handleIndicatorStyle={{ backgroundColor: C.border }}
+      {/* Custom animated sheet + backdrop */}
+      <Modal
+        visible={sheetVisible}
+        transparent
+        animationType="none"
+        onRequestClose={closeSheet}
+        statusBarTranslucent
       >
-        <BottomSheetScrollView
-          contentContainerStyle={[styles.sheetContent, { paddingBottom: sheetInsets.bottom + 24 }]}
+        {/* Backdrop */}
+        <TouchableWithoutFeedback onPress={closeSheet}>
+          <RNAnimated.View
+            style={[styles.backdrop, { opacity: backdropOpacity }]}
+          />
+        </TouchableWithoutFeedback>
+
+        {/* Sheet */}
+        <RNAnimated.View
+          style={[
+            styles.sheet,
+            { backgroundColor: C.bg, transform: [{ translateY: sheetY }] },
+          ]}
         >
-          <View style={styles.sheetHeader}>
-            <Text style={[styles.sheetTitle, { color: C.text }]}>Inventário</Text>
-            <View style={[styles.coinBadge, { backgroundColor: C.spotMoney + "18", borderColor: C.spotMoney + "44" }]}>
-              <Feather name="dollar-sign" size={13} color={C.spotMoney} />
-              <Text style={[styles.coinText, { color: C.spotMoney }]}>{userProfile.coins ?? 0}</Text>
-            </View>
+          {/* Draggable handle */}
+          <View {...sheetPan.panHandlers} style={styles.sheetHandleArea}>
+            <View style={[styles.sheetHandleBar, { backgroundColor: C.border }]} />
           </View>
 
-          {collectedSpots.length > 0 && (
-            <>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { color: C.textMuted }]}>SPOTS COLETADOS</Text>
-                <View style={[styles.sectionBadge, { backgroundColor: C.accent + "18" }]}>
-                  <Text style={[styles.sectionBadgeText, { color: C.accent }]}>{collectedSpots.length}</Text>
-                </View>
+          <ScrollView
+            contentContainerStyle={[
+              styles.sheetContent,
+              { paddingBottom: sheetInsets.bottom + 24 },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.sheetHeader}>
+              <Text style={[styles.sheetTitle, { color: C.text }]}>Inventário</Text>
+              <View style={[styles.coinBadge, { backgroundColor: C.spotMoney + "18", borderColor: C.spotMoney + "44" }]}>
+                <Feather name="dollar-sign" size={13} color={C.spotMoney} />
+                <Text style={[styles.coinText, { color: C.spotMoney }]}>{userProfile.coins ?? 0}</Text>
               </View>
-              <View style={styles.grid}>
-                {collectedSpots.map((spot) => (
-                  <SpotCard
-                    key={spot.id}
-                    spot={spot}
-                    cardWidth={cardWidth}
-                    isSelected={selectedInventorySpot?.id === spot.id}
-                    onSelect={(s) => {
-                      selectInventorySpot(selectedInventorySpot?.id === s.id ? null : s);
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                    }}
-                  />
-                ))}
-              </View>
-            </>
-          )}
-
-          {bagItems.length > 0 && (
-            <>
-              <View style={[styles.sectionHeader, collectedSpots.length > 0 && { marginTop: 20 }]}>
-                <Text style={[styles.sectionTitle, { color: C.textMuted }]}>ITENS</Text>
-                <View style={[styles.sectionBadge, { backgroundColor: C.purple + "18" }]}>
-                  <Text style={[styles.sectionBadgeText, { color: C.purple }]}>{bagItems.length}</Text>
-                </View>
-              </View>
-              <View style={styles.grid}>
-                {bagItems.map((item) => (
-                  <ItemCard key={item.id} item={item} cardWidth={cardWidth} />
-                ))}
-              </View>
-            </>
-          )}
-
-          {totalItems === 0 && (
-            <View style={styles.emptyState}>
-              <View style={[styles.emptyIcon, { backgroundColor: C.surface }]}>
-                <Feather name="briefcase" size={28} color={C.textMuted} />
-              </View>
-              <Text style={[styles.emptyTitle, { color: C.text }]}>Inventário vazio</Text>
-              <Text style={[styles.emptySub, { color: C.textMuted }]}>
-                Explore o mapa e colete spots e itens para vê-los aqui
-              </Text>
             </View>
-          )}
-        </BottomSheetScrollView>
-      </BottomSheetModal>
+
+            {collectedSpots.length > 0 && (
+              <>
+                <View style={styles.sectionHeader}>
+                  <Text style={[styles.sectionTitle, { color: C.textMuted }]}>SPOTS COLETADOS</Text>
+                  <View style={[styles.sectionBadge, { backgroundColor: C.accent + "18" }]}>
+                    <Text style={[styles.sectionBadgeText, { color: C.accent }]}>{collectedSpots.length}</Text>
+                  </View>
+                </View>
+                <View style={styles.grid}>
+                  {collectedSpots.map((spot) => (
+                    <SpotCard
+                      key={spot.id}
+                      spot={spot}
+                      cardWidth={cardWidth}
+                      isSelected={selectedInventorySpot?.id === spot.id}
+                      onSelect={(s) => {
+                        selectInventorySpot(selectedInventorySpot?.id === s.id ? null : s);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }}
+                    />
+                  ))}
+                </View>
+              </>
+            )}
+
+            {bagItems.length > 0 && (
+              <>
+                <View style={[styles.sectionHeader, collectedSpots.length > 0 && { marginTop: 20 }]}>
+                  <Text style={[styles.sectionTitle, { color: C.textMuted }]}>ITENS</Text>
+                  <View style={[styles.sectionBadge, { backgroundColor: C.purple + "18" }]}>
+                    <Text style={[styles.sectionBadgeText, { color: C.purple }]}>{bagItems.length}</Text>
+                  </View>
+                </View>
+                <View style={styles.grid}>
+                  {bagItems.map((item) => (
+                    <ItemCard key={item.id} item={item} cardWidth={cardWidth} />
+                  ))}
+                </View>
+              </>
+            )}
+
+            {totalItems === 0 && (
+              <View style={styles.emptyState}>
+                <View style={[styles.emptyIcon, { backgroundColor: C.surface }]}>
+                  <Feather name="briefcase" size={28} color={C.textMuted} />
+                </View>
+                <Text style={[styles.emptyTitle, { color: C.text }]}>Inventário vazio</Text>
+                <Text style={[styles.emptySub, { color: C.textMuted }]}>
+                  Explore o mapa e colete spots e itens para vê-los aqui
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        </RNAnimated.View>
+      </Modal>
     </>
   );
 }
@@ -425,9 +502,38 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginTop: 1,
   },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.65)",
+  },
+  sheet: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  sheetHandleArea: {
+    width: "100%",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  sheetHandleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    opacity: 0.5,
+  },
   sheetContent: {
     paddingHorizontal: 20,
-    paddingTop: 8,
+    paddingTop: 4,
   },
   sheetHeader: {
     flexDirection: "row",
@@ -480,7 +586,6 @@ const styles = StyleSheet.create({
   },
   gridCard: {
     borderRadius: 14,
-    borderWidth: 1.5,
     padding: 12,
     gap: 6,
     position: "relative",
