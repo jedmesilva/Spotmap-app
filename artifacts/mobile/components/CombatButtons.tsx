@@ -6,11 +6,26 @@ import { Animated as RNAnimated, Pressable, StyleSheet, Text, View } from "react
 import { useGame } from "@/context/GameContext";
 import { useColors } from "@/hooks/useColors";
 
+const SPOT_ICONS: Record<string, string> = {
+  coupon: "tag",
+  money: "dollar-sign",
+  product: "box",
+  rare: "star",
+};
+
+const SPOT_LABELS: Record<string, string> = {
+  coupon: "CUPOM",
+  money: "DINHEIRO",
+  product: "PRODUTO",
+  rare: "RARO",
+};
+
 interface CombatButtonsProps {
   insets: { bottom: number };
   onAttack?: () => void;
   onDefend?: () => void;
   canAttack?: boolean;
+  miningClicks?: number;
   extraBottomOffset?: number;
 }
 
@@ -19,10 +34,11 @@ export function CombatButtons({
   onAttack,
   onDefend,
   canAttack = false,
+  miningClicks = 0,
   extraBottomOffset = 0,
 }: CombatButtonsProps) {
   const C = useColors();
-  const { selectedUser } = useGame();
+  const { selectedUser, selectedInventorySpot } = useGame();
 
   const bottomAnim = useRef(new RNAnimated.Value(extraBottomOffset)).current;
   useEffect(() => {
@@ -66,76 +82,119 @@ export function CombatButtons({
     onDefend?.();
   };
 
-  const atkColor = selectedUser ? C.danger : C.accent;
+  const SPOT_COLORS: Record<string, string> = {
+    coupon: C.spotCoupon,
+    money: C.spotMoney,
+    product: C.spotProduct,
+    rare: C.spotRare,
+  };
+
+  const atkColor = selectedInventorySpot
+    ? (SPOT_COLORS[selectedInventorySpot.type] ?? C.accent)
+    : selectedUser ? C.danger : C.accent;
+
+  const atkIcon = selectedInventorySpot
+    ? (SPOT_ICONS[selectedInventorySpot.type] ?? "zap")
+    : "zap";
+
+  const atkLabel = selectedInventorySpot
+    ? (SPOT_LABELS[selectedInventorySpot.type] ?? selectedInventorySpot.type.toUpperCase())
+    : selectedUser ? "ATK" : "ATK";
+
   const defColor = C.purple;
 
   return (
-    <RNAnimated.View
-      style={[styles.container, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}
-    >
-      <Pressable
-        onPress={handleDefend}
-        style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
+    <>
+      {/* DEF — esquerda */}
+      <RNAnimated.View
+        style={[styles.leftContainer, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}
       >
-        <RNAnimated.View
-          style={[
-            styles.btn,
-            {
-              backgroundColor: defColor + "18",
-              borderColor: defColor + "66",
-              borderWidth: 1.5,
-              transform: [{ scale: defScale }],
-            },
-          ]}
+        <Pressable
+          onPress={handleDefend}
+          style={({ pressed }) => ({ opacity: pressed ? 0.75 : 1 })}
         >
-          <Feather name="shield" size={22} color={defColor} />
-          <Text style={[styles.label, { color: defColor }]}>DEF</Text>
-        </RNAnimated.View>
-      </Pressable>
+          <RNAnimated.View
+            style={[
+              styles.btn,
+              {
+                backgroundColor: defColor + "18",
+                borderColor: defColor + "66",
+                borderWidth: 1.5,
+                transform: [{ scale: defScale }],
+              },
+            ]}
+          >
+            <Feather name="shield" size={26} color={defColor} />
+            <Text style={[styles.label, { color: defColor }]}>DEF</Text>
+          </RNAnimated.View>
+        </Pressable>
+      </RNAnimated.View>
 
-      <Pressable
-        onPress={handleAttack}
-        style={({ pressed }) => ({ opacity: pressed ? 0.75 : canAttack ? 1 : 0.45 })}
+      {/* ATK — direita */}
+      <RNAnimated.View
+        style={[styles.rightContainer, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}
       >
-        <RNAnimated.View
-          style={[
-            styles.btn,
-            styles.atkBtn,
-            {
-              backgroundColor: canAttack ? atkColor + "22" : C.card,
-              borderColor: canAttack ? atkColor : C.border,
-              borderWidth: canAttack ? 2 : 1.5,
-              transform: [{ scale: atkScale }, { translateY: atkY }],
-            },
-            canAttack && {
-              shadowColor: atkColor,
-              shadowOpacity: 0.45,
-              shadowRadius: 12,
-              elevation: 10,
-            },
-          ]}
+        <Pressable
+          onPress={handleAttack}
+          style={({ pressed }) => ({ opacity: pressed ? 0.75 : canAttack ? 1 : 0.45 })}
         >
-          <Feather
-            name="zap"
-            size={26}
-            color={canAttack ? atkColor : C.textMuted}
-          />
-          <Text style={[styles.label, { color: canAttack ? atkColor : C.textMuted, fontSize: 9 }]}>
-            ATK
-          </Text>
-        </RNAnimated.View>
-      </Pressable>
-    </RNAnimated.View>
+          <RNAnimated.View
+            style={[
+              styles.btn,
+              {
+                backgroundColor: canAttack ? atkColor + "22" : C.card,
+                borderColor: canAttack ? atkColor : C.border,
+                borderWidth: canAttack ? 2 : 1.5,
+                transform: [{ scale: atkScale }, { translateY: atkY }],
+              },
+              canAttack && {
+                shadowColor: atkColor,
+                shadowOpacity: 0.45,
+                shadowRadius: 12,
+                elevation: 10,
+              },
+            ]}
+          >
+            <RNAnimated.View style={{ transform: [{ translateY: atkY }] }}>
+              <Feather
+                name={atkIcon as any}
+                size={canAttack ? 24 : 26}
+                color={canAttack ? atkColor : C.textMuted}
+              />
+            </RNAnimated.View>
+            <Text
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              style={[
+                styles.label,
+                { color: canAttack ? atkColor : C.textMuted },
+                selectedInventorySpot && { letterSpacing: 0 },
+              ]}
+            >
+              {atkLabel}
+            </Text>
+            {canAttack && miningClicks > 0 && (
+              <View style={[styles.minesBadge, { backgroundColor: C.bg, borderColor: atkColor }]}>
+                <Text style={[styles.minesBadgeText, { color: atkColor }]}>{miningClicks}x</Text>
+              </View>
+            )}
+          </RNAnimated.View>
+        </Pressable>
+      </RNAnimated.View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  leftContainer: {
     position: "absolute",
     left: 16,
-    gap: 8,
     zIndex: 20,
-    alignItems: "center",
+  },
+  rightContainer: {
+    position: "absolute",
+    right: 16,
+    zIndex: 20,
   },
   btn: {
     width: 68,
@@ -150,10 +209,25 @@ const styles = StyleSheet.create({
     elevation: 6,
     gap: 3,
   },
-  atkBtn: {},
   label: {
     fontSize: 9,
     fontWeight: "700",
     letterSpacing: 0.8,
+  },
+  minesBadge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  minesBadgeText: {
+    fontSize: 9,
+    fontWeight: "700",
   },
 });

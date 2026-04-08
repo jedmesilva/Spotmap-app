@@ -78,7 +78,17 @@ const ITEM_TYPE_LABELS: Record<string, string> = {
   rare: "RARO",
 };
 
-function SpotCard({ spot, cardWidth }: { spot: Spot; cardWidth: number }) {
+function SpotCard({
+  spot,
+  cardWidth,
+  isSelected,
+  onSelect,
+}: {
+  spot: Spot;
+  cardWidth: number;
+  isSelected: boolean;
+  onSelect: (spot: Spot) => void;
+}) {
   const C = useColors();
   const SPOT_COLORS: Record<string, string> = {
     coupon: C.spotCoupon,
@@ -88,28 +98,47 @@ function SpotCard({ spot, cardWidth }: { spot: Spot; cardWidth: number }) {
   };
   const color = SPOT_COLORS[spot.type] ?? C.accent;
   return (
-    <View style={[styles.gridCard, { width: cardWidth, backgroundColor: C.surface, borderColor: color + "44" }]}>
-      <View style={[styles.gridCardIcon, { backgroundColor: color + "18" }]}>
-        <Feather name={SPOT_ICONS[spot.type] as any ?? "package"} size={20} color={color} />
-      </View>
-      <Text style={[styles.gridCardName, { color: C.text }]} numberOfLines={2}>{spot.title}</Text>
-      <View style={[styles.gridCardPill, { backgroundColor: color + "18", borderColor: color + "33" }]}>
-        <Text style={[styles.gridCardPillText, { color }]}>{SPOT_LABELS[spot.type] ?? spot.type.toUpperCase()}</Text>
-      </View>
-      {spot.badges && spot.badges.filter(b => b !== "manipulated").length > 0 && (
-        <View style={styles.badgeStrip}>
-          {spot.badges.filter(b => b !== "manipulated").slice(0, 3).map((badge) => {
-            const cfg = SPOT_BADGE_CONFIGS[badge];
-            if (!cfg) return null;
-            return (
-              <View key={badge} style={[styles.badgeDot, { backgroundColor: cfg.color + "22", borderColor: cfg.color + "66" }]}>
-                <Ionicons name={cfg.icon as any} size={9} color={cfg.color} />
-              </View>
-            );
-          })}
+    <Pressable
+      onPress={() => onSelect(spot)}
+      style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, width: cardWidth })}
+    >
+      <View
+        style={[
+          styles.gridCard,
+          {
+            backgroundColor: isSelected ? color + "18" : C.surface,
+            borderColor: isSelected ? color : color + "44",
+            borderWidth: isSelected ? 2 : 1.5,
+          },
+        ]}
+      >
+        <View style={[styles.gridCardIcon, { backgroundColor: color + "18" }]}>
+          <Feather name={SPOT_ICONS[spot.type] as any ?? "package"} size={20} color={color} />
         </View>
-      )}
-    </View>
+        <Text style={[styles.gridCardName, { color: C.text }]} numberOfLines={2}>{spot.title}</Text>
+        <View style={[styles.gridCardPill, { backgroundColor: color + "18", borderColor: color + "33" }]}>
+          <Text style={[styles.gridCardPillText, { color }]}>{SPOT_LABELS[spot.type] ?? spot.type.toUpperCase()}</Text>
+        </View>
+        {spot.badges && spot.badges.filter(b => b !== "manipulated").length > 0 && (
+          <View style={styles.badgeStrip}>
+            {spot.badges.filter(b => b !== "manipulated").slice(0, 3).map((badge) => {
+              const cfg = SPOT_BADGE_CONFIGS[badge];
+              if (!cfg) return null;
+              return (
+                <View key={badge} style={[styles.badgeDot, { backgroundColor: cfg.color + "22", borderColor: cfg.color + "66" }]}>
+                  <Ionicons name={cfg.icon as any} size={9} color={cfg.color} />
+                </View>
+              );
+            })}
+          </View>
+        )}
+        {isSelected && (
+          <View style={[styles.selectedCheck, { backgroundColor: color, borderColor: C.bg }]}>
+            <Feather name="check" size={9} color="#fff" />
+          </View>
+        )}
+      </View>
+    </Pressable>
   );
 }
 
@@ -144,7 +173,7 @@ const DRAG_THRESHOLD = 40;
 export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButtonProps) {
   const C = useColors();
   const sheetRef = useRef<BottomSheetModal>(null);
-  const { userProfile, collectedSpots } = useGame();
+  const { userProfile, collectedSpots, selectedInventorySpot, selectInventorySpot } = useGame();
   const sheetInsets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
 
@@ -286,7 +315,16 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
               </View>
               <View style={styles.grid}>
                 {collectedSpots.map((spot) => (
-                  <SpotCard key={spot.id} spot={spot} cardWidth={cardWidth} />
+                  <SpotCard
+                    key={spot.id}
+                    spot={spot}
+                    cardWidth={cardWidth}
+                    isSelected={selectedInventorySpot?.id === spot.id}
+                    onSelect={(s) => {
+                      selectInventorySpot(selectedInventorySpot?.id === s.id ? null : s);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                  />
                 ))}
               </View>
             </>
@@ -512,6 +550,17 @@ const styles = StyleSheet.create({
   qtyBadgeText: {
     fontSize: 9,
     fontWeight: "700",
+  },
+  selectedCheck: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
   },
   emptyState: {
     alignItems: "center",
