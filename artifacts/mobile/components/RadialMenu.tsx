@@ -127,7 +127,7 @@ export function RadialMenu({
   const hoveredSlot = hoveredIndex !== null ? slots[hoveredIndex] : null;
 
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+    <View style={[StyleSheet.absoluteFill, styles.overlay]} pointerEvents="none">
       <RNAnimated.View
         style={[StyleSheet.absoluteFill, { backgroundColor: "#000", opacity: backdropOpacity }]}
       />
@@ -253,6 +253,10 @@ export function RadialMenu({
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    zIndex: 9999,
+    elevation: 999,
+  },
   preview: {
     position: "absolute",
     flexDirection: "row",

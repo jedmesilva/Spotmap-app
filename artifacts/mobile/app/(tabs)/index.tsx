@@ -239,6 +239,21 @@ export default function MapScreen() {
         )}
       </View>
 
+      <InventoryButton
+        insets={{ bottom: bottomInset }}
+        extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
+      />
+
+      {selectedUser && (
+        <EmojiBar
+          user={selectedUser}
+          bottomInset={bottomInset}
+          onSendEmoji={(emoji) =>
+            mapRef.current?.sendEmojiReaction(selectedUser.id, emoji)
+          }
+        />
+      )}
+
       <CombatButtons
         insets={{ bottom: bottomInset }}
         canAttack={!!selectedInventorySpot && (canMine || !!selectedUser)}
@@ -256,21 +271,6 @@ export default function MapScreen() {
         onDefend={() => {}}
         extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
       />
-
-      <InventoryButton
-        insets={{ bottom: bottomInset }}
-        extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
-      />
-
-      {selectedUser && (
-        <EmojiBar
-          user={selectedUser}
-          bottomInset={bottomInset}
-          onSendEmoji={(emoji) =>
-            mapRef.current?.sendEmojiReaction(selectedUser.id, emoji)
-          }
-        />
-      )}
     </View>
   );
 }
