@@ -48,6 +48,14 @@ export function RadialMenu({
   const slotOpacities = useRef(
     Array.from({ length: MAX_SLOTS }, () => new RNAnimated.Value(0))
   ).current;
+  const hoverScales = useRef(
+    Array.from({ length: MAX_SLOTS }, () => new RNAnimated.Value(1))
+  ).current;
+  const combinedScales = useRef(
+    Array.from({ length: MAX_SLOTS }, (_, i) =>
+      RNAnimated.multiply(slotScales[i], hoverScales[i])
+    )
+  ).current;
 
   const previewOpacity = useRef(new RNAnimated.Value(0)).current;
   const previewTranslateY = useRef(new RNAnimated.Value(-8)).current;
@@ -96,6 +104,15 @@ export function RadialMenu({
   }, [visible]);
 
   useEffect(() => {
+    hoverScales.forEach((hs, i) => {
+      RNAnimated.spring(hs, {
+        toValue: i === hoveredIndex ? 1.15 : 1,
+        tension: 200,
+        friction: 10,
+        useNativeDriver: true,
+      }).start();
+    });
+
     if (hoveredIndex !== null) {
       RNAnimated.parallel([
         RNAnimated.timing(previewOpacity, { toValue: 1, duration: 140, useNativeDriver: true }),
@@ -188,7 +205,6 @@ export function RadialMenu({
         const pos = slotPositions[i];
         if (!pos) return null;
         const isHovered = hoveredIndex === i;
-        const scale = slotScales[i];
         const opacity = slotOpacities[i];
 
         return (
@@ -208,7 +224,7 @@ export function RadialMenu({
                 shadowOpacity: isHovered ? 0.7 : 0.2,
                 shadowRadius: isHovered ? 14 : 5,
                 elevation: isHovered ? 12 : 4,
-                transform: [{ scale: isHovered ? RNAnimated.multiply(scale, new RNAnimated.Value(1.15)) : scale }],
+                transform: [{ scale: combinedScales[i] }],
                 opacity,
               },
             ]}

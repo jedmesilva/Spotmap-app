@@ -201,6 +201,24 @@ export function CombatButtons({
     ]).start();
   };
 
+  // ─── Refs to always-fresh values (solves stale closure inside PanResponder) ─
+  const canAttackRef = useRef(canAttack);
+  canAttackRef.current = canAttack;
+  const onAttackRef = useRef(onAttack);
+  onAttackRef.current = onAttack;
+  const onDefendRef = useRef(onDefend);
+  onDefendRef.current = onDefend;
+  const selectInventorySpotRef = useRef(selectInventorySpot);
+  selectInventorySpotRef.current = selectInventorySpot;
+  const useSubstanceRef = useRef(useSubstance);
+  useSubstanceRef.current = useSubstance;
+  const buildAtkSlotsRef = useRef(buildAtkSlots);
+  buildAtkSlotsRef.current = buildAtkSlots;
+  const buildDefSlotsRef = useRef(buildDefSlots);
+  buildDefSlotsRef.current = buildDefSlots;
+  const collectedSpotsRef = useRef(collectedSpots);
+  collectedSpotsRef.current = collectedSpots;
+
   // ─── ATK radial menu state ────────────────────────────────────────────────
   const [atkMenuVisible, setAtkMenuVisible] = useState(false);
   const [atkHoveredIndex, setAtkHoveredIndex] = useState<number | null>(null);
@@ -278,12 +296,10 @@ export function CombatButtons({
           const center = { x: pageX + w / 2, y: pageY + h / 2 };
           atkButtonCenterRef.current = center;
 
-          const slots = buildAtkSlots();
+          const slots = buildAtkSlotsRef.current();
           atkSlotsRef.current = slots;
 
-          if (slots.length > 0) {
-            atkSlotPositionsRef.current = getSlotPositions(center, slots.length, true);
-          }
+          atkSlotPositionsRef.current = getSlotPositions(center, slots.length, true);
         });
 
         atkLongPressTimer.current = setTimeout(() => {
@@ -312,18 +328,18 @@ export function CombatButtons({
         atkScale.setValue(1);
 
         if (!atkIsLongPressRef.current) {
-          if (canAttack) {
+          if (canAttackRef.current) {
             animateAtk();
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            onAttack?.();
+            onAttackRef.current?.();
           }
         } else {
           const idx = atkHoveredIndexRef.current;
           if (idx !== null) {
             const slot = atkSlotsRef.current[idx];
-            const spot = collectedSpots.find((s) => s.id === slot.id);
+            const spot = collectedSpotsRef.current.find((s) => s.id === slot.id);
             if (spot) {
-              selectInventorySpot(spot);
+              selectInventorySpotRef.current(spot);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }
           }
@@ -362,12 +378,10 @@ export function CombatButtons({
           const center = { x: pageX + w / 2, y: pageY + h / 2 };
           defButtonCenterRef.current = center;
 
-          const slots = buildDefSlots();
+          const slots = buildDefSlotsRef.current();
           defSlotsRef.current = slots;
 
-          if (slots.length > 0) {
-            defSlotPositionsRef.current = getSlotPositions(center, slots.length, false);
-          }
+          defSlotPositionsRef.current = getSlotPositions(center, slots.length, false);
         });
 
         defLongPressTimer.current = setTimeout(() => {
@@ -398,13 +412,13 @@ export function CombatButtons({
         if (!defIsLongPressRef.current) {
           animateDef();
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          onDefend?.();
+          onDefendRef.current?.();
         } else {
           const idx = defHoveredIndexRef.current;
           if (idx !== null) {
             const slot = defSlotsRef.current[idx];
             if (SUBSTANCE_TYPES.includes(slot.id as SubstanceType)) {
-              useSubstance(slot.id as SubstanceType);
+              useSubstanceRef.current(slot.id as SubstanceType);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }
           }
