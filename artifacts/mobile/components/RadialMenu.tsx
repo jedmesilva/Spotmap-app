@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import React, { useEffect, useRef } from "react";
-import { Animated as RNAnimated, Image, StyleSheet, Text, View } from "react-native";
+import { Animated as RNAnimated, Dimensions, Image, StyleSheet, Text, View } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
 
@@ -25,10 +25,13 @@ interface RadialMenuProps {
   hoveredIndex: number | null;
   previewOnLeft: boolean;
   topInset: number;
+  scrollOffset: number;
+  totalSlots: number;
 }
 
 const SLOT_SIZE = 58;
-const MAX_SLOTS = 8;
+const MAX_SLOTS = 5;
+const EDGE_ZONE = 64;
 
 export function RadialMenu({
   visible,
@@ -37,8 +40,11 @@ export function RadialMenu({
   hoveredIndex,
   previewOnLeft,
   topInset,
+  scrollOffset,
+  totalSlots,
 }: RadialMenuProps) {
   const C = useColors();
+  const screenWidth = Dimensions.get("window").width;
 
   const backdropOpacity = useRef(new RNAnimated.Value(0)).current;
 
@@ -69,7 +75,7 @@ export function RadialMenu({
       }).start();
 
       RNAnimated.stagger(
-        45,
+        40,
         slotScales.slice(0, slots.length).map((scale, i) =>
           RNAnimated.parallel([
             RNAnimated.spring(scale, {
@@ -80,12 +86,17 @@ export function RadialMenu({
             }),
             RNAnimated.timing(slotOpacities[i], {
               toValue: 1,
-              duration: 130,
+              duration: 120,
               useNativeDriver: true,
             }),
           ])
         )
       ).start();
+
+      slotScales.slice(slots.length).forEach((scale, i) => {
+        scale.setValue(0);
+        slotOpacities[slots.length + i]?.setValue(0);
+      });
     } else {
       RNAnimated.timing(backdropOpacity, {
         toValue: 0,
@@ -93,7 +104,7 @@ export function RadialMenu({
         useNativeDriver: true,
       }).start();
 
-      slotScales.slice(0, slots.length).forEach((scale, i) => {
+      slotScales.forEach((scale, i) => {
         RNAnimated.timing(scale, { toValue: 0, duration: 100, useNativeDriver: true }).start();
         RNAnimated.timing(slotOpacities[i], { toValue: 0, duration: 100, useNativeDriver: true }).start();
       });
@@ -102,6 +113,27 @@ export function RadialMenu({
       previewTranslateY.setValue(-8);
     }
   }, [visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+    slotScales.slice(0, slots.length).forEach((scale, i) => {
+      RNAnimated.spring(scale, {
+        toValue: 1,
+        tension: 160,
+        friction: 8,
+        useNativeDriver: true,
+      }).start();
+      RNAnimated.timing(slotOpacities[i], {
+        toValue: 1,
+        duration: 100,
+        useNativeDriver: true,
+      }).start();
+    });
+    slotScales.slice(slots.length).forEach((scale, i) => {
+      scale.setValue(0);
+      slotOpacities[slots.length + i]?.setValue(0);
+    });
+  }, [slots.length, scrollOffset]);
 
   useEffect(() => {
     hoverScales.forEach((hs, i) => {
@@ -125,6 +157,10 @@ export function RadialMenu({
   }, [hoveredIndex]);
 
   const hoveredSlot = hoveredIndex !== null ? slots[hoveredIndex] : null;
+
+  const hasPrev = scrollOffset > 0;
+  const hasNext = scrollOffset + MAX_SLOTS < totalSlots;
+  const showScrollHint = totalSlots > MAX_SLOTS;
 
   return (
     <View style={[StyleSheet.absoluteFill, styles.overlay]} pointerEvents="none">
@@ -248,6 +284,24 @@ export function RadialMenu({
           </RNAnimated.View>
         );
       })}
+
+      {showScrollHint && (
+        <View style={styles.scrollHintRow}>
+          <View style={[styles.scrollEdgeHint, { opacity: hasPrev ? 1 : 0.2 }]}>
+            <Feather name="chevron-left" size={12} color="#fff" />
+            <Text style={styles.scrollEdgeText}>ARRASTAR</Text>
+          </View>
+          <View style={styles.scrollPagination}>
+            <Text style={styles.scrollPaginationText}>
+              {scrollOffset + 1}–{Math.min(scrollOffset + MAX_SLOTS, totalSlots)} / {totalSlots}
+            </Text>
+          </View>
+          <View style={[styles.scrollEdgeHint, { opacity: hasNext ? 1 : 0.2 }]}>
+            <Text style={styles.scrollEdgeText}>ARRASTAR</Text>
+            <Feather name="chevron-right" size={12} color="#fff" />
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -376,5 +430,48 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     opacity: 0.5,
     textAlign: "center",
+  },
+  scrollHintRow: {
+    position: "absolute",
+    bottom: 120,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+  },
+  scrollEdgeHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  scrollEdgeText: {
+    color: "#fff",
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1,
+    opacity: 0.8,
+  },
+  scrollPagination: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.15)",
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  scrollPaginationText: {
+    color: "#fff",
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    opacity: 0.7,
+    letterSpacing: 0.5,
   },
 });

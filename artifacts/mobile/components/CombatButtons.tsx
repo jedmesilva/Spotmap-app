@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated as RNAnimated,
+  Dimensions,
   PanResponder,
   StyleSheet,
   Text,
@@ -19,9 +20,13 @@ import { useColors } from "@/hooks/useColors";
 import { RadialMenu, RadialSlot } from "@/components/RadialMenu";
 
 const LONG_PRESS_DELAY = 480;
-const SLOT_RADIUS = 105;
-const HOVER_THRESHOLD = 40;
+const SLOT_RADIUS = 120;
+const HOVER_THRESHOLD = 42;
 const MAX_RADIAL_SLOTS = 8;
+const VISIBLE_SLOTS = 5;
+const EDGE_ZONE = 64;
+const SCROLL_INTERVAL = 320;
+const SLOT_SPREAD = 140;
 
 const SPOT_COLORS: Record<string, string> = {
   coupon: "#C97400",
@@ -99,7 +104,7 @@ function getSlotPositions(
 ): { x: number; y: number }[] {
   if (count === 0) return [];
   const arcCenter = openLeft ? 225 : 315;
-  const spread = count === 1 ? 0 : Math.min(115, count * 28);
+  const spread = count === 1 ? 0 : SLOT_SPREAD;
   const startAngle = arcCenter - spread / 2;
   const step = count > 1 ? spread / (count - 1) : 0;
   return Array.from({ length: count }, (_, i) => {
@@ -202,7 +207,6 @@ export function CombatButtons({
     ]).start();
   };
 
-  // ─── Refs to always-fresh values (solves stale closure inside PanResponder) ─
   const canAttackRef = useRef(canAttack);
   canAttackRef.current = canAttack;
   const onAttackRef = useRef(onAttack);
@@ -224,6 +228,7 @@ export function CombatButtons({
   const [atkMenuVisible, setAtkMenuVisible] = useState(false);
   const [atkHoveredIndex, setAtkHoveredIndex] = useState<number | null>(null);
   const [atkButtonCenter, setAtkButtonCenter] = useState({ x: 0, y: 0 });
+  const [atkScrollOffset, setAtkScrollOffset] = useState(0);
 
   const atkMenuVisibleRef = useRef(false);
   const atkIsLongPressRef = useRef(false);
@@ -232,12 +237,15 @@ export function CombatButtons({
   const atkButtonCenterRef = useRef({ x: 0, y: 0 });
   const atkSlotPositionsRef = useRef<{ x: number; y: number }[]>([]);
   const atkSlotsRef = useRef<RadialSlot[]>([]);
+  const atkScrollOffsetRef = useRef(0);
+  const atkScrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const atkBtnRef = useRef<View>(null);
 
   // ─── DEF radial menu state ────────────────────────────────────────────────
   const [defMenuVisible, setDefMenuVisible] = useState(false);
   const [defHoveredIndex, setDefHoveredIndex] = useState<number | null>(null);
   const [defButtonCenter, setDefButtonCenter] = useState({ x: 0, y: 0 });
+  const [defScrollOffset, setDefScrollOffset] = useState(0);
 
   const defMenuVisibleRef = useRef(false);
   const defIsLongPressRef = useRef(false);
@@ -246,9 +254,60 @@ export function CombatButtons({
   const defButtonCenterRef = useRef({ x: 0, y: 0 });
   const defSlotPositionsRef = useRef<{ x: number; y: number }[]>([]);
   const defSlotsRef = useRef<RadialSlot[]>([]);
+  const defScrollOffsetRef = useRef(0);
+  const defScrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const defBtnRef = useRef<View>(null);
 
-  // ─── Build slot arrays (must stay in sync with refs) ────────────────────
+  // ─── Scroll helpers ───────────────────────────────────────────────────────
+  function stopAtkScroll() {
+    if (atkScrollIntervalRef.current) {
+      clearInterval(atkScrollIntervalRef.current);
+      atkScrollIntervalRef.current = null;
+    }
+  }
+
+  function stopDefScroll() {
+    if (defScrollIntervalRef.current) {
+      clearInterval(defScrollIntervalRef.current);
+      defScrollIntervalRef.current = null;
+    }
+  }
+
+  function doAtkScroll(dir: -1 | 1) {
+    const curr = atkScrollOffsetRef.current;
+    const total = atkSlotsRef.current.length;
+    const maxOffset = Math.max(0, total - VISIBLE_SLOTS);
+    const next = Math.max(0, Math.min(maxOffset, curr + dir));
+    if (next === curr) return;
+    atkScrollOffsetRef.current = next;
+    setAtkScrollOffset(next);
+    const visCount = Math.min(VISIBLE_SLOTS, total - next);
+    atkSlotPositionsRef.current = getSlotPositions(atkButtonCenterRef.current, visCount, true);
+    if (atkHoveredIndexRef.current !== null) {
+      atkHoveredIndexRef.current = null;
+      setAtkHoveredIndex(null);
+    }
+    Haptics.selectionAsync();
+  }
+
+  function doDefScroll(dir: -1 | 1) {
+    const curr = defScrollOffsetRef.current;
+    const total = defSlotsRef.current.length;
+    const maxOffset = Math.max(0, total - VISIBLE_SLOTS);
+    const next = Math.max(0, Math.min(maxOffset, curr + dir));
+    if (next === curr) return;
+    defScrollOffsetRef.current = next;
+    setDefScrollOffset(next);
+    const visCount = Math.min(VISIBLE_SLOTS, total - next);
+    defSlotPositionsRef.current = getSlotPositions(defButtonCenterRef.current, visCount, false);
+    if (defHoveredIndexRef.current !== null) {
+      defHoveredIndexRef.current = null;
+      setDefHoveredIndex(null);
+    }
+    Haptics.selectionAsync();
+  }
+
+  // ─── Build slot arrays ────────────────────────────────────────────────────
   const buildAtkSlots = (): RadialSlot[] =>
     collectedSpots.slice(0, MAX_RADIAL_SLOTS).map((spot) => ({
       id: spot.id,
@@ -292,6 +351,8 @@ export function CombatButtons({
 
       onPanResponderGrant: () => {
         atkIsLongPressRef.current = false;
+        atkScrollOffsetRef.current = 0;
+        setAtkScrollOffset(0);
         atkScale.setValue(0.9);
 
         atkBtnRef.current?.measure((_, __, w, h, pageX, pageY) => {
@@ -312,7 +373,8 @@ export function CombatButtons({
           }));
           atkSlotsRef.current = slots;
 
-          atkSlotPositionsRef.current = getSlotPositions(center, slots.length, true);
+          const visCount = Math.min(VISIBLE_SLOTS, slots.length);
+          atkSlotPositionsRef.current = getSlotPositions(center, visCount, true);
         });
 
         atkLongPressTimer.current = setTimeout(() => {
@@ -327,17 +389,34 @@ export function CombatButtons({
 
       onPanResponderMove: (e) => {
         if (!atkMenuVisibleRef.current) return;
-        const pos = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY };
-        const idx = findHoveredSlot(pos, atkSlotPositionsRef.current);
-        if (idx !== atkHoveredIndexRef.current) {
-          atkHoveredIndexRef.current = idx;
-          setAtkHoveredIndex(idx);
-          if (idx !== null) Haptics.selectionAsync();
+        const { pageX, pageY } = e.nativeEvent;
+        const screenWidth = Dimensions.get("window").width;
+
+        if (pageX < EDGE_ZONE) {
+          if (!atkScrollIntervalRef.current) {
+            doAtkScroll(-1);
+            atkScrollIntervalRef.current = setInterval(() => doAtkScroll(-1), SCROLL_INTERVAL);
+          }
+        } else if (pageX > screenWidth - EDGE_ZONE) {
+          if (!atkScrollIntervalRef.current) {
+            doAtkScroll(1);
+            atkScrollIntervalRef.current = setInterval(() => doAtkScroll(1), SCROLL_INTERVAL);
+          }
+        } else {
+          stopAtkScroll();
+          const pos = { x: pageX, y: pageY };
+          const idx = findHoveredSlot(pos, atkSlotPositionsRef.current);
+          if (idx !== atkHoveredIndexRef.current) {
+            atkHoveredIndexRef.current = idx;
+            setAtkHoveredIndex(idx);
+            if (idx !== null) Haptics.selectionAsync();
+          }
         }
       },
 
       onPanResponderRelease: () => {
         if (atkLongPressTimer.current) clearTimeout(atkLongPressTimer.current);
+        stopAtkScroll();
         atkScale.setValue(1);
 
         if (!atkIsLongPressRef.current) {
@@ -349,11 +428,17 @@ export function CombatButtons({
         } else {
           const idx = atkHoveredIndexRef.current;
           if (idx !== null) {
-            const slot = atkSlotsRef.current[idx];
-            const spot = collectedSpotsRef.current.find((s) => s.id === slot.id);
-            if (spot) {
-              selectInventorySpotRef.current(spot);
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            const visibleSlots = atkSlotsRef.current.slice(
+              atkScrollOffsetRef.current,
+              atkScrollOffsetRef.current + VISIBLE_SLOTS
+            );
+            const slot = visibleSlots[idx];
+            if (slot) {
+              const spot = collectedSpotsRef.current.find((s) => s.id === slot.id);
+              if (spot) {
+                selectInventorySpotRef.current(spot);
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+              }
             }
           }
           setAtkMenuVisible(false);
@@ -367,6 +452,7 @@ export function CombatButtons({
 
       onPanResponderTerminate: () => {
         if (atkLongPressTimer.current) clearTimeout(atkLongPressTimer.current);
+        stopAtkScroll();
         atkScale.setValue(1);
         setAtkMenuVisible(false);
         atkMenuVisibleRef.current = false;
@@ -385,6 +471,8 @@ export function CombatButtons({
 
       onPanResponderGrant: () => {
         defIsLongPressRef.current = false;
+        defScrollOffsetRef.current = 0;
+        setDefScrollOffset(0);
         defScale.setValue(0.9);
 
         defBtnRef.current?.measure((_, __, w, h, pageX, pageY) => {
@@ -412,7 +500,8 @@ export function CombatButtons({
             }));
           defSlotsRef.current = slots;
 
-          defSlotPositionsRef.current = getSlotPositions(center, slots.length, false);
+          const visCount = Math.min(VISIBLE_SLOTS, slots.length);
+          defSlotPositionsRef.current = getSlotPositions(center, visCount, false);
         });
 
         defLongPressTimer.current = setTimeout(() => {
@@ -427,17 +516,34 @@ export function CombatButtons({
 
       onPanResponderMove: (e) => {
         if (!defMenuVisibleRef.current) return;
-        const pos = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY };
-        const idx = findHoveredSlot(pos, defSlotPositionsRef.current);
-        if (idx !== defHoveredIndexRef.current) {
-          defHoveredIndexRef.current = idx;
-          setDefHoveredIndex(idx);
-          if (idx !== null) Haptics.selectionAsync();
+        const { pageX, pageY } = e.nativeEvent;
+        const screenWidth = Dimensions.get("window").width;
+
+        if (pageX < EDGE_ZONE) {
+          if (!defScrollIntervalRef.current) {
+            doDefScroll(-1);
+            defScrollIntervalRef.current = setInterval(() => doDefScroll(-1), SCROLL_INTERVAL);
+          }
+        } else if (pageX > screenWidth - EDGE_ZONE) {
+          if (!defScrollIntervalRef.current) {
+            doDefScroll(1);
+            defScrollIntervalRef.current = setInterval(() => doDefScroll(1), SCROLL_INTERVAL);
+          }
+        } else {
+          stopDefScroll();
+          const pos = { x: pageX, y: pageY };
+          const idx = findHoveredSlot(pos, defSlotPositionsRef.current);
+          if (idx !== defHoveredIndexRef.current) {
+            defHoveredIndexRef.current = idx;
+            setDefHoveredIndex(idx);
+            if (idx !== null) Haptics.selectionAsync();
+          }
         }
       },
 
       onPanResponderRelease: () => {
         if (defLongPressTimer.current) clearTimeout(defLongPressTimer.current);
+        stopDefScroll();
         defScale.setValue(1);
 
         if (!defIsLongPressRef.current) {
@@ -447,8 +553,12 @@ export function CombatButtons({
         } else {
           const idx = defHoveredIndexRef.current;
           if (idx !== null) {
-            const slot = defSlotsRef.current[idx];
-            if (SUBSTANCE_TYPES.includes(slot.id as SubstanceType)) {
+            const visibleSlots = defSlotsRef.current.slice(
+              defScrollOffsetRef.current,
+              defScrollOffsetRef.current + VISIBLE_SLOTS
+            );
+            const slot = visibleSlots[idx];
+            if (slot && SUBSTANCE_TYPES.includes(slot.id as SubstanceType)) {
               useSubstanceRef.current(slot.id as SubstanceType);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             }
@@ -464,6 +574,7 @@ export function CombatButtons({
 
       onPanResponderTerminate: () => {
         if (defLongPressTimer.current) clearTimeout(defLongPressTimer.current);
+        stopDefScroll();
         defScale.setValue(1);
         setDefMenuVisible(false);
         defMenuVisibleRef.current = false;
@@ -474,35 +585,40 @@ export function CombatButtons({
     })
   ).current;
 
-  const atkSlots = buildAtkSlots();
-  const defSlots = buildDefSlots();
+  const allAtkSlots = buildAtkSlots();
+  const allDefSlots = buildDefSlots();
 
-  const atkSlotPositions = getSlotPositions(atkButtonCenter, atkSlots.length, true);
-  const defSlotPositions = getSlotPositions(defButtonCenter, defSlots.length, false);
+  const atkVisibleSlots = allAtkSlots.slice(atkScrollOffset, atkScrollOffset + VISIBLE_SLOTS);
+  const defVisibleSlots = allDefSlots.slice(defScrollOffset, defScrollOffset + VISIBLE_SLOTS);
+
+  const atkSlotPositions = getSlotPositions(atkButtonCenter, atkVisibleSlots.length, true);
+  const defSlotPositions = getSlotPositions(defButtonCenter, defVisibleSlots.length, false);
 
   return (
     <>
-      {/* ATK Radial Menu */}
       {atkMenuVisible && (
         <RadialMenu
           visible={atkMenuVisible}
-          slots={atkSlots}
+          slots={atkVisibleSlots}
           slotPositions={atkSlotPositions}
           hoveredIndex={atkHoveredIndex}
           previewOnLeft={true}
           topInset={60}
+          scrollOffset={atkScrollOffset}
+          totalSlots={allAtkSlots.length}
         />
       )}
 
-      {/* DEF Radial Menu */}
       {defMenuVisible && (
         <RadialMenu
           visible={defMenuVisible}
-          slots={defSlots}
+          slots={defVisibleSlots}
           slotPositions={defSlotPositions}
           hoveredIndex={defHoveredIndex}
           previewOnLeft={false}
           topInset={60}
+          scrollOffset={defScrollOffset}
+          totalSlots={allDefSlots.length}
         />
       )}
 
@@ -516,7 +632,7 @@ export function CombatButtons({
               styles.btn,
               {
                 backgroundColor: defColor + "18",
-                borderColor: defSlots.length > 0 ? defColor + "88" : defColor + "44",
+                borderColor: allDefSlots.length > 0 ? defColor + "88" : defColor + "44",
                 borderWidth: 1.5,
                 transform: [{ scale: defScale }],
               },
@@ -524,7 +640,7 @@ export function CombatButtons({
           >
             <Feather name="shield" size={26} color={defColor} />
             <Text style={[styles.label, { color: defColor }]}>DEF</Text>
-            {defSlots.length > 0 && (
+            {allDefSlots.length > 0 && (
               <View style={[styles.holdHint, { borderColor: defColor + "55" }]}>
                 <Feather name="more-horizontal" size={8} color={defColor + "AA"} />
               </View>
@@ -578,7 +694,7 @@ export function CombatButtons({
                 <Text style={[styles.minesBadgeText, { color: atkColor }]}>{miningClicks}x</Text>
               </View>
             )}
-            {atkSlots.length > 0 && (
+            {allAtkSlots.length > 0 && (
               <View style={[styles.holdHint, { borderColor: atkColor + "55" }]}>
                 <Feather name="more-horizontal" size={8} color={atkColor + "AA"} />
               </View>
