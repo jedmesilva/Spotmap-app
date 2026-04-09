@@ -338,9 +338,7 @@ function updateSpots(spots){
       var m=L.marker(ll,{icon:icon,zIndexOffset:100});
       (function(sid){
         m.on('click',function(e){L.DomEvent.stopPropagation(e);send({type:'SPOT_PRESS',spotId:sid})});
-        var _lp;
-        m.on('mousedown touchstart',function(e){_lp=setTimeout(function(){send({type:'SPOT_LONG_PRESS',spotId:sid})},500)});
-        m.on('mouseup touchend touchcancel click',function(){clearTimeout(_lp)});
+        m.on('contextmenu',function(e){L.DomEvent.stopPropagation(e);send({type:'SPOT_LONG_PRESS',spotId:sid})});
       })(spot.id);
       m.addTo(map);spotMarkers[spot.id]=m;
     }
