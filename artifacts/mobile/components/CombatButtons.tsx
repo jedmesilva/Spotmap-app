@@ -212,12 +212,12 @@ export function CombatButtons({
   selectInventorySpotRef.current = selectInventorySpot;
   const useSubstanceRef = useRef(useSubstance);
   useSubstanceRef.current = useSubstance;
-  const buildAtkSlotsRef = useRef(buildAtkSlots);
-  buildAtkSlotsRef.current = buildAtkSlots;
-  const buildDefSlotsRef = useRef(buildDefSlots);
-  buildDefSlotsRef.current = buildDefSlots;
   const collectedSpotsRef = useRef(collectedSpots);
   collectedSpotsRef.current = collectedSpots;
+  const userProfileRef = useRef(userProfile);
+  userProfileRef.current = userProfile;
+  const selectedUserRef = useRef(selectedUser);
+  selectedUserRef.current = selectedUser;
 
   // ─── ATK radial menu state ────────────────────────────────────────────────
   const [atkMenuVisible, setAtkMenuVisible] = useState(false);
@@ -296,7 +296,18 @@ export function CombatButtons({
           const center = { x: pageX + w / 2, y: pageY + h / 2 };
           atkButtonCenterRef.current = center;
 
-          const slots = buildAtkSlotsRef.current();
+          const slots: RadialSlot[] = collectedSpotsRef.current.map((spot) => ({
+            id: spot.id,
+            label: SPOT_LABELS[spot.type] ?? spot.type.toUpperCase(),
+            color: SPOT_COLORS[spot.type] ?? "#888",
+            icon: SPOT_ICONS[spot.type] ?? "zap",
+            previewName: spot.title,
+            previewType: SPOT_LABELS[spot.type] ?? spot.type,
+            previewDescription: `Spot ${SPOT_LABELS[spot.type]?.toLowerCase() ?? spot.type} — use como arma ou colete no mapa`,
+            previewImpact: `${SPOT_DAMAGE[spot.type as SpotType] ?? 10} DMG`,
+            previewTarget: selectedUserRef.current ? "Oponente" : "Spot",
+            previewImageUrl: spot.imageUrl,
+          }));
           atkSlotsRef.current = slots;
 
           atkSlotPositionsRef.current = getSlotPositions(center, slots.length, true);
@@ -378,7 +389,24 @@ export function CombatButtons({
           const center = { x: pageX + w / 2, y: pageY + h / 2 };
           defButtonCenterRef.current = center;
 
-          const slots = buildDefSlotsRef.current();
+          const slots: RadialSlot[] = userProfileRef.current.bag
+            .filter(
+              (item) =>
+                item.quantity > 0 &&
+                SUBSTANCE_TYPES.includes(item.type as SubstanceType)
+            )
+            .map((item) => ({
+              id: item.type,
+              label: DEF_LABELS[item.type] ?? item.type.toUpperCase(),
+              color: ITEM_COLORS[item.type] ?? "#888",
+              icon: ITEM_ICONS[item.type] ?? "shield",
+              previewName: item.name,
+              previewType: DEF_LABELS[item.type] ?? item.type,
+              previewDescription: DEF_DESCRIPTIONS[item.type] ?? "Item defensivo",
+              previewImpact: DEF_IMPACT[item.type] ?? "+DEF",
+              previewTarget: "Você",
+              quantity: item.quantity,
+            }));
           defSlotsRef.current = slots;
 
           defSlotPositionsRef.current = getSlotPositions(center, slots.length, false);
