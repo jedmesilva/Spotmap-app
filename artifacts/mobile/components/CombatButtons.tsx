@@ -287,9 +287,6 @@ export function CombatButtons({
         });
 
         atkLongPressTimer.current = setTimeout(() => {
-          const slots = atkSlotsRef.current;
-          if (slots.length === 0) return;
-
           atkIsLongPressRef.current = true;
           atkMenuVisibleRef.current = true;
 
@@ -374,9 +371,6 @@ export function CombatButtons({
         });
 
         defLongPressTimer.current = setTimeout(() => {
-          const slots = defSlotsRef.current;
-          if (slots.length === 0) return;
-
           defIsLongPressRef.current = true;
           defMenuVisibleRef.current = true;
 

@@ -176,6 +176,14 @@ export function RadialMenu({
         </RNAnimated.View>
       )}
 
+      {slots.length === 0 && (
+        <View style={styles.emptyHint}>
+          <Feather name="package" size={22} color="#fff" style={{ opacity: 0.5 }} />
+          <Text style={styles.emptyHintText}>Nenhum item disponível</Text>
+          <Text style={styles.emptyHintSub}>Colete spots no mapa para equipar</Text>
+        </View>
+      )}
+
       {slots.map((slot, i) => {
         const pos = slotPositions[i];
         if (!pos) return null;
@@ -328,5 +336,25 @@ const styles = StyleSheet.create({
     fontSize: 9,
     fontFamily: "Inter_700Bold",
     color: "#fff",
+  },
+  emptyHint: {
+    position: "absolute",
+    top: "40%",
+    alignSelf: "center",
+    alignItems: "center",
+    gap: 8,
+  },
+  emptyHintText: {
+    color: "#fff",
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    opacity: 0.8,
+  },
+  emptyHintSub: {
+    color: "#fff",
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    opacity: 0.5,
+    textAlign: "center",
   },
 });
