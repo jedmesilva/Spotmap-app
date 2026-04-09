@@ -21,6 +21,7 @@ import { RadialMenu, RadialSlot } from "@/components/RadialMenu";
 const LONG_PRESS_DELAY = 480;
 const SLOT_RADIUS = 105;
 const HOVER_THRESHOLD = 40;
+const MAX_RADIAL_SLOTS = 8;
 
 const SPOT_COLORS: Record<string, string> = {
   coupon: "#C97400",
@@ -249,7 +250,7 @@ export function CombatButtons({
 
   // ─── Build slot arrays (must stay in sync with refs) ────────────────────
   const buildAtkSlots = (): RadialSlot[] =>
-    collectedSpots.map((spot) => ({
+    collectedSpots.slice(0, MAX_RADIAL_SLOTS).map((spot) => ({
       id: spot.id,
       label: SPOT_LABELS[spot.type] ?? spot.type.toUpperCase(),
       color: SPOT_COLORS[spot.type] ?? C.accent,
@@ -269,6 +270,7 @@ export function CombatButtons({
           item.quantity > 0 &&
           SUBSTANCE_TYPES.includes(item.type as SubstanceType)
       )
+      .slice(0, MAX_RADIAL_SLOTS)
       .map((item) => ({
         id: item.type,
         label: DEF_LABELS[item.type] ?? item.type.toUpperCase(),
@@ -296,7 +298,7 @@ export function CombatButtons({
           const center = { x: pageX + w / 2, y: pageY + h / 2 };
           atkButtonCenterRef.current = center;
 
-          const slots: RadialSlot[] = collectedSpotsRef.current.map((spot) => ({
+          const slots: RadialSlot[] = collectedSpotsRef.current.slice(0, MAX_RADIAL_SLOTS).map((spot) => ({
             id: spot.id,
             label: SPOT_LABELS[spot.type] ?? spot.type.toUpperCase(),
             color: SPOT_COLORS[spot.type] ?? "#888",
@@ -395,6 +397,7 @@ export function CombatButtons({
                 item.quantity > 0 &&
                 SUBSTANCE_TYPES.includes(item.type as SubstanceType)
             )
+            .slice(0, MAX_RADIAL_SLOTS)
             .map((item) => ({
               id: item.type,
               label: DEF_LABELS[item.type] ?? item.type.toUpperCase(),

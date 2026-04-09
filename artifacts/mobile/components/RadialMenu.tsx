@@ -201,7 +201,7 @@ export function RadialMenu({
         </View>
       )}
 
-      {slots.map((slot, i) => {
+      {slots.slice(0, MAX_SLOTS).map((slot, i) => {
         const pos = slotPositions[i];
         if (!pos) return null;
         const isHovered = hoveredIndex === i;
