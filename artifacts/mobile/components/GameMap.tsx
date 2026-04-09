@@ -375,7 +375,10 @@ function updateUsers(users){
       userMarkers[user.id].setLatLng(ll).setIcon(icon);
     } else {
       var m=L.marker(ll,{icon:icon,zIndexOffset:50});
-      (function(uid){m.on('click',function(e){L.DomEvent.stopPropagation(e);send({type:'USER_PRESS',userId:uid})})})(user.id);
+      (function(uid){
+        m.on('click',function(e){L.DomEvent.stopPropagation(e);send({type:'USER_PRESS',userId:uid})});
+        m.on('contextmenu',function(e){L.DomEvent.stopPropagation(e);send({type:'USER_LONG_PRESS',userId:uid})});
+      })(user.id);
       m.addTo(map);userMarkers[user.id]=m;
     }
   });
@@ -433,7 +436,8 @@ function updatePlayer(loc,radius,profile,collecting){
     if(el){el.style.transition='transform 0.6s linear';}
     playerDot.setLatLng(ll);
   } else {
-    playerDot=L.marker(ll,{icon:icon,zIndexOffset:200,interactive:false}).addTo(map);
+    playerDot=L.marker(ll,{icon:icon,zIndexOffset:200,interactive:true}).addTo(map);
+    playerDot.on('contextmenu',function(e){L.DomEvent.stopPropagation(e);send({type:'PLAYER_LONG_PRESS'});});
     var el=playerDot.getElement();
     if(el){el.style.transition='transform 0.6s linear';}
   }
@@ -640,6 +644,8 @@ interface GameMapProps {
   onSpotPress: (spotId: string) => void;
   onSpotLongPress?: (spotId: string) => void;
   onUserPress: (userId: string) => void;
+  onUserLongPress?: (userId: string) => void;
+  onPlayerLongPress?: () => void;
   onMapPress: () => void;
 }
 
@@ -656,6 +662,8 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
   onSpotPress,
   onSpotLongPress,
   onUserPress,
+  onUserLongPress,
+  onPlayerLongPress,
   onMapPress,
 }, ref) {
   const webViewRef = useRef<WebView>(null);
@@ -726,11 +734,15 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
         onSpotLongPress?.(data.spotId);
       } else if (data.type === "USER_PRESS") {
         onUserPress(data.userId);
+      } else if (data.type === "USER_LONG_PRESS") {
+        onUserLongPress?.(data.userId);
+      } else if (data.type === "PLAYER_LONG_PRESS") {
+        onPlayerLongPress?.();
       } else if (data.type === "MAP_PRESS") {
         onMapPress();
       }
     } catch {}
-  }, [onSpotPress, onSpotLongPress, onUserPress, onMapPress]);
+  }, [onSpotPress, onSpotLongPress, onUserPress, onUserLongPress, onPlayerLongPress, onMapPress]);
 
   return (
     <WebView

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { InventoryItem, Spot, useGame } from "@/context/GameContext";
 import { GameMap, GameMapHandle } from "@/components/GameMap";
+import { PlayerDetailSheet, PlayerDetailData } from "@/components/PlayerDetailSheet";
 import { CombatButtons } from "@/components/CombatButtons";
 import { InventoryButton } from "@/components/InventoryButton";
 import { ItemDetailModal } from "@/components/ItemDetailModal";
@@ -38,6 +39,7 @@ export default function MapScreen() {
   const [mapDetailSpot, setMapDetailSpot] = useState<Spot | null>(null);
   const [inventoryDetailSpot, setInventoryDetailSpot] = useState<Spot | null>(null);
   const [inventoryDetailItem, setInventoryDetailItem] = useState<InventoryItem | null>(null);
+  const [detailPlayer, setDetailPlayer] = useState<PlayerDetailData | null>(null);
 
   const {
     spots,
@@ -168,6 +170,21 @@ export default function MapScreen() {
     [spots]
   );
 
+  const handleUserLongPress = useCallback(
+    (userId: string) => {
+      const user = nearbyUsers.find((u) => u.id === userId);
+      if (!user) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      setDetailPlayer({ kind: "other", user });
+    },
+    [nearbyUsers]
+  );
+
+  const handlePlayerLongPress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    setDetailPlayer({ kind: "self", profile: userProfile });
+  }, [userProfile]);
+
   // X button on a spot: mark as manually unfocused to suppress auto-refocus until next radius exit+entry
   const handleUnfocusSpot = useCallback(() => {
     manuallyUnfocusedRef.current = selectedSpot?.id ?? null;
@@ -200,6 +217,8 @@ export default function MapScreen() {
         onSpotPress={handleSpotPress}
         onSpotLongPress={handleSpotLongPress}
         onUserPress={handleUserPress}
+        onUserLongPress={handleUserLongPress}
+        onPlayerLongPress={handlePlayerLongPress}
         onMapPress={handleMapPress}
       />
 
@@ -301,6 +320,20 @@ export default function MapScreen() {
         onClose={() => setInventoryDetailItem(null)}
         onClaim={() => setInventoryDetailItem(null)}
       />
+
+      {detailPlayer && (
+        <PlayerDetailSheet
+          data={detailPlayer}
+          onClose={() => setDetailPlayer(null)}
+          onSelectForAttack={(userId) => {
+            const user = nearbyUsers.find((u) => u.id === userId);
+            if (user) {
+              selectUser(user);
+              selectSpot(null);
+            }
+          }}
+        />
+      )}
 
       {selectedUser && (
         <EmojiBar
