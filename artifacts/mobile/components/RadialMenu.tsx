@@ -63,7 +63,7 @@ export function RadialMenu({
   useEffect(() => {
     if (visible) {
       RNAnimated.timing(backdropOpacity, {
-        toValue: 0.55,
+        toValue: 0.82,
         duration: 160,
         useNativeDriver: true,
       }).start();
@@ -217,8 +217,8 @@ export function RadialMenu({
                 top: pos.y - SLOT_SIZE / 2,
                 width: SLOT_SIZE,
                 height: SLOT_SIZE,
-                backgroundColor: isHovered ? slot.color + "30" : C.surface,
-                borderColor: isHovered ? slot.color : slot.color + "77",
+                backgroundColor: isHovered ? slot.color + "55" : C.surface,
+                borderColor: isHovered ? slot.color : slot.color + "AA",
                 borderWidth: isHovered ? 2.5 : 1.5,
                 shadowColor: slot.color,
                 shadowOpacity: isHovered ? 0.7 : 0.2,
@@ -232,10 +232,10 @@ export function RadialMenu({
             <Feather
               name={slot.icon as any}
               size={20}
-              color={isHovered ? slot.color : slot.color + "BB"}
+              color={isHovered ? slot.color : slot.color + "EE"}
             />
             <Text
-              style={[styles.slotLabel, { color: isHovered ? slot.color : C.textMuted }]}
+              style={[styles.slotLabel, { color: isHovered ? slot.color : C.textSecondary }]}
               numberOfLines={1}
             >
               {slot.label}
