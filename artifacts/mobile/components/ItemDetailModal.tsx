@@ -141,8 +141,6 @@ export function ItemDetailModal({ visible, onClose, spot, item, mode, onClaim }:
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scanAnim = useRef(new Animated.Value(0)).current;
-  const glowAnim = useRef(new Animated.Value(0)).current;
-
   const type = spot?.type ?? item?.type ?? "rare";
   const SPOT_COLORS: Record<string, string> = {
     coupon: C.spotCoupon,
@@ -190,19 +188,11 @@ export function ItemDetailModal({ visible, onClose, spot, item, mode, onClaim }:
         Animated.timing(scanAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
       ]).start();
 
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(glowAnim, { toValue: 1, duration: 1400, useNativeDriver: true }),
-          Animated.timing(glowAnim, { toValue: 0, duration: 1400, useNativeDriver: true }),
-        ])
-      ).start();
     } else {
       slideAnim.setValue(SCREEN_HEIGHT);
       fadeAnim.setValue(0);
     }
   }, [visible]);
-
-  const glowOpacity = glowAnim.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] });
 
   if (!visible || (!spot && !item)) return null;
 
@@ -319,7 +309,7 @@ export function ItemDetailModal({ visible, onClose, spot, item, mode, onClaim }:
         </View>
 
         {/* Claim button */}
-        <Animated.View style={{ opacity: glowOpacity }}>
+        <View>
           <Pressable
             onPress={() => {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -341,7 +331,7 @@ export function ItemDetailModal({ visible, onClose, spot, item, mode, onClaim }:
             <Feather name="download" size={18} color="#fff" />
             <Text style={styles.claimBtnText}>RESGATAR ITEM</Text>
           </Pressable>
-        </Animated.View>
+        </View>
       </ScrollView>
     </View>
   );
