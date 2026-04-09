@@ -423,9 +423,8 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
       {/* Pill button */}
       <RNAnimated.View
         style={[styles.container, { bottom: bottomOffset, transform: [{ translateY: btnDragY }] }]}
-        {...buttonPan.panHandlers}
       >
-        <View style={[styles.pill, { backgroundColor: C.card, borderColor: C.border }]}>
+        <View style={[styles.pill, { backgroundColor: C.card, borderColor: C.border }]} {...buttonPan.panHandlers}>
           <View style={styles.pillContent}>
             <View style={[styles.pillIconWrap, { backgroundColor: C.accent + "18" }]}>
               <Feather name="briefcase" size={18} color={C.accent} />
