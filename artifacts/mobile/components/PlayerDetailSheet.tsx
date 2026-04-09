@@ -1,43 +1,62 @@
 import { Feather, Ionicons } from "@expo/vector-icons";
-import { BottomSheetModal, BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef } from "react";
 import {
+  Animated,
+  Dimensions,
   Image,
+  Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import COLORS from "@/constants/colors";
 import { NearbyUser, SubstanceType, UserProfile, STRENGTH_MONSTER_THRESHOLD } from "@/context/GameContext";
+import { useColors } from "@/hooks/useColors";
 
-function getHealthColor(health: number, maxHealth: number): string {
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+function getHealthColor(health: number, maxHealth: number, C: ReturnType<typeof useColors>): string {
   const r = maxHealth > 0 ? health / maxHealth : 1;
-  return r > 0.6 ? COLORS.dark.spotMoney : r > 0.3 ? COLORS.dark.warning : COLORS.dark.danger;
+  return r > 0.6 ? C.spotMoney : r > 0.3 ? C.warning : C.danger;
 }
 
-function getStrengthColor(strength: number): string {
+function getStrengthColor(strength: number, C: ReturnType<typeof useColors>): string {
   if (strength >= STRENGTH_MONSTER_THRESHOLD) return "#ff6b00";
   if (strength >= 150) return "#c084fc";
   if (strength >= 100) return "#60a5fa";
   if (strength >= 50) return "#94a3b8";
-  return COLORS.dark.danger;
+  return C.danger;
 }
 
-function ImmunityBadge({ name }: { name: SubstanceType }) {
-  const labels: Record<SubstanceType, string> = {
-    flame_shield: "Escudo de Fogo",
-    cryo_armor: "Armadura de Gelo",
-    volt_ward: "Guarda Raio",
-    antidote: "Antídoto",
-    barrier: "Barreira",
-  };
+const IMMUNITY_LABELS: Record<SubstanceType, string> = {
+  flame_shield: "ESCUDO CHAMA",
+  cryo_armor: "ARMADURA CRYO",
+  volt_ward: "PROTEÇÃO VOLT",
+  antidote: "ANTÍDOTO",
+  barrier: "BARREIRA",
+};
+
+interface DataBlockProps {
+  label: string;
+  value: string;
+  color: string;
+  icon?: string;
+  wide?: boolean;
+}
+
+function DataBlock({ label, value, color, icon, wide }: DataBlockProps) {
+  const C = useColors();
   return (
-    <View style={styles.immunityBadge}>
-      <Feather name="shield" size={10} color={COLORS.dark.purple} />
-      <Text style={styles.immunityText}>{labels[name] ?? name.replace("_", " ")}</Text>
+    <View style={[styles.dataBlock, wide && styles.dataBlockWide, { borderColor: color + "33", backgroundColor: color + "0A" }]}>
+      <View style={styles.dataBlockHeader}>
+        {icon && <Feather name={icon as any} size={10} color={color} />}
+        <Text style={[styles.dataBlockLabel, { color: color + "AA" }]}>{label}</Text>
+      </View>
+      <Text style={[styles.dataBlockValue, { color }]}>{value}</Text>
     </View>
   );
 }
@@ -47,21 +66,50 @@ export type PlayerDetailData =
   | { kind: "other"; user: NearbyUser };
 
 interface PlayerDetailSheetProps {
-  data: PlayerDetailData;
+  data: PlayerDetailData | null;
   onClose: () => void;
   onSelectForAttack?: (userId: string) => void;
 }
 
 export function PlayerDetailSheet({ data, onClose, onSelectForAttack }: PlayerDetailSheetProps) {
+  const C = useColors();
   const insets = useSafeAreaInsets();
-  const sheetRef = useRef<BottomSheetModal>(null);
+
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scanAnim = useRef(new Animated.Value(0)).current;
+
+  const visible = data !== null;
 
   useEffect(() => {
-    sheetRef.current?.present();
-  }, []);
+    if (visible) {
+      Animated.parallel([
+        Animated.spring(slideAnim, {
+          toValue: 0,
+          useNativeDriver: true,
+          tension: 70,
+          friction: 12,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      Animated.sequence([
+        Animated.timing(scanAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(scanAnim, { toValue: 0, duration: 0, useNativeDriver: true }),
+      ]).start();
+    } else {
+      slideAnim.setValue(SCREEN_HEIGHT);
+      fadeAnim.setValue(0);
+    }
+  }, [visible]);
+
+  if (!visible || !data) return null;
 
   const isSelf = data.kind === "self";
-
   const name = isSelf ? data.profile.name : data.user.name;
   const avatar = isSelf ? data.profile.avatar : data.user.avatar;
   const health = isSelf ? data.profile.health : data.user.health;
@@ -72,333 +120,462 @@ export function PlayerDetailSheet({ data, onClose, onSelectForAttack }: PlayerDe
   const collectProgress = isSelf ? 0 : data.user.collectProgress;
   const medals = isSelf ? data.profile.medals : (data.user.medals ?? []);
 
-  const healthPercent = maxHealth > 0 ? health / maxHealth : 0;
-  const healthColor = getHealthColor(health, maxHealth);
-  const strColor = getStrengthColor(strength);
+  const healthColor = getHealthColor(health, maxHealth, C);
+  const strColor = getStrengthColor(strength, C);
+  const accentColor = isSelf ? C.accent : healthColor;
 
   const isUrl = (s: string) => s.startsWith("http://") || s.startsWith("https://");
 
+  const healthPct = maxHealth > 0 ? Math.round((health / maxHealth) * 100) : 0;
+
   return (
-    <BottomSheetModal
-      ref={sheetRef}
-      enablePanDownToClose
-      onDismiss={onClose}
-      backgroundStyle={styles.sheetBackground}
-      handleIndicatorStyle={styles.handle}
-      snapPoints={["55%", "85%"]}
-    >
-      <BottomSheetScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: 32 + insets.bottom }]}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.headerRow}>
-          <View style={styles.avatarWrap}>
-            <View style={[styles.avatarCircle, { borderColor: healthColor }]}>
-              {isUrl(avatar) ? (
-                <Image source={{ uri: avatar }} style={styles.avatarImage} />
-              ) : (
-                <Text style={styles.avatarEmoji}>{avatar}</Text>
-              )}
-            </View>
-            {isSelf && (
-              <View style={styles.selfBadge}>
-                <Text style={styles.selfBadgeText}>Você</Text>
-              </View>
-            )}
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose} statusBarTranslucent>
+      <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+
+        {/* Scan line */}
+        <Animated.View
+          style={[
+            styles.scanLine,
+            { backgroundColor: accentColor + "88" },
+            {
+              transform: [{
+                translateY: scanAnim.interpolate({ inputRange: [0, 1], outputRange: [-4, SCREEN_HEIGHT] }),
+              }],
+            },
+          ]}
+        />
+
+        {/* Panel */}
+        <Animated.View
+          style={[
+            styles.panel,
+            { backgroundColor: C.card, borderColor: accentColor + "55", transform: [{ translateY: slideAnim }] },
+          ]}
+        >
+          {/* Notch */}
+          <View style={[styles.panelNotch, { borderBottomColor: accentColor + "88" }]}>
+            <View style={[styles.notchLine, { backgroundColor: accentColor }]} />
           </View>
 
-          <View style={styles.headerInfo}>
-            <Text style={styles.playerName}>{name}</Text>
-
-            {medals.length > 0 && (
-              <View style={styles.medalsRow}>
-                {medals.slice(0, 5).map((m) => (
-                  <Text key={m.id} style={styles.medalEmoji}>{m.icon}</Text>
-                ))}
-                {medals.length > 5 && (
-                  <Text style={styles.medalsMore}>+{medals.length - 5}</Text>
-                )}
-              </View>
-            )}
-
-            {isSelf && (
-              <View style={styles.coinRow}>
-                <Ionicons name="cash-outline" size={13} color={COLORS.dark.spotMoney} />
-                <Text style={styles.coinText}>{data.profile.coins ?? 0} moedas</Text>
-              </View>
-            )}
-          </View>
-
-          <Pressable onPress={onClose} style={styles.closeBtn}>
-            <Feather name="x" size={18} color={COLORS.dark.textSecondary} />
-          </Pressable>
-        </View>
-
-        <View style={styles.statsCard}>
-          <View style={styles.statRow}>
-            <Feather name="heart" size={13} color={healthColor} />
-            <Text style={[styles.statLabel, { color: COLORS.dark.textMuted }]}>Vida</Text>
-            <View style={styles.healthTrack}>
-              <View style={[styles.healthBar, { width: `${healthPercent * 100}%`, backgroundColor: healthColor }]} />
-            </View>
-            <Text style={[styles.statValue, { color: healthColor }]}>
-              {health}/{maxHealth}
-            </Text>
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.statRow}>
-            <Ionicons name="flash" size={13} color={strColor} />
-            <Text style={[styles.statLabel, { color: COLORS.dark.textMuted }]}>Força</Text>
-            <View style={styles.strengthBarTrack}>
-              <View
-                style={[
-                  styles.strengthBar,
-                  {
-                    width: `${Math.min((strength / 300) * 100, 100)}%`,
-                    backgroundColor: strColor,
-                  },
-                ]}
-              />
-            </View>
-            <Text style={[styles.statValue, { color: strColor }]}>
-              {Math.round(strength)}
-            </Text>
-          </View>
-        </View>
-
-        {immunities.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>IMUNIDADES</Text>
-            <View style={styles.badgesWrap}>
-              {immunities.map((imm) => (
-                <ImmunityBadge key={imm} name={imm} />
-              ))}
-            </View>
-          </View>
-        )}
-
-        {collectingSpotId && (
-          <View style={styles.collectCard}>
-            <View style={styles.collectRow}>
-              <Feather name="loader" size={13} color={COLORS.dark.warning} />
-              <Text style={styles.collectLabel}>Coletando spot</Text>
-              <Text style={[styles.collectPct, { color: collectProgress > 60 ? COLORS.dark.danger : COLORS.dark.warning }]}>
-                {collectProgress}%
+          {/* Top bar */}
+          <View style={[styles.topBar, { borderBottomColor: accentColor + "44" }]}>
+            <View style={styles.topBarLeft}>
+              <View style={[styles.topBarDot, { backgroundColor: accentColor }]} />
+              <Text style={[styles.topBarLabel, { color: accentColor }]}>
+                {isSelf ? "PERFIL DO OPERADOR" : "ANÁLISE DE OPERADOR"}
               </Text>
             </View>
-            <View style={styles.collectTrack}>
-              <View
-                style={[
-                  styles.collectBar,
+            <Pressable
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onClose(); }}
+              style={[styles.closeBtn, { borderColor: C.border }]}
+            >
+              <Feather name="x" size={16} color={C.textSecondary} />
+            </Pressable>
+          </View>
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: insets.bottom + 24 }]}
+          >
+            {/* Header: avatar + name */}
+            <View style={styles.headerSection}>
+              <View style={[styles.avatarContainer, { borderColor: accentColor + "55" }]}>
+                {isUrl(avatar) ? (
+                  <Image source={{ uri: avatar }} style={styles.avatarImage} />
+                ) : (
+                  <View style={[styles.avatarPlaceholder, { backgroundColor: accentColor + "15" }]}>
+                    <Text style={styles.avatarEmoji}>{avatar}</Text>
+                  </View>
+                )}
+                {/* Corner brackets */}
+                <View style={[styles.corner, styles.cornerTL, { borderColor: accentColor }]} />
+                <View style={[styles.corner, styles.cornerTR, { borderColor: accentColor }]} />
+                <View style={[styles.corner, styles.cornerBL, { borderColor: accentColor }]} />
+                <View style={[styles.corner, styles.cornerBR, { borderColor: accentColor }]} />
+              </View>
+
+              <View style={styles.headerInfo}>
+                <View style={[styles.typeBadge, { backgroundColor: accentColor + "18", borderColor: accentColor + "55" }]}>
+                  <Feather name={isSelf ? "user" : "crosshair"} size={10} color={accentColor} />
+                  <Text style={[styles.typeLabel, { color: accentColor }]}>
+                    {isSelf ? "VOCÊ" : "INIMIGO"}
+                  </Text>
+                </View>
+
+                <Text style={[styles.playerName, { color: C.text }]}>{name}</Text>
+
+                {medals.length > 0 && (
+                  <View style={styles.medalsRow}>
+                    {medals.slice(0, 4).map((m) => (
+                      <Text key={m.id} style={styles.medalEmoji}>{m.icon}</Text>
+                    ))}
+                    {medals.length > 4 && (
+                      <Text style={[styles.medalsMore, { color: C.textMuted }]}>+{medals.length - 4}</Text>
+                    )}
+                  </View>
+                )}
+
+                {isSelf && (
+                  <View style={[styles.coinBadge, { backgroundColor: C.spotMoney + "15", borderColor: C.spotMoney + "44" }]}>
+                    <Ionicons name="cash-outline" size={10} color={C.spotMoney} />
+                    <Text style={[styles.coinText, { color: C.spotMoney }]}>{data.profile.coins ?? 0} MOEDAS</Text>
+                  </View>
+                )}
+
+                {collectingSpotId && (
+                  <View style={[styles.collectingBadge, { backgroundColor: C.warning + "18", borderColor: C.warning + "44" }]}>
+                    <Feather name="download" size={10} color={C.warning} />
+                    <Text style={[styles.collectingText, { color: C.warning }]}>COLETANDO</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Divider */}
+            <View style={[styles.divider, { backgroundColor: accentColor + "33" }]} />
+
+            {/* Stats grid */}
+            <View style={styles.statsGrid}>
+              <DataBlock
+                label="VIDA"
+                value={`${health}/${maxHealth}`}
+                color={healthColor}
+                icon="heart"
+              />
+              <DataBlock
+                label="VITALIDADE"
+                value={`${healthPct}%`}
+                color={healthColor}
+                icon="activity"
+              />
+              <DataBlock
+                label="FORÇA"
+                value={String(Math.round(strength))}
+                color={strColor}
+                icon="zap"
+              />
+              <DataBlock
+                label="NÍVEL"
+                value={strength >= STRENGTH_MONSTER_THRESHOLD ? "MONSTRO" : strength >= 150 ? "ÉLITE" : strength >= 100 ? "AVANÇADO" : strength >= 50 ? "REGULAR" : "INICIANTE"}
+                color={strColor}
+                icon="trending-up"
+              />
+              {collectingSpotId && (
+                <DataBlock
+                  label="COLETA"
+                  value={`${collectProgress}%`}
+                  color={C.warning}
+                  icon="loader"
+                  wide
+                />
+              )}
+              {isSelf && (
+                <DataBlock
+                  label="MEDALHAS"
+                  value={`${medals.length}`}
+                  color={C.spotRare}
+                  icon="award"
+                />
+              )}
+            </View>
+
+            {/* Immunities */}
+            {immunities.length > 0 && (
+              <View style={styles.immunitiesSection}>
+                <Text style={[styles.sectionLabel, { color: C.textMuted }]}>IMUNIDADES ATIVAS</Text>
+                <View style={styles.badgesRow}>
+                  {immunities.map((imm) => (
+                    <View key={imm} style={[styles.immunityBadge, { backgroundColor: C.purple + "15", borderColor: C.purple + "44" }]}>
+                      <Feather name="shield" size={10} color={C.purple} />
+                      <Text style={[styles.immunityText, { color: C.purple }]}>
+                        {IMMUNITY_LABELS[imm] ?? imm.replace("_", " ").toUpperCase()}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Bag (self only) */}
+            {isSelf && data.profile.bag.length > 0 && (
+              <View style={styles.bagSection}>
+                <Text style={[styles.sectionLabel, { color: C.textMuted }]}>INVENTÁRIO DE CAMPO</Text>
+                <View style={styles.statsGrid}>
+                  {data.profile.bag.map((item) => (
+                    <DataBlock
+                      key={item.id}
+                      label={item.name.toUpperCase()}
+                      value={`${item.quantity}×`}
+                      color={C.textSecondary}
+                      icon="package"
+                    />
+                  ))}
+                </View>
+              </View>
+            )}
+
+            {/* Intel report */}
+            <View style={[styles.intelSection, { borderColor: C.border + "55" }]}>
+              <Text style={[styles.sectionLabel, { color: C.textMuted }]}>RELATÓRIO DE INTELIGÊNCIA</Text>
+              <Text style={[styles.intelText, { color: C.textSecondary }]}>
+                {isSelf
+                  ? `Operador ativo no campo. Vida em ${healthPct}% da capacidade máxima. Força registrada em ${Math.round(strength)} unidades.${immunities.length > 0 ? ` Imunidades ativas: ${immunities.length}.` : ""}`
+                  : `Operador hostil detectado. Vida em ${healthPct}% da capacidade. Força ofensiva: ${Math.round(strength)}.${immunities.length > 0 ? ` Possui ${immunities.length} imunidade(s) ativa(s) — proceda com cautela.` : " Nenhuma imunidade detectada."}`
+                }
+              </Text>
+            </View>
+
+            {/* Action button */}
+            {!isSelf && onSelectForAttack && (
+              <Pressable
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+                  onSelectForAttack((data as Extract<PlayerDetailData, { kind: "other" }>).user.id);
+                  onClose();
+                }}
+                style={({ pressed }) => [
+                  styles.actionBtn,
                   {
-                    width: `${collectProgress}%`,
-                    backgroundColor: collectProgress > 60 ? COLORS.dark.danger : COLORS.dark.warning,
+                    backgroundColor: C.danger,
+                    borderColor: C.danger,
+                    shadowColor: C.danger,
+                    opacity: pressed ? 0.8 : 1,
                   },
                 ]}
-              />
-            </View>
-          </View>
-        )}
-
-        {isSelf && data.profile.bag.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionLabel}>MOCHILA</Text>
-            <View style={styles.bagGrid}>
-              {data.profile.bag.map((item) => (
-                <View key={item.id} style={styles.bagItem}>
-                  <Text style={styles.bagIcon}>{item.icon}</Text>
-                  <Text style={styles.bagName} numberOfLines={1}>{item.name}</Text>
-                  <View style={styles.bagQtyBadge}>
-                    <Text style={styles.bagQty}>{item.quantity}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {!isSelf && onSelectForAttack && (
-          <Pressable
-            style={({ pressed }) => [styles.attackBtn, { opacity: pressed ? 0.75 : 1 }]}
-            onPress={() => {
-              onSelectForAttack((data as { kind: "other"; user: NearbyUser }).user.id);
-              onClose();
-            }}
-          >
-            <Feather name="crosshair" size={16} color={COLORS.dark.bg} />
-            <Text style={styles.attackBtnText}>Selecionar para Atacar</Text>
-          </Pressable>
-        )}
-      </BottomSheetScrollView>
-    </BottomSheetModal>
+              >
+                <View style={[styles.actionCorner, styles.actionCornerTL]} />
+                <View style={[styles.actionCorner, styles.actionCornerTR]} />
+                <Feather name="crosshair" size={18} color="#fff" />
+                <Text style={styles.actionBtnText}>SELECIONAR ALVO</Text>
+              </Pressable>
+            )}
+          </ScrollView>
+        </Animated.View>
+      </Animated.View>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  sheetBackground: {
-    backgroundColor: COLORS.dark.card,
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(7, 10, 4, 0.72)",
+    justifyContent: "flex-end",
+  },
+  scanLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    height: 2,
+    zIndex: 10,
+  },
+  panel: {
+    borderTopLeftRadius: 0,
+    borderTopRightRadius: 0,
     borderWidth: 1,
-    borderColor: COLORS.dark.border,
+    borderBottomWidth: 0,
+    maxHeight: SCREEN_HEIGHT * 0.80,
   },
-  handle: {
-    backgroundColor: COLORS.dark.border,
-    width: 36,
+  panelNotch: {
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 1,
   },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 4,
+  notchLine: {
+    width: 44,
+    height: 3,
+    borderRadius: 2,
   },
-  headerRow: {
+  topBar: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  topBarLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  topBarDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 1,
+  },
+  topBarLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 2,
+  },
+  closeBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 2,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scrollContent: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+  },
+  headerSection: {
+    flexDirection: "row",
     gap: 14,
     marginBottom: 16,
   },
-  avatarWrap: {
-    alignItems: "center",
+  avatarContainer: {
+    width: 90,
+    height: 90,
+    borderWidth: 1.5,
+    borderRadius: 2,
     position: "relative",
-  },
-  avatarCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 2.5,
-    backgroundColor: COLORS.dark.bgSecondary,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
+    overflow: "visible",
+    flexShrink: 0,
   },
   avatarImage: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: "100%",
+    height: "100%",
+    borderRadius: 2,
+  },
+  avatarPlaceholder: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 2,
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarEmoji: {
-    fontSize: 26,
+    fontSize: 38,
   },
-  selfBadge: {
-    marginTop: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    backgroundColor: COLORS.dark.accentGlow,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.dark.accent + "55",
+  corner: {
+    position: "absolute",
+    width: 10,
+    height: 10,
+    borderWidth: 2,
   },
-  selfBadgeText: {
-    fontSize: 10,
-    color: COLORS.dark.accent,
-    fontFamily: "Inter_700Bold",
-  },
+  cornerTL: { top: -2, left: -2, borderRightWidth: 0, borderBottomWidth: 0 },
+  cornerTR: { top: -2, right: -2, borderLeftWidth: 0, borderBottomWidth: 0 },
+  cornerBL: { bottom: -2, left: -2, borderRightWidth: 0, borderTopWidth: 0 },
+  cornerBR: { bottom: -2, right: -2, borderLeftWidth: 0, borderTopWidth: 0 },
   headerInfo: {
     flex: 1,
+    justifyContent: "center",
+    gap: 6,
+  },
+  typeBadge: {
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
-    paddingTop: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 2,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+  },
+  typeLabel: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1.5,
   },
   playerName: {
     fontSize: 20,
     fontFamily: "Inter_700Bold",
-    color: COLORS.dark.text,
+    letterSpacing: -0.3,
+    lineHeight: 24,
   },
   medalsRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 2,
-    flexWrap: "wrap",
   },
   medalEmoji: {
-    fontSize: 15,
+    fontSize: 14,
   },
   medalsMore: {
-    fontSize: 11,
-    color: COLORS.dark.textMuted,
+    fontSize: 10,
     fontFamily: "Inter_500Medium",
   },
-  coinRow: {
+  coinBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 2,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+  },
+  coinText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1,
+  },
+  collectingBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 2,
+    borderWidth: 1,
+    alignSelf: "flex-start",
+  },
+  collectingText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1,
+  },
+  divider: {
+    height: 1,
+    marginBottom: 14,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 14,
+  },
+  dataBlock: {
+    flex: 1,
+    minWidth: "44%",
+    borderWidth: 1,
+    borderRadius: 2,
+    padding: 10,
+    gap: 4,
+  },
+  dataBlockWide: {
+    minWidth: "96%",
+  },
+  dataBlockHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
-  coinText: {
-    fontSize: 12,
-    color: COLORS.dark.spotMoney,
-    fontFamily: "Inter_600SemiBold",
+  dataBlockLabel: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 1.2,
   },
-  closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: COLORS.dark.surface,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 4,
+  dataBlockValue: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.5,
   },
-  statsCard: {
-    backgroundColor: COLORS.dark.surface,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: COLORS.dark.border,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+  immunitiesSection: {
     marginBottom: 14,
-    gap: 10,
-  },
-  statRow: {
-    flexDirection: "row",
-    alignItems: "center",
     gap: 8,
   },
-  statLabel: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    width: 36,
-  },
-  statValue: {
-    fontSize: 12,
-    fontFamily: "Inter_700Bold",
-    minWidth: 46,
-    textAlign: "right",
-  },
-  healthTrack: {
-    flex: 1,
-    height: 7,
-    backgroundColor: COLORS.dark.bgSecondary,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  healthBar: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  strengthBarTrack: {
-    flex: 1,
-    height: 7,
-    backgroundColor: COLORS.dark.bgSecondary,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
-  strengthBar: {
-    height: "100%",
-    borderRadius: 4,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: COLORS.dark.border,
-    marginHorizontal: -16,
-  },
-  section: {
-    marginBottom: 14,
-  },
   sectionLabel: {
-    fontSize: 10,
+    fontSize: 9,
     fontFamily: "Inter_700Bold",
-    color: COLORS.dark.textMuted,
     letterSpacing: 1.5,
-    marginBottom: 8,
+    marginBottom: 4,
   },
-  badgesWrap: {
+  badgesRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 6,
@@ -406,109 +583,61 @@ const styles = StyleSheet.create({
   immunityBadge: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 10,
+    gap: 5,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    backgroundColor: COLORS.dark.purpleGlow,
-    borderRadius: 10,
+    borderRadius: 2,
     borderWidth: 1,
-    borderColor: COLORS.dark.purple + "44",
   },
   immunityText: {
-    fontSize: 11,
-    color: COLORS.dark.purple,
-    fontFamily: "Inter_500Medium",
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    letterSpacing: 0.5,
   },
-  collectCard: {
-    backgroundColor: COLORS.dark.surface,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: COLORS.dark.border,
-    padding: 12,
+  bagSection: {
     marginBottom: 14,
-    gap: 8,
+    gap: 4,
   },
-  collectRow: {
-    flexDirection: "row",
-    alignItems: "center",
+  intelSection: {
+    borderWidth: 1,
+    borderRadius: 2,
+    padding: 12,
+    marginBottom: 16,
     gap: 6,
   },
-  collectLabel: {
-    flex: 1,
+  intelText: {
     fontSize: 12,
-    color: COLORS.dark.textMuted,
     fontFamily: "Inter_400Regular",
+    lineHeight: 18,
   },
-  collectPct: {
-    fontSize: 13,
-    fontFamily: "Inter_700Bold",
-  },
-  collectTrack: {
-    height: 6,
-    backgroundColor: COLORS.dark.bgSecondary,
-    borderRadius: 3,
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 16,
+    borderRadius: 2,
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 16,
+    elevation: 8,
+    position: "relative",
     overflow: "hidden",
   },
-  collectBar: {
-    height: "100%",
-    borderRadius: 3,
-  },
-  bagGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  bagItem: {
-    width: "22%",
-    alignItems: "center",
-    backgroundColor: COLORS.dark.surface,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: COLORS.dark.border,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
-    position: "relative",
-    gap: 3,
-  },
-  bagIcon: {
-    fontSize: 22,
-  },
-  bagName: {
-    fontSize: 9,
-    color: COLORS.dark.textMuted,
-    fontFamily: "Inter_500Medium",
-    textAlign: "center",
-  },
-  bagQtyBadge: {
+  actionCorner: {
     position: "absolute",
-    top: 5,
-    right: 5,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: COLORS.dark.accent,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 3,
+    width: 8,
+    height: 8,
+    borderWidth: 2,
+    borderColor: "rgba(255,255,255,0.4)",
   },
-  bagQty: {
-    fontSize: 9,
-    fontFamily: "Inter_700Bold",
-    color: COLORS.dark.bg,
-  },
-  attackBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    backgroundColor: COLORS.dark.danger,
-    borderRadius: 12,
-    paddingVertical: 14,
-    marginTop: 4,
-  },
-  attackBtnText: {
+  actionCornerTL: { top: 4, left: 4, borderRightWidth: 0, borderBottomWidth: 0 },
+  actionCornerTR: { top: 4, right: 4, borderLeftWidth: 0, borderBottomWidth: 0 },
+  actionBtnText: {
     fontSize: 14,
     fontFamily: "Inter_700Bold",
-    color: COLORS.dark.bg,
+    color: "#fff",
+    letterSpacing: 2.5,
   },
 });
