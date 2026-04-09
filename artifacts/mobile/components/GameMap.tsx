@@ -336,7 +336,12 @@ function updateSpots(spots){
       spotMarkers[spot.id].setIcon(icon);
     } else {
       var m=L.marker(ll,{icon:icon,zIndexOffset:100});
-      (function(sid){m.on('click',function(e){L.DomEvent.stopPropagation(e);send({type:'SPOT_PRESS',spotId:sid})})})(spot.id);
+      (function(sid){
+        m.on('click',function(e){L.DomEvent.stopPropagation(e);send({type:'SPOT_PRESS',spotId:sid})});
+        var _lp;
+        m.on('mousedown touchstart',function(e){_lp=setTimeout(function(){send({type:'SPOT_LONG_PRESS',spotId:sid})},500)});
+        m.on('mouseup touchend touchcancel click',function(){clearTimeout(_lp)});
+      })(spot.id);
       m.addTo(map);spotMarkers[spot.id]=m;
     }
     var color=SPOT_COLOR[spot.type]||C.accent;
@@ -635,6 +640,7 @@ interface GameMapProps {
   activeCollection?: { spotId: string; progress: number } | null;
   theme?: "light" | "dark";
   onSpotPress: (spotId: string) => void;
+  onSpotLongPress?: (spotId: string) => void;
   onUserPress: (userId: string) => void;
   onMapPress: () => void;
 }
@@ -650,6 +656,7 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
   activeCollection,
   theme = "dark",
   onSpotPress,
+  onSpotLongPress,
   onUserPress,
   onMapPress,
 }, ref) {
@@ -717,13 +724,15 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
         setMapReady(true);
       } else if (data.type === "SPOT_PRESS") {
         onSpotPress(data.spotId);
+      } else if (data.type === "SPOT_LONG_PRESS") {
+        onSpotLongPress?.(data.spotId);
       } else if (data.type === "USER_PRESS") {
         onUserPress(data.userId);
       } else if (data.type === "MAP_PRESS") {
         onMapPress();
       }
     } catch {}
-  }, [onSpotPress, onUserPress, onMapPress]);
+  }, [onSpotPress, onSpotLongPress, onUserPress, onMapPress]);
 
   return (
     <WebView

@@ -1,13 +1,15 @@
-import React, { useCallback, useEffect, useMemo, useRef } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Platform, StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
 import * as Location from "expo-location";
+import * as Haptics from "expo-haptics";
 import { Feather, Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useGame } from "@/context/GameContext";
+import { InventoryItem, Spot, useGame } from "@/context/GameContext";
 import { GameMap, GameMapHandle } from "@/components/GameMap";
 import { CombatButtons } from "@/components/CombatButtons";
 import { InventoryButton } from "@/components/InventoryButton";
+import { ItemDetailModal } from "@/components/ItemDetailModal";
 import { UserProfileHUD } from "@/components/UserProfileHUD";
 import { MedalsStrip } from "@/components/MedalsStrip";
 import { EmojiBar, EMOJI_BAR_HEIGHT } from "@/components/EmojiBar";
@@ -33,6 +35,10 @@ export default function MapScreen() {
   const colorScheme = useColorScheme();
   const theme = colorScheme === "light" ? "light" : "dark";
 
+  const [mapDetailSpot, setMapDetailSpot] = useState<Spot | null>(null);
+  const [inventoryDetailSpot, setInventoryDetailSpot] = useState<Spot | null>(null);
+  const [inventoryDetailItem, setInventoryDetailItem] = useState<InventoryItem | null>(null);
+
   const {
     spots,
     nearbyUsers,
@@ -41,6 +47,7 @@ export default function MapScreen() {
     selectedInventorySpot,
     selectSpot,
     selectUser,
+    selectInventorySpot,
     userLocation,
     setUserLocation,
     userProfile,
@@ -150,6 +157,17 @@ export default function MapScreen() {
     selectUser(null);
   }, [selectSpot, selectUser]);
 
+  const handleSpotLongPress = useCallback(
+    (spotId: string) => {
+      const spot = spots.find((s) => s.id === spotId);
+      if (!spot) return;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      mapRef.current?.centerOn(spot.latitude, spot.longitude);
+      setMapDetailSpot(spot);
+    },
+    [spots]
+  );
+
   // X button on a spot: mark as manually unfocused to suppress auto-refocus until next radius exit+entry
   const handleUnfocusSpot = useCallback(() => {
     manuallyUnfocusedRef.current = selectedSpot?.id ?? null;
@@ -180,6 +198,7 @@ export default function MapScreen() {
         activeCollection={activeCollection ? { spotId: activeCollection.spotId, progress: activeCollection.progress } : null}
         theme={theme}
         onSpotPress={handleSpotPress}
+        onSpotLongPress={handleSpotLongPress}
         onUserPress={handleUserPress}
         onMapPress={handleMapPress}
       />
@@ -242,6 +261,45 @@ export default function MapScreen() {
       <InventoryButton
         insets={{ bottom: bottomInset }}
         extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
+        onSpotDetail={(spot) => setInventoryDetailSpot(spot)}
+        onItemDetail={(item) => setInventoryDetailItem(item)}
+      />
+
+      {/* Map overlay detail modal (long press on spot) */}
+      <ItemDetailModal
+        visible={!!mapDetailSpot}
+        mode="map"
+        spot={mapDetailSpot ?? undefined}
+        onClose={() => setMapDetailSpot(null)}
+        onClaim={() => {
+          if (mapDetailSpot) {
+            selectSpot(mapDetailSpot);
+          }
+          setMapDetailSpot(null);
+        }}
+      />
+
+      {/* Inventory detail modal — spot */}
+      <ItemDetailModal
+        visible={!!inventoryDetailSpot}
+        mode="inventory"
+        spot={inventoryDetailSpot ?? undefined}
+        onClose={() => setInventoryDetailSpot(null)}
+        onClaim={() => {
+          if (inventoryDetailSpot) {
+            selectInventorySpot(inventoryDetailSpot);
+          }
+          setInventoryDetailSpot(null);
+        }}
+      />
+
+      {/* Inventory detail modal — item */}
+      <ItemDetailModal
+        visible={!!inventoryDetailItem}
+        mode="inventory"
+        item={inventoryDetailItem ?? undefined}
+        onClose={() => setInventoryDetailItem(null)}
+        onClaim={() => setInventoryDetailItem(null)}
       />
 
       {selectedUser && (

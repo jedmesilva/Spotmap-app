@@ -83,11 +83,13 @@ function SpotCard({
   cardWidth,
   isSelected,
   onSelect,
+  onDetail,
 }: {
   spot: Spot;
   cardWidth: number;
   isSelected: boolean;
   onSelect: (spot: Spot) => void;
+  onDetail?: (spot: Spot) => void;
 }) {
   const C = useColors();
   const SPOT_COLORS: Record<string, string> = {
@@ -99,7 +101,7 @@ function SpotCard({
   const color = SPOT_COLORS[spot.type] ?? C.accent;
   return (
     <Pressable
-      onPress={() => onSelect(spot)}
+      onPress={() => { onDetail ? onDetail(spot) : onSelect(spot); }}
       style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, width: cardWidth })}
     >
       <View
@@ -142,11 +144,11 @@ function SpotCard({
   );
 }
 
-function ItemCard({ item, cardWidth }: { item: InventoryItem; cardWidth: number }) {
+function ItemCard({ item, cardWidth, onDetail }: { item: InventoryItem; cardWidth: number; onDetail?: (item: InventoryItem) => void }) {
   const C = useColors();
   const color = ITEM_COLORS[item.type] ?? C.accent;
   return (
-    <View style={{ width: cardWidth }}>
+    <Pressable style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, width: cardWidth })} onPress={() => onDetail?.(item)}>
       <View style={[styles.gridCard, { backgroundColor: C.surface, borderColor: C.border + "44", borderWidth: 1.5 }]}>
         <View style={[styles.gridCardIcon, { backgroundColor: color + "18" }]}>
           <Feather name={ITEM_ICONS[item.type] as any ?? "package"} size={20} color={color} />
@@ -161,18 +163,20 @@ function ItemCard({ item, cardWidth }: { item: InventoryItem; cardWidth: number 
           </View>
         )}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 interface InventoryButtonProps {
   insets: { bottom: number };
   extraBottomOffset?: number;
+  onSpotDetail?: (spot: Spot) => void;
+  onItemDetail?: (item: InventoryItem) => void;
 }
 
 const SNAP_RATIO = 0; // full screen
 
-export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButtonProps) {
+export function InventoryButton({ insets, extraBottomOffset = 0, onSpotDetail, onItemDetail }: InventoryButtonProps) {
   const C = useColors();
   const { userProfile, collectedSpots, selectedInventorySpot, selectInventorySpot } = useGame();
   const sheetInsets = useSafeAreaInsets();
@@ -384,6 +388,7 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
                         selectInventorySpot(selectedInventorySpot?.id === s.id ? null : s);
                         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       }}
+                      onDetail={onSpotDetail}
                     />
                   ))}
                 </View>
@@ -400,7 +405,7 @@ export function InventoryButton({ insets, extraBottomOffset = 0 }: InventoryButt
                 </View>
                 <View style={styles.grid}>
                   {bagItems.map((item) => (
-                    <ItemCard key={item.id} item={item} cardWidth={cardWidth} />
+                    <ItemCard key={item.id} item={item} cardWidth={cardWidth} onDetail={onItemDetail} />
                   ))}
                 </View>
               </>
