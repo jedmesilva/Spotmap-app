@@ -193,7 +193,7 @@ export function CombatButtons({
       doAction();
       holdTimer.current = setInterval(() => {
         doAction();
-      }, 280);
+      }, 80);
     }, 480);
   };
 
