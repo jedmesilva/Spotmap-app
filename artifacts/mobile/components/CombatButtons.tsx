@@ -552,25 +552,20 @@ export function CombatButtons({
                   : (SPOT_ICONS[(slot as Spot).type]         ?? "package"))
               : null;
 
+            const slotLabel = slot
+              ? (mode === "use"
+                  ? (ITEM_LABELS[(slot as InventoryItem).type] ?? "Item")
+                  : (SPOT_LABELS[(slot as Spot).type] ?? "Slot"))
+              : null;
+
             return (
               <View key={mode} style={styles.modeRow}>
+                {/* Unified mode card: left = switch mode, right = pick item */}
                 <TouchableOpacity
-                  style={[styles.slotBtn, {
-                    backgroundColor: slot ? slotColor + "20" : C.surface,
-                    borderColor:     slot ? slotColor + "88" : C.border,
-                  }]}
-                  onPress={() => setPickerMode(mode)}
-                  activeOpacity={0.75}
-                >
-                  {slotIcon
-                    ? <Feather name={slotIcon as any} size={14} color={slotColor} />
-                    : <Feather name="plus" size={12} color={C.textMuted} />
-                  }
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.modeBtn, {
-                    backgroundColor: isActive ? C.accent + "20" : "transparent",
-                    borderColor:     isActive ? C.accent + "88" : C.border,
+                  style={[styles.modeCard, {
+                    backgroundColor: isActive ? C.accent + "18" : C.surface,
+                    borderColor:     isActive ? C.accent        : C.border,
+                    shadowColor:     isActive ? C.accent        : "transparent",
                   }]}
                   onPress={() => {
                     setActiveMode(mode);
@@ -578,10 +573,40 @@ export function CombatButtons({
                   }}
                   activeOpacity={0.75}
                 >
-                  <Feather name={cfg.icon as any} size={11} color={isActive ? C.accent : C.textMuted} />
-                  <Text style={[styles.modeLabel, { color: isActive ? C.accent : C.textMuted }]}>
-                    {cfg.label}
-                  </Text>
+                  {/* Mode side */}
+                  <View style={styles.modeCardLeft}>
+                    <Feather name={cfg.icon as any} size={16} color={isActive ? C.accent : C.textMuted} />
+                    <Text style={[styles.modeCardLabel, { color: isActive ? C.accent : C.textMuted }]}>
+                      {cfg.label}
+                    </Text>
+                  </View>
+
+                  {/* Divider */}
+                  <View style={[styles.modeCardDivider, { backgroundColor: isActive ? C.accent + "44" : C.border }]} />
+
+                  {/* Item slot side */}
+                  <TouchableOpacity
+                    style={styles.modeCardSlot}
+                    onPress={() => setPickerMode(mode)}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 4, right: 12 }}
+                  >
+                    {slotIcon ? (
+                      <>
+                        <Feather name={slotIcon as any} size={13} color={slotColor} />
+                        <Text style={[styles.modeCardSlotLabel, { color: slotColor }]} numberOfLines={1}>
+                          {slotLabel}
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Feather name="plus" size={13} color={C.textMuted} />
+                        <Text style={[styles.modeCardSlotLabel, { color: C.textMuted }]}>
+                          Equipar
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
                 </TouchableOpacity>
               </View>
             );
@@ -669,29 +694,47 @@ const styles = StyleSheet.create({
   modeRow: {
     flexDirection: "row",
     alignItems:    "center",
-    gap:           5,
   },
-  slotBtn: {
-    width:          28,
-    height:         28,
-    borderRadius:   14,
-    borderWidth:    1.5,
-    alignItems:     "center",
-    justifyContent: "center",
-  },
-  modeBtn: {
+
+  modeCard: {
     flexDirection:  "row",
     alignItems:     "center",
-    gap:            4,
-    paddingHorizontal: 9,
-    paddingVertical:   5,
-    borderRadius:   12,
+    borderRadius:   14,
     borderWidth:    1.5,
+    overflow:       "hidden",
+    shadowOpacity:  0.35,
+    shadowRadius:   8,
+    shadowOffset:   { width: 0, height: 0 },
+    elevation:      4,
   },
-  modeLabel: {
-    fontSize:      10,
+  modeCardLeft: {
+    flexDirection:  "row",
+    alignItems:     "center",
+    gap:            6,
+    paddingHorizontal: 12,
+    paddingVertical:   10,
+  },
+  modeCardLabel: {
+    fontSize:      13,
     fontFamily:    "Inter_700Bold",
-    letterSpacing: 0.8,
+    letterSpacing: 0.9,
+  },
+  modeCardDivider: {
+    width:  1,
+    height: 22,
+  },
+  modeCardSlot: {
+    flexDirection:  "row",
+    alignItems:     "center",
+    gap:            5,
+    paddingHorizontal: 10,
+    paddingVertical:   10,
+    maxWidth:       110,
+  },
+  modeCardSlotLabel: {
+    fontSize:      11,
+    fontFamily:    "Inter_700Bold",
+    letterSpacing: 0.4,
   },
 
   // Outer wrapper: sized to the ring so layout reserves full ring space
