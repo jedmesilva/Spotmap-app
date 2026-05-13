@@ -76,14 +76,12 @@ const ITEM_LABELS: Record<string, string> = {
   barrier:      "BARREIRA",
 };
 
-const TOUCH_AREA  = 160;
 const BTN_SIZE    = 68;
+const RING_SIZE   = 110; // ring around the button (free-aim indicator)
+const TOUCH_PAD   = 26;  // extra invisible touch area around button
 const CONE_DEG    = 40;
 
-function calcBearing(
-  fromLat: number, fromLon: number,
-  toLat:   number, toLon:   number
-): number {
+function calcBearing(fromLat: number, fromLon: number, toLat: number, toLon: number): number {
   const φ1 = (fromLat * Math.PI) / 180;
   const φ2 = (toLat   * Math.PI) / 180;
   const Δλ = ((toLon - fromLon) * Math.PI) / 180;
@@ -94,22 +92,6 @@ function calcBearing(
 
 function angleDiff(a: number, b: number): number {
   return Math.abs(((a - b + 540) % 360) - 180);
-}
-
-function ArrowIndicator({ color }: { color: string }) {
-  return (
-    <View style={{ alignItems: "center", paddingTop: 2 }}>
-      <View style={{
-        width: 0, height: 0,
-        borderLeftWidth: 8,  borderRightWidth: 8,
-        borderBottomWidth: 14,
-        borderLeftColor:   "transparent",
-        borderRightColor:  "transparent",
-        borderBottomColor: color,
-      }} />
-      <View style={{ width: 3, height: 16, backgroundColor: color, marginTop: -1 }} />
-    </View>
-  );
 }
 
 interface CombatButtonsProps {
@@ -146,7 +128,7 @@ export function CombatButtons({
     useSubstance,
   } = useGame();
 
-  // ── Mode & item selection ─────────────────────────────────────────────────
+  // ── Mode & item selection ────────────────────────────────────────────────
   const [activeMode, setActiveMode] = useState<ActionMode>("atk");
   const [pickerMode, setPickerMode] = useState<ActionMode | null>(null);
   const [atkItem,  setAtkItem]  = useState<Spot | null>(null);
@@ -159,22 +141,47 @@ export function CombatButtons({
     if (activeMode === "use")  selectInventorySpot(null);
   }, [activeMode, atkItem, farmItem]);
 
-  // ── Joystick state ────────────────────────────────────────────────────────
-  const [isDragging,    setIsDragging]    = useState(false);
-  const [freeAimTarget, setFreeAimTarget] = useState<{ userId?: string; spotId?: string } | null>(null);
+  // ── Free-aim state ───────────────────────────────────────────────────────
+  const [isAiming,      setIsAiming]      = useState(false);
+  const [hasAimTarget,  setHasAimTarget]  = useState(false);
 
-  const isDraggingRef    = useRef(false);
-  const freeAimTargetRef = useRef<{ userId?: string; spotId?: string } | null>(null);
-  const hasLockedTarget  = useRef(false);
+  const isAimingRef       = useRef(false);
+  const aimTargetRef      = useRef<{ userId?: string; spotId?: string } | null>(null);
+  const hasLockedTarget   = useRef(false);
 
-  const dragAngleAnim   = useRef(new RNAnimated.Value(0)).current;
-  const joystickVisible = useRef(new RNAnimated.Value(0)).current;
+  // Animated values
+  const btnScale    = useRef(new RNAnimated.Value(1)).current;
+  const btnY        = useRef(new RNAnimated.Value(0)).current;
+  const ringOpacity = useRef(new RNAnimated.Value(0)).current;
+  const ringRotate  = useRef(new RNAnimated.Value(0)).current;
+  const bottomAnim  = useRef(new RNAnimated.Value(extraBottomOffset)).current;
 
-  // Keep locked-target ref in sync
+  useEffect(() => {
+    RNAnimated.spring(bottomAnim, { toValue: extraBottomOffset, useNativeDriver: false, tension: 70, friction: 11 }).start();
+  }, [extraBottomOffset]);
+
   useEffect(() => {
     hasLockedTarget.current = !!(selectedUser || selectedSpot);
   }, [selectedUser, selectedSpot]);
 
+  // ── Refs to avoid stale closures ─────────────────────────────────────────
+  const activeModeRef    = useRef(activeMode);
+  const atkItemRef       = useRef(atkItem);
+  const farmItemRef      = useRef(farmItem);
+  const useItemRef       = useRef(useItem);
+  const onAttackRef      = useRef(onAttack);
+  const onFreeAimFireRef = useRef(onFreeAimFire);
+  const useSubstanceRef  = useRef(useSubstance);
+
+  useEffect(() => { activeModeRef.current    = activeMode;    }, [activeMode]);
+  useEffect(() => { atkItemRef.current       = atkItem;       }, [atkItem]);
+  useEffect(() => { farmItemRef.current      = farmItem;      }, [farmItem]);
+  useEffect(() => { useItemRef.current       = useItem;       }, [useItem]);
+  useEffect(() => { onAttackRef.current      = onAttack;      }, [onAttack]);
+  useEffect(() => { onFreeAimFireRef.current = onFreeAimFire; }, [onFreeAimFire]);
+  useEffect(() => { useSubstanceRef.current  = useSubstance;  }, [useSubstance]);
+
+  // ── Target cone detection ─────────────────────────────────────────────────
   const findTargetInCone = (aimAngle: number) => {
     if (!userLocation) return null;
     let best: { userId?: string; spotId?: string } | null = null;
@@ -197,15 +204,7 @@ export function CombatButtons({
     return best;
   };
 
-  // ── Button animation ──────────────────────────────────────────────────────
-  const btnScale   = useRef(new RNAnimated.Value(1)).current;
-  const btnY       = useRef(new RNAnimated.Value(0)).current;
-  const bottomAnim = useRef(new RNAnimated.Value(extraBottomOffset)).current;
-
-  useEffect(() => {
-    RNAnimated.spring(bottomAnim, { toValue: extraBottomOffset, useNativeDriver: false, tension: 70, friction: 11 }).start();
-  }, [extraBottomOffset]);
-
+  // ── Fire animations ───────────────────────────────────────────────────────
   const animateFire = () => {
     RNAnimated.parallel([
       RNAnimated.sequence([
@@ -221,24 +220,9 @@ export function CombatButtons({
     ]).start();
   };
 
-  // ── Active-mode refs (avoid stale closures in PanResponder) ──────────────
-  const activeModeRef       = useRef(activeMode);
-  const atkItemRef          = useRef(atkItem);
-  const farmItemRef         = useRef(farmItem);
-  const useItemRef          = useRef(useItem);
-  const onAttackRef         = useRef(onAttack);
-  const onFreeAimFireRef    = useRef(onFreeAimFire);
-  const useSubstanceRef     = useRef(useSubstance);
-
-  useEffect(() => { activeModeRef.current       = activeMode;    }, [activeMode]);
-  useEffect(() => { atkItemRef.current          = atkItem;       }, [atkItem]);
-  useEffect(() => { farmItemRef.current         = farmItem;      }, [farmItem]);
-  useEffect(() => { useItemRef.current          = useItem;       }, [useItem]);
-  useEffect(() => { onAttackRef.current         = onAttack;      }, [onAttack]);
-  useEffect(() => { onFreeAimFireRef.current    = onFreeAimFire; }, [onFreeAimFire]);
-  useEffect(() => { useSubstanceRef.current     = useSubstance;  }, [useSubstance]);
-
-  const doAction = () => {
+  // ── Actions ───────────────────────────────────────────────────────────────
+  // Fire at locked target (onAttack callback)
+  const doLockedAction = () => {
     animateFire();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     const mode = activeModeRef.current;
@@ -251,9 +235,18 @@ export function CombatButtons({
     }
   };
 
-  // ── Long-press timers ─────────────────────────────────────────────────────
+  // Fire at free-aim target (current aim direction)
+  const doFreeAimAction = () => {
+    const target = aimTargetRef.current;
+    if (!target) return;
+    animateFire();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    onFreeAimFireRef.current?.(target.userId ?? null, target.spotId ?? null);
+  };
+
+  // ── Long-press / fire timers ──────────────────────────────────────────────
   const holdTimer  = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pressTimer = useRef<ReturnType<typeof setTimeout>  | null>(null);
   const isHolding  = useRef(false);
   const pressStart = useRef(0);
   const MIN_TAP_MS = 80;
@@ -261,23 +254,24 @@ export function CombatButtons({
   const stopTimers = () => {
     if (pressTimer.current) { clearTimeout(pressTimer.current);  pressTimer.current = null; }
     if (holdTimer.current)  { clearInterval(holdTimer.current);  holdTimer.current  = null; }
+    isHolding.current = false;
   };
 
-  const showJoystick = () => {
-    isDraggingRef.current = true;
-    setIsDragging(true);
-    RNAnimated.spring(joystickVisible, { toValue: 1, useNativeDriver: true, tension: 160, friction: 8 }).start();
+  const showRing = () => {
+    isAimingRef.current = true;
+    setIsAiming(true);
+    RNAnimated.spring(ringOpacity, { toValue: 1, useNativeDriver: true, tension: 180, friction: 8 }).start();
   };
 
-  const hideJoystick = () => {
-    isDraggingRef.current = false;
-    setIsDragging(false);
-    freeAimTargetRef.current = null;
-    setFreeAimTarget(null);
-    RNAnimated.timing(joystickVisible, { toValue: 0, duration: 160, useNativeDriver: true }).start();
+  const hideRing = () => {
+    isAimingRef.current = false;
+    setIsAiming(false);
+    aimTargetRef.current = null;
+    setHasAimTarget(false);
+    RNAnimated.timing(ringOpacity, { toValue: 0, duration: 180, useNativeDriver: true }).start();
   };
 
-  // ── Main PanResponder ─────────────────────────────────────────────────────
+  // ── PanResponder ──────────────────────────────────────────────────────────
   const mainPan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -285,61 +279,64 @@ export function CombatButtons({
 
       onPanResponderGrant: () => {
         pressStart.current = Date.now();
-        btnScale.setValue(0.92);
-        isHolding.current = false;
+        isHolding.current  = false;
+        RNAnimated.spring(btnScale, { toValue: 0.9, useNativeDriver: true, tension: 200, friction: 10 }).start();
 
-        // Start long-press timer (works for both locked-target and free-aim)
+        // Long-press: always available (locked or free)
         pressTimer.current = setTimeout(() => {
-          if (isDraggingRef.current) return; // joystick mode took over
-          isHolding.current = true;
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-          doAction();
-          holdTimer.current = setInterval(doAction, 80);
+          if (!isAimingRef.current) {
+            // Locked target long-press
+            isHolding.current = true;
+            doLockedAction();
+            holdTimer.current = setInterval(doLockedAction, 80);
+          }
         }, 480);
       },
 
       onPanResponderMove: (_, gs) => {
         const mag = Math.hypot(gs.dx, gs.dy);
 
-        // Activate joystick only when there's no locked target and dragging > 15px
-        if (mag > 15 && !hasLockedTarget.current) {
-          if (!isDraggingRef.current) {
-            stopTimers();
-            isHolding.current = false;
-            showJoystick();
-          }
+        // Only activate free-aim when no locked target and dragging > 12px
+        if (mag > 12 && !hasLockedTarget.current) {
+          // Calculate compass angle: up = North (0°), right = East (90°)
           const angle = ((Math.atan2(gs.dx, -gs.dy) * 180) / Math.PI + 360) % 360;
-          dragAngleAnim.setValue(angle);
+          ringRotate.setValue(angle);
+
+          if (!isAimingRef.current) {
+            // Cancel long-press timer, switch to free-aim mode
+            stopTimers();
+            showRing();
+            // Start continuous fire immediately in free-aim mode
+            doFreeAimAction();
+            holdTimer.current = setInterval(doFreeAimAction, 80);
+          }
+
+          // Update aim target
           const target = findTargetInCone(angle);
-          freeAimTargetRef.current = target;
-          setFreeAimTarget(target);
+          aimTargetRef.current = target;
+          setHasAimTarget(!!target);
         }
       },
 
       onPanResponderRelease: () => {
-        stopTimers();
         RNAnimated.spring(btnScale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 10 }).start();
 
-        if (isDraggingRef.current) {
-          const target = freeAimTargetRef.current;
-          if (target) {
-            animateFire();
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            onFreeAimFireRef.current?.(target.userId ?? null, target.spotId ?? null);
-          }
-          hideJoystick();
+        if (isAimingRef.current) {
+          // Free-aim mode: stop on release
+          stopTimers();
+          hideRing();
         } else {
+          // Locked target: tap or hold release
+          stopTimers();
           const elapsed = Date.now() - pressStart.current;
-          if (!isHolding.current && elapsed >= MIN_TAP_MS) doAction();
-          isHolding.current = false;
+          if (elapsed >= MIN_TAP_MS) doLockedAction();
         }
       },
 
       onPanResponderTerminate: () => {
-        stopTimers();
         RNAnimated.spring(btnScale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 10 }).start();
-        if (isDraggingRef.current) hideJoystick();
-        isHolding.current = false;
+        stopTimers();
+        if (isAimingRef.current) hideRing();
       },
     })
   ).current;
@@ -366,8 +363,8 @@ export function CombatButtons({
     return "zap";
   })();
 
-  const arrowColor = freeAimTarget ? "#ff4444" : "rgba(255,255,255,0.75)";
-  const ringColor  = freeAimTarget ? "#ff444488" : "rgba(255,255,255,0.15)";
+  const ringColor   = hasAimTarget ? "#ff5533" : "rgba(255,255,255,0.25)";
+  const pointerColor = hasAimTarget ? "#ff5533" : "rgba(255,255,255,0.8)";
 
   const atkItems  = collectedSpots;
   const farmItems = collectedSpots;
@@ -415,10 +412,15 @@ export function CombatButtons({
                             borderColor:     selected ? color : C.border,
                             backgroundColor: selected ? color + "18" : C.surface,
                           }]}
-                          onPress={() => { setUseItem(item); setPickerMode(null); setActiveMode("use"); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                          onPress={() => {
+                            setUseItem(item);
+                            setPickerMode(null);
+                            setActiveMode("use");
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }}
                         >
                           <View style={[styles.pickerIcon, { backgroundColor: color + "22" }]}>
-                            <Feather name={ITEM_ICONS[item.type] as any ?? "package"} size={18} color={color} />
+                            <Feather name={(ITEM_ICONS[item.type] ?? "package") as any} size={18} color={color} />
                           </View>
                           <View style={{ flex: 1 }}>
                             <Text style={[styles.pickerRowName, { color: C.text }]}>{item.name}</Text>
@@ -451,7 +453,7 @@ export function CombatButtons({
                           }}
                         >
                           <View style={[styles.pickerIcon, { backgroundColor: color + "22" }]}>
-                            <Feather name={SPOT_ICONS[spot.type] as any ?? "package"} size={18} color={color} />
+                            <Feather name={(SPOT_ICONS[spot.type] ?? "package") as any} size={18} color={color} />
                           </View>
                           <View style={{ flex: 1 }}>
                             <Text style={[styles.pickerRowName, { color: C.text }]} numberOfLines={1}>{spot.title}</Text>
@@ -469,7 +471,7 @@ export function CombatButtons({
         </Pressable>
       </Modal>
 
-      {/* Main container */}
+      {/* Main layout */}
       <RNAnimated.View
         style={[styles.container, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}
       >
@@ -481,13 +483,13 @@ export function CombatButtons({
             const slot     = getSlotForMode(mode);
             const slotColor = slot
               ? (mode === "use"
-                  ? ITEM_COLORS[(slot as InventoryItem).type] ?? C.purple
-                  : SPOT_COLORS[(slot as Spot).type] ?? C.accent)
+                  ? (ITEM_COLORS[(slot as InventoryItem).type] ?? C.purple)
+                  : (SPOT_COLORS[(slot as Spot).type] ?? C.accent))
               : C.textMuted;
             const slotIcon = slot
               ? (mode === "use"
-                  ? ITEM_ICONS[(slot as InventoryItem).type] ?? "package"
-                  : SPOT_ICONS[(slot as Spot).type] ?? "package")
+                  ? (ITEM_ICONS[(slot as InventoryItem).type] ?? "package")
+                  : (SPOT_ICONS[(slot as Spot).type]         ?? "package"))
               : null;
 
             return (
@@ -510,7 +512,10 @@ export function CombatButtons({
                     backgroundColor: isActive ? C.accent + "20" : "transparent",
                     borderColor:     isActive ? C.accent + "88" : C.border,
                   }]}
-                  onPress={() => { setActiveMode(mode); Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); }}
+                  onPress={() => {
+                    setActiveMode(mode);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
                   activeOpacity={0.75}
                 >
                   <Feather name={cfg.icon as any} size={11} color={isActive ? C.accent : C.textMuted} />
@@ -523,39 +528,33 @@ export function CombatButtons({
           })}
         </View>
 
-        {/* Action button + joystick overlay */}
-        <View style={styles.btnWrapper} {...mainPan.panHandlers}>
+        {/* Action button */}
+        {/*
+          Layout trick: the visual button is BTN_SIZE.
+          An invisible "touch catcher" View extends TOUCH_PAD in all directions
+          via negative margin/absolute — captures the pan gesture without
+          changing where the button appears on screen.
+        */}
+        <View style={styles.btnOuter}>
 
-          {/* Joystick ring */}
+          {/* Free-aim ring: orbiting pointer on a circle around the button.
+              The whole ring View rotates so the pointer (at 12-o'clock) tracks aim direction. */}
           <RNAnimated.View
-            style={[styles.joystickRing, { borderColor: ringColor, opacity: joystickVisible }]}
-            pointerEvents="none"
-          />
-
-          {/* Directional arrow */}
-          <RNAnimated.View
-            style={[styles.arrowContainer, {
-              opacity: joystickVisible,
-              transform: [{
-                rotate: dragAngleAnim.interpolate({
-                  inputRange:  [0, 360],
-                  outputRange: ["0deg", "360deg"],
-                }),
-              }],
-            }]}
+            style={[
+              styles.aimRingWrap,
+              { opacity: ringOpacity, transform: [{
+                  rotate: ringRotate.interpolate({ inputRange: [0, 360], outputRange: ["0deg", "360deg"] }),
+              }] },
+            ]}
             pointerEvents="none"
           >
-            <ArrowIndicator color={arrowColor} />
+            {/* Ring circle */}
+            <View style={[styles.aimRing, { borderColor: ringColor }]} />
+            {/* Pointer dot at 12-o'clock (North), rotates with ring */}
+            <View style={[styles.aimPointer, { backgroundColor: pointerColor }]} />
           </RNAnimated.View>
 
-          {/* Target hint */}
-          {isDragging && freeAimTarget && (
-            <View style={[styles.targetHint, { backgroundColor: "#ff444488", borderColor: "#ff4444" }]} pointerEvents="none">
-              <Feather name="crosshair" size={10} color="#fff" />
-            </View>
-          )}
-
-          {/* The visual button (touch handled by parent View) */}
+          {/* Visual button */}
           <RNAnimated.View
             style={[
               styles.btn,
@@ -563,11 +562,11 @@ export function CombatButtons({
                 backgroundColor: canAct ? btnColor + "22" : C.card,
                 borderColor:     canAct ? btnColor        : C.border,
                 borderWidth:     canAct ? 2 : 1.5,
-                transform:       [{ scale: btnScale }, { translateY: btnY }],
+                transform: [{ scale: btnScale }, { translateY: btnY }],
               },
               canAct && {
                 shadowColor:   btnColor,
-                shadowOpacity: 0.5,
+                shadowOpacity: 0.55,
                 shadowRadius:  14,
                 elevation:     10,
               },
@@ -583,6 +582,9 @@ export function CombatButtons({
               </View>
             )}
           </RNAnimated.View>
+
+          {/* Invisible touch-catcher — same center as button, extends TOUCH_PAD outwards */}
+          <View style={styles.touchCatcher} {...mainPan.panHandlers} />
         </View>
       </RNAnimated.View>
     </>
@@ -591,77 +593,81 @@ export function CombatButtons({
 
 const styles = StyleSheet.create({
   container: {
-    position: "absolute",
-    right: 16,
-    flexDirection: "column",
-    alignItems: "flex-end",
-    gap: 8,
-    zIndex: 20,
+    position:       "absolute",
+    right:          16,
+    flexDirection:  "column",
+    alignItems:     "flex-end",
+    gap:            8,
+    zIndex:         20,
   },
   modeList: {
-    gap: 6,
+    gap:        6,
     alignItems: "flex-end",
   },
   modeRow: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
+    alignItems:    "center",
+    gap:           5,
   },
   slotBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    alignItems: "center",
+    width:          28,
+    height:         28,
+    borderRadius:   14,
+    borderWidth:    1.5,
+    alignItems:     "center",
     justifyContent: "center",
   },
   modeBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+    flexDirection:  "row",
+    alignItems:     "center",
+    gap:            4,
     paddingHorizontal: 9,
-    paddingVertical: 5,
-    borderRadius: 12,
-    borderWidth: 1.5,
+    paddingVertical:   5,
+    borderRadius:   12,
+    borderWidth:    1.5,
   },
   modeLabel: {
-    fontSize: 10,
-    fontFamily: "Inter_700Bold",
+    fontSize:      10,
+    fontFamily:    "Inter_700Bold",
     letterSpacing: 0.8,
   },
-  // Wrapper gives extra touch area for joystick drag
-  btnWrapper: {
-    width:  TOUCH_AREA,
-    height: TOUCH_AREA,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  joystickRing: {
-    position:    "absolute",
-    width:       TOUCH_AREA - 10,
-    height:      TOUCH_AREA - 10,
-    borderRadius:(TOUCH_AREA - 10) / 2,
-    borderWidth: 1.5,
-    borderStyle: "dashed",
-  },
-  arrowContainer: {
-    position:       "absolute",
-    width:          TOUCH_AREA,
-    height:         TOUCH_AREA,
+
+  // Outer wrapper: just enough to contain the absolute-positioned ring + touch-catcher
+  btnOuter: {
+    width:          BTN_SIZE,
+    height:         BTN_SIZE,
     alignItems:     "center",
-    justifyContent: "flex-start",
-  },
-  targetHint: {
-    position:     "absolute",
-    top:          10,
-    right:        10,
-    width:        20,
-    height:       20,
-    borderRadius: 10,
-    borderWidth:  1.5,
-    alignItems:   "center",
     justifyContent: "center",
   },
+
+  // Ring sits absolutely centered on the button, larger than it
+  aimRingWrap: {
+    position:   "absolute",
+    width:      RING_SIZE,
+    height:     RING_SIZE,
+    alignItems: "center",
+    // Center over the button
+    left:   -(RING_SIZE - BTN_SIZE) / 2,
+    top:    -(RING_SIZE - BTN_SIZE) / 2,
+  },
+  aimRing: {
+    position:     "absolute",
+    width:        RING_SIZE,
+    height:       RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    borderWidth:  1.5,
+    borderStyle:  "dashed",
+  },
+  // Pointer at 12-o'clock within aimRingWrap
+  aimPointer: {
+    position:     "absolute",
+    top:          2,
+    left:         RING_SIZE / 2 - 5,
+    width:        10,
+    height:       10,
+    borderRadius: 5,
+  },
+
   btn: {
     width:          BTN_SIZE,
     height:         BTN_SIZE,
@@ -676,26 +682,37 @@ const styles = StyleSheet.create({
     gap:            3,
   },
   btnLabel: {
-    fontSize:   9,
-    fontFamily: "Inter_700Bold",
+    fontSize:      9,
+    fontFamily:    "Inter_700Bold",
     letterSpacing: 0.8,
   },
   badge: {
-    position:       "absolute",
-    top:            -5,
-    right:          -5,
-    minWidth:       18,
-    height:         18,
-    borderRadius:   9,
-    borderWidth:    1.5,
-    alignItems:     "center",
-    justifyContent: "center",
+    position:          "absolute",
+    top:               -5,
+    right:             -5,
+    minWidth:          18,
+    height:            18,
+    borderRadius:      9,
+    borderWidth:       1.5,
+    alignItems:        "center",
+    justifyContent:    "center",
     paddingHorizontal: 3,
   },
   badgeText: {
     fontSize:   9,
     fontFamily: "Inter_700Bold",
   },
+
+  // Touch-catcher is bigger than the button by TOUCH_PAD on all sides
+  touchCatcher: {
+    position:     "absolute",
+    left:         -TOUCH_PAD,
+    top:          -TOUCH_PAD,
+    right:        -TOUCH_PAD,
+    bottom:       -TOUCH_PAD,
+    borderRadius: (BTN_SIZE + TOUCH_PAD * 2) / 2,
+  },
+
   // Modal
   modalBackdrop: {
     flex:            1,
@@ -710,14 +727,14 @@ const styles = StyleSheet.create({
     maxHeight:    420,
   },
   pickerTitle: {
-    fontSize:   16,
-    fontFamily: "Inter_700Bold",
+    fontSize:      16,
+    fontFamily:    "Inter_700Bold",
     letterSpacing: 0.5,
-    marginBottom: 2,
+    marginBottom:  2,
   },
   pickerSub: {
-    fontSize:   12,
-    fontFamily: "Inter_400Regular",
+    fontSize:     12,
+    fontFamily:   "Inter_400Regular",
     marginBottom: 16,
   },
   pickerList: {
@@ -750,14 +767,14 @@ const styles = StyleSheet.create({
     marginTop:     1,
   },
   pickerQty: {
-    fontSize:   11,
-    fontFamily: "Inter_700Bold",
+    fontSize:    11,
+    fontFamily:  "Inter_700Bold",
     marginRight: 4,
   },
   emptyText: {
-    fontSize:    13,
-    fontFamily:  "Inter_400Regular",
-    textAlign:   "center",
+    fontSize:       13,
+    fontFamily:     "Inter_400Regular",
+    textAlign:      "center",
     paddingVertical: 24,
   },
 });
