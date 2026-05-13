@@ -545,8 +545,12 @@ export function CombatButtons({
         */}
         <View style={styles.btnOuter}>
 
-          {/* Free-aim ring: orbiting pointer on a circle around the button.
-              The whole ring View rotates so the pointer (at 12-o'clock) tracks aim direction. */}
+          {/* Idle ring: always visible dashed border at low opacity */}
+          <View style={styles.aimRingWrap} pointerEvents="none">
+            <View style={[styles.aimRing, { borderColor: C.border }]} />
+          </View>
+
+          {/* Active ring: pointer + brighter ring while aiming */}
           <RNAnimated.View
             style={[
               styles.aimRingWrap,
@@ -556,9 +560,7 @@ export function CombatButtons({
             ]}
             pointerEvents="none"
           >
-            {/* Ring circle */}
             <View style={[styles.aimRing, { borderColor: ringColor }]} />
-            {/* Pointer dot at 12-o'clock (North), rotates with ring */}
             <View style={[styles.aimPointer, { backgroundColor: pointerColor }]} />
           </RNAnimated.View>
 
@@ -640,23 +642,22 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
   },
 
-  // Outer wrapper: just enough to contain the absolute-positioned ring + touch-catcher
+  // Outer wrapper: sized to the ring so layout reserves full ring space
   btnOuter: {
-    width:          BTN_SIZE,
-    height:         BTN_SIZE,
+    width:          RING_SIZE,
+    height:         RING_SIZE,
     alignItems:     "center",
     justifyContent: "center",
   },
 
-  // Ring sits absolutely centered on the button, larger than it
+  // Ring fills the outer wrapper exactly — no negative offsets needed
   aimRingWrap: {
     position:   "absolute",
     width:      RING_SIZE,
     height:     RING_SIZE,
     alignItems: "center",
-    // Center over the button
-    left:   -(RING_SIZE - BTN_SIZE) / 2,
-    top:    -(RING_SIZE - BTN_SIZE) / 2,
+    left:       0,
+    top:        0,
   },
   aimRing: {
     position:     "absolute",
@@ -711,14 +712,14 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
   },
 
-  // Touch-catcher is bigger than the button by TOUCH_PAD on all sides
+  // Touch-catcher covers the full ring area (btnOuter is now RING_SIZE)
   touchCatcher: {
     position:     "absolute",
-    left:         -TOUCH_PAD,
-    top:          -TOUCH_PAD,
-    right:        -TOUCH_PAD,
-    bottom:       -TOUCH_PAD,
-    borderRadius: (BTN_SIZE + TOUCH_PAD * 2) / 2,
+    left:         0,
+    top:          0,
+    right:        0,
+    bottom:       0,
+    borderRadius: RING_SIZE / 2,
   },
 
   // Modal
