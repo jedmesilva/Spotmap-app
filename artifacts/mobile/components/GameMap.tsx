@@ -94,14 +94,45 @@ var playerProfile=null;var playerCollectingData=null;
 var playerUsingItem=null;var playerUseTimeout=null;
 var playerAimTarget=null;var aimLine=null;
 function removeAimLine(){if(aimLine){map.removeLayer(aimLine);aimLine=null;}}
+
+// Build quadratic-bezier sample points in container-pixel space, return as LatLngs.
+// The curve starts at the chevron tip (offset 31 px from avatar in aim direction)
+// and uses a control point along that same direction so the line exits tangentially.
+function aimBezierLatLngs(toMarker){
+  var playerPt=map.latLngToContainerPoint(playerDot.getLatLng());
+  var aRad=playerAimAngle*Math.PI/180;
+  // chevron tip: 31 px from avatar center; -4 corrects the icon-anchor Y offset
+  var fromPt={x:playerPt.x+31*Math.sin(aRad), y:playerPt.y-4-31*Math.cos(aRad)};
+  var toPt=map.latLngToContainerPoint(toMarker.getLatLng());
+  var dx=toPt.x-fromPt.x, dy=toPt.y-fromPt.y;
+  var dist=Math.sqrt(dx*dx+dy*dy);
+  // Control point: extend from the chevron in its aim direction
+  // Clamp so extreme angles don't overshoot the target
+  var cpDist=Math.min(dist*0.55, 140);
+  var cp={x:fromPt.x+Math.sin(aRad)*cpDist, y:fromPt.y-Math.cos(aRad)*cpDist};
+  // Sample the bezier – more steps for longer lines
+  var steps=Math.max(14, Math.floor(dist/12));
+  var lls=[];
+  for(var i=0;i<=steps;i++){
+    var t=i/steps, it=1-t;
+    var px=it*it*fromPt.x+2*it*t*cp.x+t*t*toPt.x;
+    var py=it*it*fromPt.y+2*it*t*cp.y+t*t*toPt.y;
+    lls.push(map.containerPointToLatLng(L.point(px,py)));
+  }
+  return lls;
+}
+
 function updateAimLine(){
   if(!playerAimTarget||!playerDot){removeAimLine();return;}
   var toMarker=playerAimTarget.userId?userMarkers[playerAimTarget.userId]:spotMarkers[playerAimTarget.spotId];
   if(!toMarker){removeAimLine();return;}
-  var fromLL=playerDot.getLatLng();var toLL=toMarker.getLatLng();
-  if(aimLine){aimLine.setLatLngs([fromLL,toLL]);}
-  else{aimLine=L.polyline([fromLL,toLL],{color:C.danger,weight:2,opacity:0.9,dashArray:'8,5',className:'aim-line'}).addTo(map);}
+  var lls=aimBezierLatLngs(toMarker);
+  if(aimLine){aimLine.setLatLngs(lls);}
+  else{aimLine=L.polyline(lls,{color:C.danger,weight:2,opacity:0.9,dashArray:'8,5',className:'aim-line'}).addTo(map);}
 }
+
+// Keep the bezier accurate when the map pans or zooms (pixel↔LatLng changes)
+map.on('move zoom',function(){if(playerAimTarget)updateAimLine();});
 var USER_VIRTUAL_RADIUS=40;
 function radiusToZoom(lat,radiusMeters){
   var zoom=Math.log2(156543.03392*Math.cos(lat*Math.PI/180)*200/radiusMeters);
