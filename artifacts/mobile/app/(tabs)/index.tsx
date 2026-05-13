@@ -370,8 +370,11 @@ export default function MapScreen() {
           } else if (spotId) {
             fireInventorySpot(spotId);
             mapRef.current?.fireAtSpot(spotId, itemType);
+          } else {
+            fireInventorySpot(null);
           }
         }}
+        onAimAngleChange={(angle) => mapRef.current?.setAimAngle(angle)}
         extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
       />
     </View>

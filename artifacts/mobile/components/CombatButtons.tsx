@@ -98,6 +98,7 @@ interface CombatButtonsProps {
   insets: { bottom: number };
   onAttack?: () => void;
   onFreeAimFire?: (userId: string | null, spotId: string | null) => void;
+  onAimAngleChange?: (angle: number | null) => void;
   canAttack?: boolean;
   miningClicks?: number;
   extraBottomOffset?: number;
@@ -110,6 +111,7 @@ export function CombatButtons({
   insets,
   onAttack,
   onFreeAimFire,
+  onAimAngleChange,
   canAttack = false,
   miningClicks = 0,
   extraBottomOffset = 0,
@@ -235,13 +237,12 @@ export function CombatButtons({
     }
   };
 
-  // Fire at free-aim target (current aim direction)
+  // Fire in free-aim direction — always fires, target may be null (shoots in the wind)
   const doFreeAimAction = () => {
     const target = aimTargetRef.current;
-    if (!target) return;
     animateFire();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    onFreeAimFireRef.current?.(target.userId ?? null, target.spotId ?? null);
+    onFreeAimFireRef.current?.(target?.userId ?? null, target?.spotId ?? null);
   };
 
   // ── Long-press / fire timers ──────────────────────────────────────────────
@@ -257,9 +258,13 @@ export function CombatButtons({
     isHolding.current = false;
   };
 
-  const showRing = () => {
+  const onAimAngleChangeRef = useRef(onAimAngleChange);
+  useEffect(() => { onAimAngleChangeRef.current = onAimAngleChange; }, [onAimAngleChange]);
+
+  const showRing = (angle: number) => {
     isAimingRef.current = true;
     setIsAiming(true);
+    onAimAngleChangeRef.current?.(angle);
     RNAnimated.spring(ringOpacity, { toValue: 1, useNativeDriver: true, tension: 180, friction: 8 }).start();
   };
 
@@ -268,7 +273,14 @@ export function CombatButtons({
     setIsAiming(false);
     aimTargetRef.current = null;
     setHasAimTarget(false);
+    onAimAngleChangeRef.current?.(null);
     RNAnimated.timing(ringOpacity, { toValue: 0, duration: 180, useNativeDriver: true }).start();
+  };
+
+  // Unified action: fire at locked target or free-aim (even with no target in cone)
+  const doAction = () => {
+    if (hasLockedTarget.current) doLockedAction();
+    else doFreeAimAction();
   };
 
   // ── PanResponder ──────────────────────────────────────────────────────────
@@ -282,36 +294,34 @@ export function CombatButtons({
         isHolding.current  = false;
         RNAnimated.spring(btnScale, { toValue: 0.9, useNativeDriver: true, tension: 200, friction: 10 }).start();
 
-        // Long-press: always available (locked or free)
+        // Long-press always starts, works for both locked and free-aim
         pressTimer.current = setTimeout(() => {
-          if (!isAimingRef.current) {
-            // Locked target long-press
-            isHolding.current = true;
-            doLockedAction();
-            holdTimer.current = setInterval(doLockedAction, 80);
-          }
+          if (isAimingRef.current) return; // joystick already took over
+          isHolding.current = true;
+          doAction();
+          holdTimer.current = setInterval(doAction, 80);
         }, 480);
       },
 
       onPanResponderMove: (_, gs) => {
         const mag = Math.hypot(gs.dx, gs.dy);
 
-        // Only activate free-aim when no locked target and dragging > 12px
+        // Joystick: drag > 12px, no locked target
         if (mag > 12 && !hasLockedTarget.current) {
-          // Calculate compass angle: up = North (0°), right = East (90°)
           const angle = ((Math.atan2(gs.dx, -gs.dy) * 180) / Math.PI + 360) % 360;
           ringRotate.setValue(angle);
 
           if (!isAimingRef.current) {
-            // Cancel long-press timer, switch to free-aim mode
+            // First drag: cancel long-press, activate joystick + start firing
             stopTimers();
-            showRing();
-            // Start continuous fire immediately in free-aim mode
+            showRing(angle);
             doFreeAimAction();
             holdTimer.current = setInterval(doFreeAimAction, 80);
+          } else {
+            // Already joysticking: just update direction on map
+            onAimAngleChangeRef.current?.(angle);
           }
 
-          // Update aim target
           const target = findTargetInCone(angle);
           aimTargetRef.current = target;
           setHasAimTarget(!!target);
@@ -320,16 +330,15 @@ export function CombatButtons({
 
       onPanResponderRelease: () => {
         RNAnimated.spring(btnScale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 10 }).start();
+        stopTimers();
 
         if (isAimingRef.current) {
-          // Free-aim mode: stop on release
-          stopTimers();
           hideRing();
         } else {
-          // Locked target: tap or hold release
-          stopTimers();
+          // Short tap: fire once (locked or free)
           const elapsed = Date.now() - pressStart.current;
-          if (elapsed >= MIN_TAP_MS) doLockedAction();
+          if (!isHolding.current && elapsed >= MIN_TAP_MS) doAction();
+          isHolding.current = false;
         }
       },
 
@@ -337,6 +346,7 @@ export function CombatButtons({
         RNAnimated.spring(btnScale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 10 }).start();
         stopTimers();
         if (isAimingRef.current) hideRing();
+        isHolding.current = false;
       },
     })
   ).current;

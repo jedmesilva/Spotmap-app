@@ -11,6 +11,7 @@ export interface GameMapHandle {
   mineHit: (spotId: string, clickCount: number) => void;
   fireAtSpot: (spotId: string, itemType: string) => void;
   fireAtUser: (userId: string, itemType: string) => void;
+  setAimAngle: (angle: number | null) => void;
 }
 
 const USER_RADIUS = 60;
@@ -385,7 +386,7 @@ function updateUsers(users){
   applyUserVisibility();
 }
 
-function playerIcon(profile,collecting){
+function playerIcon(profile,collecting,aimAngle){
   var shadow=C.shadow;
   var hColor=getHColor(profile.health,profile.maxHealth);
   var badgeRow=collecting
@@ -393,10 +394,26 @@ function playerIcon(profile,collecting){
     :'';
   var totalH=collecting?133:110;
   var anchorY=collecting?27+23:27;
+  // Aim chevron: orbits around avatar at aimAngle degrees (0=N, 90=E, 180=S, 270=W)
+  var chevron='';
+  if(aimAngle!=null){
+    var aRad=aimAngle*Math.PI/180;
+    var dist=31;
+    var cx=23+dist*Math.sin(aRad);
+    var cy=23-dist*Math.cos(aRad);
+    chevron='<div style="position:absolute;left:'+cx+'px;top:'+cy+'px;'
+      +'transform:translate(-50%,-50%) rotate('+aimAngle+'deg);'
+      +'color:'+C.accent+';font-size:13px;line-height:1;'
+      +'text-shadow:0 0 8px '+C.accent+',0 0 4px #000;'
+      +'pointer-events:none;transition:transform 0.05s linear;">▲</div>';
+  }
   var html=''
     +'<div style="width:170px;display:flex;flex-direction:column;align-items:center;">'
       +badgeRow
-      +'<div style="width:46px;height:46px;border-radius:50%;border:2.5px solid '+C.accent+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 14px '+C.accent+'88;overflow:hidden;">'+avatarHtml(profile.avatar,42)+'</div>'
+      +'<div style="position:relative;width:46px;height:46px;">'
+        +'<div style="width:46px;height:46px;border-radius:50%;border:2.5px solid '+C.accent+';background:'+C.bgSec+';display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 14px '+C.accent+'88;overflow:hidden;">'+avatarHtml(profile.avatar,42)+'</div>'
+        +chevron
+      +'</div>'
       +'<div style="margin-top:4px;color:'+C.text+';font-size:12px;font-weight:700;letter-spacing:0.3px;text-align:center;'+shadow+';">Você</div>'
       +'<div style="margin-top:2px;display:flex;align-items:center;justify-content:center;gap:4px;">'
         +heartSvg(hColor)
@@ -410,6 +427,7 @@ function playerIcon(profile,collecting){
 }
 
 var lastPlayerLat=null,lastPlayerLng=null;
+var playerAimAngle=null;
 
 function updatePlayer(loc,radius,profile,collecting){
   if(!loc)return;
@@ -426,7 +444,7 @@ function updatePlayer(loc,radius,profile,collecting){
     map.panTo(ll,{animate:true,duration:0.6,easeLinearity:0.5});
   }
   if(playerCircle){map.removeLayer(playerCircle);playerCircle=null;}
-  var icon=profile?playerIcon(profile,collecting||null):L.divIcon({
+  var icon=profile?playerIcon(profile,collecting||null,playerAimAngle):L.divIcon({
     html:'<div style="width:16px;height:16px;border-radius:50%;background:'+C.accent+';border:2.5px solid white;box-shadow:0 0 10px '+C.accent+'99;"></div>',
     className:'',iconSize:[16,16],iconAnchor:[8,8]
   });
@@ -478,6 +496,11 @@ window.receiveFromRN=function(jsonStr){
       showUserFire(d.userId,d.itemType);
     } else if(d.type==='SET_THEME'){
       window.applyTheme(d.isDark);
+    } else if(d.type==='AIM_ANGLE'){
+      playerAimAngle=d.angle;
+      if(playerDot&&playerProfile){
+        playerDot.setIcon(playerIcon(playerProfile,playerCollectingData||null,playerAimAngle));
+      }
     }
   }catch(e){}
 };
@@ -699,6 +722,9 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
     },
     fireAtUser: (userId: string, itemType: string) => {
       inject({ type: "USER_FIRE", userId, itemType });
+    },
+    setAimAngle: (angle: number | null) => {
+      inject({ type: "AIM_ANGLE", angle });
     },
   }));
 
