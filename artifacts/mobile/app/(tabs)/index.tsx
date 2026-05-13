@@ -379,6 +379,7 @@ export default function MapScreen() {
         }}
         onAimAngleChange={(angle) => mapRef.current?.setAimAngle(angle)}
         onUseItem={(itemType) => mapRef.current?.setPlayerUseItem(itemType)}
+        onAimTarget={(target) => mapRef.current?.setAimTarget(target)}
         extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
       />
     </View>

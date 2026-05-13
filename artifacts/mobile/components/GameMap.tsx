@@ -14,6 +14,7 @@ export interface GameMapHandle {
   setAimAngle: (angle: number | null) => void;
   setPlayerUseItem: (itemType: string) => void;
   fireInDirection: (itemType: string) => void;
+  setAimTarget: (target: { userId?: string; spotId?: string } | null) => void;
 }
 
 const USER_RADIUS = 60;
@@ -35,6 +36,8 @@ html,body,#map{width:100%;height:100%;background:#040801;overflow:hidden}
 @keyframes emojiBurst{0%{transform:translate(-50%,-50%) scale(1.6);opacity:1}100%{transform:translate(-50%,-50%) scale(3);opacity:0}}
 @keyframes mineFloat{0%{transform:translateX(-50%) translateY(0) scale(1);opacity:1}60%{transform:translateX(-50%) translateY(-28px) scale(1.15);opacity:1}100%{transform:translateX(-50%) translateY(-50px) scale(0.9);opacity:0}}
 @keyframes minePulse{0%{transform:scale(1)}30%{transform:scale(1.28)}70%{transform:scale(0.95)}100%{transform:scale(1)}}
+@keyframes aimDash{to{stroke-dashoffset:-14}}
+.aim-line{animation:aimDash 0.4s linear infinite;}
 </style>
 </head>
 <body>
@@ -89,6 +92,16 @@ var playerCollectingSpotId=null;
 var currentSpots=[];var currentUsers=[];var playerLoc=null;var mineableSpotId=null;
 var playerProfile=null;var playerCollectingData=null;
 var playerUsingItem=null;var playerUseTimeout=null;
+var playerAimTarget=null;var aimLine=null;
+function removeAimLine(){if(aimLine){map.removeLayer(aimLine);aimLine=null;}}
+function updateAimLine(){
+  if(!playerAimTarget||!playerDot){removeAimLine();return;}
+  var toMarker=playerAimTarget.userId?userMarkers[playerAimTarget.userId]:spotMarkers[playerAimTarget.spotId];
+  if(!toMarker){removeAimLine();return;}
+  var fromLL=playerDot.getLatLng();var toLL=toMarker.getLatLng();
+  if(aimLine){aimLine.setLatLngs([fromLL,toLL]);}
+  else{aimLine=L.polyline([fromLL,toLL],{color:C.danger,weight:2,opacity:0.9,dashArray:'8,5',className:'aim-line'}).addTo(map);}
+}
 var USER_VIRTUAL_RADIUS=40;
 function radiusToZoom(lat,radiusMeters){
   var zoom=Math.log2(156543.03392*Math.cos(lat*Math.PI/180)*200/radiusMeters);
@@ -417,11 +430,12 @@ function playerIcon(profile,collecting,aimAngle,usingItem){
     var dist=31;
     var cx=23+dist*Math.sin(aRad);
     var cy=23-dist*Math.cos(aRad);
+    var chColor=playerAimTarget?C.danger:C.accent;
     chevron='<div style="position:absolute;left:'+cx+'px;top:'+cy+'px;'
       +'transform:translate(-50%,-50%) rotate('+aimAngle+'deg);'
-      +'color:'+C.accent+';font-size:13px;line-height:1;'
-      +'text-shadow:0 0 8px '+C.accent+',0 0 4px #000;'
-      +'pointer-events:none;transition:transform 0.05s linear;">▲</div>';
+      +'color:'+chColor+';font-size:13px;line-height:1;'
+      +'text-shadow:0 0 8px '+chColor+',0 0 4px #000;'
+      +'pointer-events:none;transition:color 0.15s,text-shadow 0.15s,transform 0.05s linear;">▲</div>';
   }
   var html=''
     +'<div style="width:170px;display:flex;flex-direction:column;align-items:center;">'
@@ -475,6 +489,7 @@ function updatePlayer(loc,radius,profile,collecting){
     var el=playerDot.getElement();
     if(el){el.style.transition='transform 0.6s linear';}
   }
+  updateAimLine();
 }
 
 window.receiveFromRN=function(jsonStr){
@@ -517,6 +532,10 @@ window.receiveFromRN=function(jsonStr){
       if(playerDot&&playerProfile){
         playerDot.setIcon(playerIcon(playerProfile,playerCollectingData||null,playerAimAngle,playerUsingItem));
       }
+    } else if(d.type==='AIM_TARGET'){
+      playerAimTarget=d.target||null;
+      if(!playerAimTarget){removeAimLine();}else{updateAimLine();}
+      if(playerDot&&playerProfile){playerDot.setIcon(playerIcon(playerProfile,playerCollectingData||null,playerAimAngle,playerUsingItem));}
     } else if(d.type==='FIRE_IN_DIRECTION'){
       showDirectionFire(d.itemType);
     } else if(d.type==='PLAYER_USE_ITEM'){
@@ -767,6 +786,9 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
     },
     fireInDirection: (itemType: string) => {
       inject({ type: "FIRE_IN_DIRECTION", itemType });
+    },
+    setAimTarget: (target: { userId?: string; spotId?: string } | null) => {
+      inject({ type: "AIM_TARGET", target });
     },
   }));
 

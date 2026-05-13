@@ -100,6 +100,7 @@ interface CombatButtonsProps {
   onFreeAimFire?: (userId: string | null, spotId: string | null) => void;
   onAimAngleChange?: (angle: number | null) => void;
   onUseItem?: (itemType: string) => void;
+  onAimTarget?: (target: { userId?: string; spotId?: string } | null) => void;
   canAttack?: boolean;
   miningClicks?: number;
   extraBottomOffset?: number;
@@ -114,6 +115,7 @@ export function CombatButtons({
   onFreeAimFire,
   onAimAngleChange,
   onUseItem,
+  onAimTarget,
   canAttack = false,
   miningClicks = 0,
   extraBottomOffset = 0,
@@ -177,6 +179,7 @@ export function CombatButtons({
   const onFreeAimFireRef = useRef(onFreeAimFire);
   const useSubstanceRef  = useRef(useSubstance);
   const onUseItemRef     = useRef(onUseItem);
+  const onAimTargetRef   = useRef(onAimTarget);
 
   useEffect(() => { activeModeRef.current    = activeMode;    }, [activeMode]);
   useEffect(() => { atkItemRef.current       = atkItem;       }, [atkItem]);
@@ -186,6 +189,7 @@ export function CombatButtons({
   useEffect(() => { onFreeAimFireRef.current = onFreeAimFire; }, [onFreeAimFire]);
   useEffect(() => { useSubstanceRef.current  = useSubstance;  }, [useSubstance]);
   useEffect(() => { onUseItemRef.current     = onUseItem;     }, [onUseItem]);
+  useEffect(() => { onAimTargetRef.current   = onAimTarget;   }, [onAimTarget]);
 
   // ── Target cone detection ─────────────────────────────────────────────────
   const findTargetInCone = (aimAngle: number) => {
@@ -272,6 +276,7 @@ export function CombatButtons({
     aimTargetRef.current = null;
     setHasAimTarget(false);
     onAimAngleChangeRef.current?.(null);
+    onAimTargetRef.current?.(null);
     RNAnimated.timing(ringOpacity, { toValue: 0, duration: 180, useNativeDriver: true }).start();
   };
 
@@ -303,6 +308,7 @@ export function CombatButtons({
           const target = findTargetInCone(angle);
           aimTargetRef.current = target;
           setHasAimTarget(!!target);
+          onAimTargetRef.current?.(target ?? null);
         }
       },
 
@@ -356,6 +362,7 @@ export function CombatButtons({
           const target = findTargetInCone(angle);
           aimTargetRef.current = target;
           setHasAimTarget(!!target);
+          onAimTargetRef.current?.(target ?? null);
         }
       },
 
