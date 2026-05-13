@@ -99,6 +99,7 @@ interface CombatButtonsProps {
   onAttack?: () => void;
   onFreeAimFire?: (userId: string | null, spotId: string | null) => void;
   onAimAngleChange?: (angle: number | null) => void;
+  onUseItem?: (itemType: string) => void;
   canAttack?: boolean;
   miningClicks?: number;
   extraBottomOffset?: number;
@@ -112,6 +113,7 @@ export function CombatButtons({
   onAttack,
   onFreeAimFire,
   onAimAngleChange,
+  onUseItem,
   canAttack = false,
   miningClicks = 0,
   extraBottomOffset = 0,
@@ -174,6 +176,7 @@ export function CombatButtons({
   const onAttackRef      = useRef(onAttack);
   const onFreeAimFireRef = useRef(onFreeAimFire);
   const useSubstanceRef  = useRef(useSubstance);
+  const onUseItemRef     = useRef(onUseItem);
 
   useEffect(() => { activeModeRef.current    = activeMode;    }, [activeMode]);
   useEffect(() => { atkItemRef.current       = atkItem;       }, [atkItem]);
@@ -182,6 +185,7 @@ export function CombatButtons({
   useEffect(() => { onAttackRef.current      = onAttack;      }, [onAttack]);
   useEffect(() => { onFreeAimFireRef.current = onFreeAimFire; }, [onFreeAimFire]);
   useEffect(() => { useSubstanceRef.current  = useSubstance;  }, [useSubstance]);
+  useEffect(() => { onUseItemRef.current     = onUseItem;     }, [onUseItem]);
 
   // ── Target cone detection ─────────────────────────────────────────────────
   const findTargetInCone = (aimAngle: number) => {
@@ -233,6 +237,7 @@ export function CombatButtons({
     } else if (mode === "use" && useItemRef.current) {
       if (SUBSTANCE_TYPES.includes(useItemRef.current.type as SubstanceType)) {
         useSubstanceRef.current(useItemRef.current.type as SubstanceType);
+        onUseItemRef.current?.(useItemRef.current.type);
       }
     }
   };

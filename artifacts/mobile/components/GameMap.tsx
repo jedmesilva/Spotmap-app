@@ -12,6 +12,7 @@ export interface GameMapHandle {
   fireAtSpot: (spotId: string, itemType: string) => void;
   fireAtUser: (userId: string, itemType: string) => void;
   setAimAngle: (angle: number | null) => void;
+  setPlayerUseItem: (itemType: string) => void;
 }
 
 const USER_RADIUS = 60;
@@ -86,6 +87,7 @@ var userCollectingSpot={};
 var playerCollectingSpotId=null;
 var currentSpots=[];var currentUsers=[];var playerLoc=null;var mineableSpotId=null;
 var playerProfile=null;var playerCollectingData=null;
+var playerUsingItem=null;var playerUseTimeout=null;
 var USER_VIRTUAL_RADIUS=40;
 function radiusToZoom(lat,radiusMeters){
   var zoom=Math.log2(156543.03392*Math.cos(lat*Math.PI/180)*200/radiusMeters);
@@ -142,6 +144,16 @@ function avatarHtml(avatar,size){
   return '<span>'+avatar+'</span>';
 }
 
+var USE_ITEM_EMOJI={flame_shield:'🔥',cryo_armor:'❄️',volt_ward:'⚡',antidote:'💊',barrier:'🛡️'};
+var USE_ITEM_LABEL={flame_shield:'ESCUDO FOGO',cryo_armor:'ARMADURA GELO',volt_ward:'PROTEÇÃO RAIO',antidote:'ANTÍDOTO',barrier:'BARREIRA'};
+function useBadge(itemType){
+  var emoji=USE_ITEM_EMOJI[itemType]||'✨';
+  var label=USE_ITEM_LABEL[itemType]||(itemType.toUpperCase());
+  return '<div style="display:inline-flex;align-items:center;gap:3px;border:1px solid '+C.rare+'88;border-radius:8px;padding:2px 7px;white-space:nowrap;overflow:hidden;background:'+C.bgSec+';">'
+    +'<span style="font-size:10px;">'+emoji+'</span>'
+    +'<span style="color:'+C.rare+';font-size:10px;font-weight:700;">'+label+'</span>'
+    +'</div>';
+}
 function collectBadge(progress){
   return '<div style="'
     +'position:relative;display:inline-flex;align-items:center;gap:3px;'
@@ -386,14 +398,17 @@ function updateUsers(users){
   applyUserVisibility();
 }
 
-function playerIcon(profile,collecting,aimAngle){
+function playerIcon(profile,collecting,aimAngle,usingItem){
   var shadow=C.shadow;
   var hColor=getHColor(profile.health,profile.maxHealth);
+  var hasBadge=collecting||usingItem;
   var badgeRow=collecting
     ?'<div style="display:flex;justify-content:center;margin-bottom:2px;">'+collectBadge(Math.round(collecting.progress))+'</div>'
-    :'';
-  var totalH=collecting?133:110;
-  var anchorY=collecting?27+23:27;
+    :usingItem
+      ?'<div style="display:flex;justify-content:center;margin-bottom:2px;">'+useBadge(usingItem)+'</div>'
+      :'';
+  var totalH=hasBadge?133:110;
+  var anchorY=hasBadge?27+23:27;
   // Aim chevron: orbits around avatar at aimAngle degrees (0=N, 90=E, 180=S, 270=W)
   var chevron='';
   if(aimAngle!=null){
@@ -444,7 +459,7 @@ function updatePlayer(loc,radius,profile,collecting){
     map.panTo(ll,{animate:true,duration:0.6,easeLinearity:0.5});
   }
   if(playerCircle){map.removeLayer(playerCircle);playerCircle=null;}
-  var icon=profile?playerIcon(profile,collecting||null,playerAimAngle):L.divIcon({
+  var icon=profile?playerIcon(profile,collecting||null,playerAimAngle,playerUsingItem):L.divIcon({
     html:'<div style="width:16px;height:16px;border-radius:50%;background:'+C.accent+';border:2.5px solid white;box-shadow:0 0 10px '+C.accent+'99;"></div>',
     className:'',iconSize:[16,16],iconAnchor:[8,8]
   });
@@ -499,8 +514,16 @@ window.receiveFromRN=function(jsonStr){
     } else if(d.type==='AIM_ANGLE'){
       if(d.angle!==null&&d.angle!==undefined){playerAimAngle=d.angle;}
       if(playerDot&&playerProfile){
-        playerDot.setIcon(playerIcon(playerProfile,playerCollectingData||null,playerAimAngle));
+        playerDot.setIcon(playerIcon(playerProfile,playerCollectingData||null,playerAimAngle,playerUsingItem));
       }
+    } else if(d.type==='PLAYER_USE_ITEM'){
+      playerUsingItem=d.itemType;
+      if(playerUseTimeout){clearTimeout(playerUseTimeout);}
+      playerUseTimeout=setTimeout(function(){
+        playerUsingItem=null;playerUseTimeout=null;
+        if(playerDot&&playerProfile){playerDot.setIcon(playerIcon(playerProfile,playerCollectingData||null,playerAimAngle,null));}
+      },1500);
+      if(playerDot&&playerProfile){playerDot.setIcon(playerIcon(playerProfile,playerCollectingData||null,playerAimAngle,playerUsingItem));}
     }
   }catch(e){}
 };
@@ -725,6 +748,9 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
     },
     setAimAngle: (angle: number | null) => {
       inject({ type: "AIM_ANGLE", angle });
+    },
+    setPlayerUseItem: (itemType: string) => {
+      inject({ type: "PLAYER_USE_ITEM", itemType });
     },
   }));
 
