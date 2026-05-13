@@ -281,7 +281,42 @@ export function CombatButtons({
     else doFreeAimAction();
   };
 
-  // ── PanResponder ──────────────────────────────────────────────────────────
+  // ── PanResponders ─────────────────────────────────────────────────────────
+
+  // RING pan: drag anywhere on the ring area → only aims, never fires
+  const ringPan = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder:  () => true,
+
+      onPanResponderGrant: () => {
+        // show ring immediately so user sees feedback
+        showRing(0);
+      },
+
+      onPanResponderMove: (_, gs) => {
+        const mag = Math.hypot(gs.dx, gs.dy);
+        if (mag > 4) {
+          const angle = ((Math.atan2(gs.dx, -gs.dy) * 180) / Math.PI + 360) % 360;
+          ringRotate.setValue(angle);
+          onAimAngleChangeRef.current?.(angle);
+          const target = findTargetInCone(angle);
+          aimTargetRef.current = target;
+          setHasAimTarget(!!target);
+        }
+      },
+
+      onPanResponderRelease: () => {
+        hideRing();
+      },
+
+      onPanResponderTerminate: () => {
+        hideRing();
+      },
+    })
+  ).current;
+
+  // BUTTON pan: tap = fire once, hold = fire continuously, drag = fire + aim
   const mainPan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -292,9 +327,8 @@ export function CombatButtons({
         isHolding.current  = false;
         RNAnimated.spring(btnScale, { toValue: 0.9, useNativeDriver: true, tension: 200, friction: 10 }).start();
 
-        // Long-press always starts, works for both locked and free-aim
+        // Long-press: start continuous fire
         pressTimer.current = setTimeout(() => {
-          if (isAimingRef.current) return; // joystick already took over
           isHolding.current = true;
           doAction();
           holdTimer.current = setInterval(doAction, 80);
@@ -304,19 +338,18 @@ export function CombatButtons({
       onPanResponderMove: (_, gs) => {
         const mag = Math.hypot(gs.dx, gs.dy);
 
-        // Joystick: drag > 12px, no locked target
+        // Drag > 12px while on button = aim + fire
         if (mag > 12 && !hasLockedTarget.current) {
           const angle = ((Math.atan2(gs.dx, -gs.dy) * 180) / Math.PI + 360) % 360;
           ringRotate.setValue(angle);
 
           if (!isAimingRef.current) {
-            // First drag: cancel long-press, activate joystick + start firing
+            // First drag: cancel hold timer, switch to continuous free-aim fire
             stopTimers();
             showRing(angle);
             doFreeAimAction();
             holdTimer.current = setInterval(doFreeAimAction, 80);
           } else {
-            // Already joysticking: just update direction on map
             onAimAngleChangeRef.current?.(angle);
           }
 
@@ -333,7 +366,7 @@ export function CombatButtons({
         if (isAimingRef.current) {
           hideRing();
         } else {
-          // Short tap: fire once (locked or free)
+          // Short tap: fire once
           const elapsed = Date.now() - pressStart.current;
           if (!isHolding.current && elapsed >= MIN_TAP_MS) doAction();
           isHolding.current = false;
@@ -545,8 +578,8 @@ export function CombatButtons({
         */}
         <View style={styles.btnOuter}>
 
-          {/* Idle ring: always visible dashed border at low opacity */}
-          <View style={styles.aimRingWrap} pointerEvents="none">
+          {/* Idle ring: always visible, drag here = only aim, no fire */}
+          <View style={styles.aimRingWrap} {...ringPan.panHandlers}>
             <View style={[styles.aimRing, { borderColor: C.border }]} />
           </View>
 
@@ -712,14 +745,14 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
   },
 
-  // Touch-catcher covers the full ring area (btnOuter is now RING_SIZE)
+  // Touch-catcher covers only the button center (not the ring area)
   touchCatcher: {
     position:     "absolute",
-    left:         0,
-    top:          0,
-    right:        0,
-    bottom:       0,
-    borderRadius: RING_SIZE / 2,
+    width:        BTN_SIZE,
+    height:       BTN_SIZE,
+    left:         (RING_SIZE - BTN_SIZE) / 2,
+    top:          (RING_SIZE - BTN_SIZE) / 2,
+    borderRadius: BTN_SIZE / 2,
   },
 
   // Modal
