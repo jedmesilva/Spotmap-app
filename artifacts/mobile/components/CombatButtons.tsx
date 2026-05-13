@@ -180,6 +180,10 @@ export function CombatButtons({
   const useSubstanceRef  = useRef(useSubstance);
   const onUseItemRef     = useRef(onUseItem);
   const onAimTargetRef   = useRef(onAimTarget);
+  // Props that change over time and are read inside PanResponder closures
+  const nearbyUsersRef   = useRef(nearbyUsers);
+  const freeAimSpotsRef  = useRef(freeAimSpots);
+  const userLocationRef  = useRef(userLocation);
 
   useEffect(() => { activeModeRef.current    = activeMode;    }, [activeMode]);
   useEffect(() => { atkItemRef.current       = atkItem;       }, [atkItem]);
@@ -190,24 +194,32 @@ export function CombatButtons({
   useEffect(() => { useSubstanceRef.current  = useSubstance;  }, [useSubstance]);
   useEffect(() => { onUseItemRef.current     = onUseItem;     }, [onUseItem]);
   useEffect(() => { onAimTargetRef.current   = onAimTarget;   }, [onAimTarget]);
+  useEffect(() => { nearbyUsersRef.current   = nearbyUsers;   }, [nearbyUsers]);
+  useEffect(() => { freeAimSpotsRef.current  = freeAimSpots;  }, [freeAimSpots]);
+  useEffect(() => { userLocationRef.current  = userLocation;  }, [userLocation]);
 
   // ── Target cone detection ─────────────────────────────────────────────────
+  // NOTE: This function is captured inside PanResponder (created once via useRef),
+  // so it must read from refs — never from direct closure values — to avoid stale data.
   const findTargetInCone = (aimAngle: number) => {
-    if (!userLocation) return null;
+    const loc   = userLocationRef.current;
+    const users = nearbyUsersRef.current;
+    const spots = freeAimSpotsRef.current;
+    if (!loc) return null;
     let best: { userId?: string; spotId?: string } | null = null;
     let bestDist = Infinity;
 
-    for (const u of nearbyUsers) {
-      const bearing = calcBearing(userLocation.latitude, userLocation.longitude, u.latitude, u.longitude);
+    for (const u of users) {
+      const bearing = calcBearing(loc.latitude, loc.longitude, u.latitude, u.longitude);
       if (angleDiff(bearing, aimAngle) <= CONE_DEG) {
-        const d = Math.hypot(u.latitude - userLocation.latitude, u.longitude - userLocation.longitude);
+        const d = Math.hypot(u.latitude - loc.latitude, u.longitude - loc.longitude);
         if (d < bestDist) { bestDist = d; best = { userId: u.id }; }
       }
     }
-    for (const s of freeAimSpots) {
-      const bearing = calcBearing(userLocation.latitude, userLocation.longitude, s.latitude, s.longitude);
+    for (const s of spots) {
+      const bearing = calcBearing(loc.latitude, loc.longitude, s.latitude, s.longitude);
       if (angleDiff(bearing, aimAngle) <= CONE_DEG) {
-        const d = Math.hypot(s.latitude - userLocation.latitude, s.longitude - userLocation.longitude);
+        const d = Math.hypot(s.latitude - loc.latitude, s.longitude - loc.longitude);
         if (d < bestDist) { bestDist = d; best = { spotId: s.id }; }
       }
     }

@@ -92,7 +92,7 @@ var playerCollectingSpotId=null;
 var currentSpots=[];var currentUsers=[];var playerLoc=null;var mineableSpotId=null;
 var playerProfile=null;var playerCollectingData=null;
 var playerUsingItem=null;var playerUseTimeout=null;
-var playerAimTarget=null;var aimLine=null;var playerAimAngle=null;
+var playerAimTarget=null;var aimLine=null;
 function removeAimLine(){if(aimLine){map.removeLayer(aimLine);aimLine=null;}}
 function updateAimLine(){
   if(!playerAimTarget||!playerDot){removeAimLine();return;}
@@ -457,6 +457,7 @@ function playerIcon(profile,collecting,aimAngle,usingItem){
 }
 
 var lastPlayerLat=null,lastPlayerLng=null;
+var playerAimAngle=0;
 
 function updatePlayer(loc,radius,profile,collecting){
   if(!loc)return;
@@ -527,7 +528,7 @@ window.receiveFromRN=function(jsonStr){
     } else if(d.type==='SET_THEME'){
       window.applyTheme(d.isDark);
     } else if(d.type==='AIM_ANGLE'){
-      playerAimAngle=d.angle!==undefined?d.angle:null;
+      if(d.angle!==null&&d.angle!==undefined){playerAimAngle=d.angle;}
       if(playerDot&&playerProfile){
         playerDot.setIcon(playerIcon(playerProfile,playerCollectingData||null,playerAimAngle,playerUsingItem));
       }
