@@ -427,7 +427,7 @@ function playerIcon(profile,collecting,aimAngle){
 }
 
 var lastPlayerLat=null,lastPlayerLng=null;
-var playerAimAngle=null;
+var playerAimAngle=0;
 
 function updatePlayer(loc,radius,profile,collecting){
   if(!loc)return;
@@ -497,7 +497,7 @@ window.receiveFromRN=function(jsonStr){
     } else if(d.type==='SET_THEME'){
       window.applyTheme(d.isDark);
     } else if(d.type==='AIM_ANGLE'){
-      playerAimAngle=d.angle;
+      if(d.angle!==null&&d.angle!==undefined){playerAimAngle=d.angle;}
       if(playerDot&&playerProfile){
         playerDot.setIcon(playerIcon(playerProfile,playerCollectingData||null,playerAimAngle));
       }
