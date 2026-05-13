@@ -212,17 +212,10 @@ export function CombatButtons({
 
   // ── Fire animations ───────────────────────────────────────────────────────
   const animateFire = () => {
-    RNAnimated.parallel([
-      RNAnimated.sequence([
-        RNAnimated.timing(btnScale, { toValue: 0.78, duration: 70, useNativeDriver: true }),
-        RNAnimated.timing(btnScale, { toValue: 1.08, duration: 70, useNativeDriver: true }),
-        RNAnimated.timing(btnScale, { toValue: 1,    duration: 60, useNativeDriver: true }),
-      ]),
-      RNAnimated.sequence([
-        RNAnimated.timing(btnY, { toValue: -8, duration: 70, useNativeDriver: true }),
-        RNAnimated.timing(btnY, { toValue:  2, duration: 70, useNativeDriver: true }),
-        RNAnimated.timing(btnY, { toValue:  0, duration: 60, useNativeDriver: true }),
-      ]),
+    RNAnimated.sequence([
+      RNAnimated.timing(btnScale, { toValue: 0.78, duration: 70, useNativeDriver: true }),
+      RNAnimated.timing(btnScale, { toValue: 1.08, duration: 70, useNativeDriver: true }),
+      RNAnimated.timing(btnScale, { toValue: 1,    duration: 60, useNativeDriver: true }),
     ]).start();
   };
 
@@ -577,7 +570,7 @@ export function CombatButtons({
                 backgroundColor: canAct ? btnColor + "22" : C.card,
                 borderColor:     canAct ? btnColor        : C.border,
                 borderWidth:     canAct ? 2 : 1.5,
-                transform: [{ scale: btnScale }, { translateY: btnY }],
+                transform: [{ scale: btnScale }],
               },
               canAct && {
                 shadowColor:   btnColor,
