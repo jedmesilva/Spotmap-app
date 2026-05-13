@@ -138,9 +138,11 @@ export function CombatButtons({
   // Main button animation
   const btnScale = useRef(new RNAnimated.Value(1)).current;
   const btnY     = useRef(new RNAnimated.Value(0)).current;
-  const holdTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isHolding = useRef(false);
+  const holdTimer   = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pressTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isHolding   = useRef(false);
+  const pressStart  = useRef(0);
+  const MIN_TAP_MS  = 80;
 
   const bottomAnim = useRef(new RNAnimated.Value(extraBottomOffset)).current;
   useEffect(() => {
@@ -182,6 +184,7 @@ export function CombatButtons({
   };
 
   const handlePressIn = () => {
+    pressStart.current = Date.now();
     btnScale.setValue(0.92);
     isHolding.current = false;
     pressTimer.current = setTimeout(() => {
@@ -190,7 +193,7 @@ export function CombatButtons({
       doAction();
       holdTimer.current = setInterval(() => {
         doAction();
-      }, 600);
+      }, 280);
     }, 480);
   };
 
@@ -198,7 +201,8 @@ export function CombatButtons({
     RNAnimated.spring(btnScale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 10 }).start();
     if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; }
     if (holdTimer.current)  { clearInterval(holdTimer.current);  holdTimer.current  = null; }
-    if (!isHolding.current) {
+    const elapsed = Date.now() - pressStart.current;
+    if (!isHolding.current && elapsed >= MIN_TAP_MS) {
       doAction();
     }
     isHolding.current = false;
