@@ -452,7 +452,7 @@ const styles = StyleSheet.create({
   container: {
     position: "absolute",
     right: 16,
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "flex-end",
     gap: 8,
     zIndex: 20,
@@ -460,8 +460,6 @@ const styles = StyleSheet.create({
   modeList: {
     gap: 6,
     alignItems: "flex-end",
-    justifyContent: "flex-end",
-    paddingBottom: 6,
   },
   modeRow: {
     flexDirection: "row",
