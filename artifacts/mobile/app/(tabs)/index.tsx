@@ -347,7 +347,7 @@ export default function MapScreen() {
 
       <CombatButtons
         insets={{ bottom: bottomInset }}
-        canAttack={!!selectedInventorySpot && (canMine || !!selectedUser)}
+        canAttack={canMine || !!selectedUser}
         miningClicks={miningClicks}
         onAttack={() => {
           fireInventorySpot(mineableSpotId);
@@ -359,7 +359,6 @@ export default function MapScreen() {
             mapRef.current?.fireAtSpot(mineableSpotId, itemType);
           }
         }}
-        onDefend={() => {}}
         extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
       />
     </View>

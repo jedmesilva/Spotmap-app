@@ -3,9 +3,12 @@ import * as Haptics from "expo-haptics";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated as RNAnimated,
-  PanResponder,
+  Modal,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -13,116 +16,63 @@ import {
   SPOT_DAMAGE,
   SubstanceType,
   SpotType,
+  Spot,
+  InventoryItem,
   useGame,
 } from "@/context/GameContext";
 import { useColors } from "@/hooks/useColors";
-import { RadialMenu, RadialSlot } from "@/components/RadialMenu";
 
-const LONG_PRESS_DELAY = 480;
-const SLOT_RADIUS = 105;
-const HOVER_THRESHOLD = 40;
-const MAX_RADIAL_SLOTS = 8;
+export type ActionMode = "atk" | "farm" | "use";
+
+const MODE_CONFIG: Record<ActionMode, { label: string; icon: string; desc: string }> = {
+  atk:  { label: "ATK",  icon: "zap",        desc: "Atacar jogador ou spot" },
+  farm: { label: "FARM", icon: "cpu",         desc: "Minerar spot selecionado" },
+  use:  { label: "USE",  icon: "plus-circle", desc: "Usar item em si mesmo" },
+};
 
 const SPOT_COLORS: Record<string, string> = {
   coupon: "#C97400",
-  money: "#5D8A20",
-  product: "#1A6B9A",
-  rare: "#7A5CB0",
+  money:  "#5D8A20",
+  product:"#1A6B9A",
+  rare:   "#7A5CB0",
 };
-
 const SPOT_ICONS: Record<string, string> = {
   coupon: "tag",
-  money: "dollar-sign",
-  product: "box",
-  rare: "star",
+  money:  "dollar-sign",
+  product:"box",
+  rare:   "star",
 };
-
 const SPOT_LABELS: Record<string, string> = {
   coupon: "CUPOM",
-  money: "DINHEIRO",
-  product: "PRODUTO",
-  rare: "RARO",
-};
-
-const ITEM_COLORS: Record<string, string> = {
-  flame_shield: "#7A5CB0",
-  cryo_armor: "#1A6B9A",
-  volt_ward: "#C97400",
-  antidote: "#5D8A20",
-  barrier: "#5D8A20",
-};
-
-const ITEM_ICONS: Record<string, string> = {
-  flame_shield: "shield",
-  cryo_armor: "shield",
-  volt_ward: "shield",
-  antidote: "plus-circle",
-  barrier: "shield",
-};
-
-const DEF_LABELS: Record<string, string> = {
-  flame_shield: "ESCUDO",
-  cryo_armor: "ARMADURA",
-  volt_ward: "PROTEÇÃO",
-  antidote: "ANTÍDOTO",
-  barrier: "BARREIRA",
-};
-
-const DEF_DESCRIPTIONS: Record<string, string> = {
-  flame_shield: "Imunidade ao próximo ataque de Fogo",
-  cryo_armor: "Imunidade ao próximo ataque de Gelo",
-  volt_ward: "Imunidade ao próximo ataque de Raio",
-  antidote: "Remove envenenamento ativo e cura",
-  barrier: "Absorve qualquer tipo de dano recebido",
-};
-
-const DEF_IMPACT: Record<string, string> = {
-  flame_shield: "+IMUN. FOGO",
-  cryo_armor: "+IMUN. GELO",
-  volt_ward: "+IMUN. RAIO",
-  antidote: "CURA VENENO",
-  barrier: "+50 ABSORÇÃO",
+  money:  "DINHEIRO",
+  product:"PRODUTO",
+  rare:   "RARO",
 };
 
 const SUBSTANCE_TYPES: SubstanceType[] = [
-  "flame_shield",
-  "cryo_armor",
-  "volt_ward",
-  "antidote",
-  "barrier",
+  "flame_shield","cryo_armor","volt_ward","antidote","barrier",
 ];
-
-function getSlotPositions(
-  center: { x: number; y: number },
-  count: number,
-  openLeft: boolean
-): { x: number; y: number }[] {
-  if (count === 0) return [];
-  const arcCenter = openLeft ? 225 : 315;
-  const spread = count === 1 ? 0 : Math.min(115, count * 28);
-  const startAngle = arcCenter - spread / 2;
-  const step = count > 1 ? spread / (count - 1) : 0;
-  return Array.from({ length: count }, (_, i) => {
-    const rad = ((startAngle + i * step) * Math.PI) / 180;
-    return {
-      x: center.x + SLOT_RADIUS * Math.cos(rad),
-      y: center.y + SLOT_RADIUS * Math.sin(rad),
-    };
-  });
-}
-
-function findHoveredSlot(
-  pos: { x: number; y: number },
-  positions: { x: number; y: number }[]
-): number | null {
-  let minDist = Infinity;
-  let minIdx: number | null = null;
-  positions.forEach((p, i) => {
-    const d = Math.sqrt((pos.x - p.x) ** 2 + (pos.y - p.y) ** 2);
-    if (d < minDist) { minDist = d; minIdx = i; }
-  });
-  return minDist <= HOVER_THRESHOLD ? minIdx : null;
-}
+const ITEM_COLORS: Record<string, string> = {
+  flame_shield: "#7A5CB0",
+  cryo_armor:   "#1A6B9A",
+  volt_ward:    "#C97400",
+  antidote:     "#5D8A20",
+  barrier:      "#5D8A20",
+};
+const ITEM_ICONS: Record<string, string> = {
+  flame_shield: "shield",
+  cryo_armor:   "shield",
+  volt_ward:    "shield",
+  antidote:     "plus-circle",
+  barrier:      "shield",
+};
+const ITEM_LABELS: Record<string, string> = {
+  flame_shield: "ESCUDO FOGO",
+  cryo_armor:   "ARMADURA GELO",
+  volt_ward:    "PROTEÇÃO RAIO",
+  antidote:     "ANTÍDOTO",
+  barrier:      "BARREIRA",
+};
 
 interface CombatButtonsProps {
   insets: { bottom: number };
@@ -136,7 +86,6 @@ interface CombatButtonsProps {
 export function CombatButtons({
   insets,
   onAttack,
-  onDefend,
   canAttack = false,
   miningClicks = 0,
   extraBottomOffset = 0,
@@ -149,7 +98,49 @@ export function CombatButtons({
     userProfile,
     selectInventorySpot,
     useSubstance,
+    fireInventorySpot,
   } = useGame();
+
+  const [activeMode, setActiveMode] = useState<ActionMode>("atk");
+  const [pickerMode, setPickerMode] = useState<ActionMode | null>(null);
+
+  // Selected item per mode
+  const [atkItem, setAtkItem]   = useState<Spot | null>(null);
+  const [farmItem, setFarmItem] = useState<Spot | null>(null);
+  const [useItem, setUseItem]   = useState<InventoryItem | null>(null);
+
+  // Keep selectedInventorySpot in sync with atkItem
+  useEffect(() => {
+    if (activeMode === "atk") {
+      selectInventorySpot(atkItem ?? null);
+    }
+  }, [atkItem, activeMode]);
+
+  useEffect(() => {
+    if (activeMode === "farm") {
+      selectInventorySpot(farmItem ?? null);
+    }
+  }, [farmItem, activeMode]);
+
+  useEffect(() => {
+    if (activeMode === "use") {
+      selectInventorySpot(null);
+    }
+  }, [activeMode]);
+
+  // When mode changes, sync inventory spot
+  useEffect(() => {
+    if (activeMode === "atk")  selectInventorySpot(atkItem ?? null);
+    if (activeMode === "farm") selectInventorySpot(farmItem ?? null);
+    if (activeMode === "use")  selectInventorySpot(null);
+  }, [activeMode]);
+
+  // Main button animation
+  const btnScale = useRef(new RNAnimated.Value(1)).current;
+  const btnY     = useRef(new RNAnimated.Value(0)).current;
+  const holdTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isHolding = useRef(false);
 
   const bottomAnim = useRef(new RNAnimated.Value(extraBottomOffset)).current;
   useEffect(() => {
@@ -161,445 +152,343 @@ export function CombatButtons({
     }).start();
   }, [extraBottomOffset]);
 
-  const atkScale = useRef(new RNAnimated.Value(1)).current;
-  const atkY = useRef(new RNAnimated.Value(0)).current;
-  const defScale = useRef(new RNAnimated.Value(1)).current;
-
-  const atkColor = selectedInventorySpot
-    ? (SPOT_COLORS[selectedInventorySpot.type] ?? C.accent)
-    : selectedUser ? C.danger : C.accent;
-
-  const atkIcon = selectedInventorySpot
-    ? (SPOT_ICONS[selectedInventorySpot.type] ?? "zap")
-    : "zap";
-
-  const atkLabel = selectedInventorySpot
-    ? (SPOT_LABELS[selectedInventorySpot.type] ?? selectedInventorySpot.type.toUpperCase())
-    : selectedUser ? "ATK" : "ATK";
-
-  const defColor = C.purple;
-
-  const animateAtk = () => {
+  const animateFire = () => {
     RNAnimated.parallel([
       RNAnimated.sequence([
-        RNAnimated.timing(atkScale, { toValue: 0.75, duration: 80, useNativeDriver: true }),
-        RNAnimated.timing(atkScale, { toValue: 1.1, duration: 80, useNativeDriver: true }),
-        RNAnimated.timing(atkScale, { toValue: 1, duration: 60, useNativeDriver: true }),
+        RNAnimated.timing(btnScale, { toValue: 0.78, duration: 70, useNativeDriver: true }),
+        RNAnimated.timing(btnScale, { toValue: 1.08, duration: 70, useNativeDriver: true }),
+        RNAnimated.timing(btnScale, { toValue: 1,    duration: 60, useNativeDriver: true }),
       ]),
       RNAnimated.sequence([
-        RNAnimated.timing(atkY, { toValue: -8, duration: 80, useNativeDriver: true }),
-        RNAnimated.timing(atkY, { toValue: 2, duration: 80, useNativeDriver: true }),
-        RNAnimated.timing(atkY, { toValue: 0, duration: 60, useNativeDriver: true }),
+        RNAnimated.timing(btnY, { toValue: -8, duration: 70, useNativeDriver: true }),
+        RNAnimated.timing(btnY, { toValue: 2,  duration: 70, useNativeDriver: true }),
+        RNAnimated.timing(btnY, { toValue: 0,  duration: 60, useNativeDriver: true }),
       ]),
     ]).start();
   };
 
-  const animateDef = () => {
-    RNAnimated.sequence([
-      RNAnimated.timing(defScale, { toValue: 0.75, duration: 80, useNativeDriver: true }),
-      RNAnimated.timing(defScale, { toValue: 1.1, duration: 80, useNativeDriver: true }),
-      RNAnimated.timing(defScale, { toValue: 1, duration: 60, useNativeDriver: true }),
-    ]).start();
+  const doAction = () => {
+    animateFire();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    if (activeMode === "atk" && atkItem) {
+      onAttack?.();
+    } else if (activeMode === "farm" && farmItem) {
+      onAttack?.();
+    } else if (activeMode === "use" && useItem) {
+      if (SUBSTANCE_TYPES.includes(useItem.type as SubstanceType)) {
+        useSubstance(useItem.type as SubstanceType);
+      }
+    }
   };
 
-  // ─── Refs to always-fresh values (solves stale closure inside PanResponder) ─
-  const canAttackRef = useRef(canAttack);
-  canAttackRef.current = canAttack;
-  const onAttackRef = useRef(onAttack);
-  onAttackRef.current = onAttack;
-  const onDefendRef = useRef(onDefend);
-  onDefendRef.current = onDefend;
-  const selectInventorySpotRef = useRef(selectInventorySpot);
-  selectInventorySpotRef.current = selectInventorySpot;
-  const useSubstanceRef = useRef(useSubstance);
-  useSubstanceRef.current = useSubstance;
-  const collectedSpotsRef = useRef(collectedSpots);
-  collectedSpotsRef.current = collectedSpots;
-  const userProfileRef = useRef(userProfile);
-  userProfileRef.current = userProfile;
-  const selectedUserRef = useRef(selectedUser);
-  selectedUserRef.current = selectedUser;
+  const handlePressIn = () => {
+    btnScale.setValue(0.92);
+    isHolding.current = false;
+    pressTimer.current = setTimeout(() => {
+      isHolding.current = true;
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      doAction();
+      holdTimer.current = setInterval(() => {
+        doAction();
+      }, 600);
+    }, 480);
+  };
 
-  // ─── ATK radial menu state ────────────────────────────────────────────────
-  const [atkMenuVisible, setAtkMenuVisible] = useState(false);
-  const [atkHoveredIndex, setAtkHoveredIndex] = useState<number | null>(null);
-  const [atkButtonCenter, setAtkButtonCenter] = useState({ x: 0, y: 0 });
+  const handlePressOut = () => {
+    RNAnimated.spring(btnScale, { toValue: 1, useNativeDriver: true, tension: 200, friction: 10 }).start();
+    if (pressTimer.current) { clearTimeout(pressTimer.current); pressTimer.current = null; }
+    if (holdTimer.current)  { clearInterval(holdTimer.current);  holdTimer.current  = null; }
+    if (!isHolding.current) {
+      doAction();
+    }
+    isHolding.current = false;
+  };
 
-  const atkMenuVisibleRef = useRef(false);
-  const atkIsLongPressRef = useRef(false);
-  const atkLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const atkHoveredIndexRef = useRef<number | null>(null);
-  const atkButtonCenterRef = useRef({ x: 0, y: 0 });
-  const atkSlotPositionsRef = useRef<{ x: number; y: number }[]>([]);
-  const atkSlotsRef = useRef<RadialSlot[]>([]);
-  const atkBtnRef = useRef<View>(null);
+  // Derived state for action button appearance
+  const canAct = (() => {
+    if (activeMode === "atk")  return !!atkItem && (!!selectedUser || canAttack);
+    if (activeMode === "farm") return !!farmItem && canAttack;
+    if (activeMode === "use")  return !!useItem;
+    return false;
+  })();
 
-  // ─── DEF radial menu state ────────────────────────────────────────────────
-  const [defMenuVisible, setDefMenuVisible] = useState(false);
-  const [defHoveredIndex, setDefHoveredIndex] = useState<number | null>(null);
-  const [defButtonCenter, setDefButtonCenter] = useState({ x: 0, y: 0 });
+  const btnColor = (() => {
+    if (activeMode === "atk")  return atkItem  ? (SPOT_COLORS[atkItem.type]  ?? C.accent) : C.accent;
+    if (activeMode === "farm") return farmItem ? (SPOT_COLORS[farmItem.type] ?? C.accent) : C.accent;
+    if (activeMode === "use")  return useItem  ? (ITEM_COLORS[useItem.type]  ?? C.purple) : C.purple;
+    return C.accent;
+  })();
 
-  const defMenuVisibleRef = useRef(false);
-  const defIsLongPressRef = useRef(false);
-  const defLongPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const defHoveredIndexRef = useRef<number | null>(null);
-  const defButtonCenterRef = useRef({ x: 0, y: 0 });
-  const defSlotPositionsRef = useRef<{ x: number; y: number }[]>([]);
-  const defSlotsRef = useRef<RadialSlot[]>([]);
-  const defBtnRef = useRef<View>(null);
+  const btnIcon = (() => {
+    if (activeMode === "atk")  return atkItem  ? (SPOT_ICONS[atkItem.type]  ?? "zap") : "zap";
+    if (activeMode === "farm") return farmItem ? (SPOT_ICONS[farmItem.type] ?? "cpu") : "cpu";
+    if (activeMode === "use")  return useItem  ? (ITEM_ICONS[useItem.type]  ?? "plus-circle") : "plus-circle";
+    return "zap";
+  })();
 
-  // ─── Build slot arrays (must stay in sync with refs) ────────────────────
-  const buildAtkSlots = (): RadialSlot[] =>
-    collectedSpots.slice(0, MAX_RADIAL_SLOTS).map((spot) => ({
-      id: spot.id,
-      label: SPOT_LABELS[spot.type] ?? spot.type.toUpperCase(),
-      color: SPOT_COLORS[spot.type] ?? C.accent,
-      icon: SPOT_ICONS[spot.type] ?? "zap",
-      previewName: spot.title,
-      previewType: SPOT_LABELS[spot.type] ?? spot.type,
-      previewDescription: `Spot ${SPOT_LABELS[spot.type]?.toLowerCase() ?? spot.type} — use como arma ou colete no mapa`,
-      previewImpact: `${SPOT_DAMAGE[spot.type as SpotType] ?? 10} DMG`,
-      previewTarget: selectedUser ? "Oponente" : "Spot",
-      previewImageUrl: spot.imageUrl,
-    }));
+  // Items for picker
+  const atkItems  = collectedSpots;
+  const farmItems = collectedSpots;
+  const useItems  = userProfile.bag.filter(
+    (i) => i.quantity > 0 && SUBSTANCE_TYPES.includes(i.type as SubstanceType)
+  );
 
-  const buildDefSlots = (): RadialSlot[] =>
-    userProfile.bag
-      .filter(
-        (item) =>
-          item.quantity > 0 &&
-          SUBSTANCE_TYPES.includes(item.type as SubstanceType)
-      )
-      .slice(0, MAX_RADIAL_SLOTS)
-      .map((item) => ({
-        id: item.type,
-        label: DEF_LABELS[item.type] ?? item.type.toUpperCase(),
-        color: ITEM_COLORS[item.type] ?? defColor,
-        icon: ITEM_ICONS[item.type] ?? "shield",
-        previewName: item.name,
-        previewType: DEF_LABELS[item.type] ?? item.type,
-        previewDescription: DEF_DESCRIPTIONS[item.type] ?? "Item defensivo",
-        previewImpact: DEF_IMPACT[item.type] ?? "+DEF",
-        previewTarget: "Você",
-        quantity: item.quantity,
-      }));
+  const getSlotForMode = (mode: ActionMode) => {
+    if (mode === "atk")  return atkItem;
+    if (mode === "farm") return farmItem;
+    if (mode === "use")  return useItem;
+    return null;
+  };
 
-  // ─── ATK PanResponder ─────────────────────────────────────────────────────
-  const atkPan = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-
-      onPanResponderGrant: () => {
-        atkIsLongPressRef.current = false;
-        atkScale.setValue(0.9);
-
-        atkBtnRef.current?.measure((_, __, w, h, pageX, pageY) => {
-          const center = { x: pageX + w / 2, y: pageY + h / 2 };
-          atkButtonCenterRef.current = center;
-
-          const slots: RadialSlot[] = collectedSpotsRef.current.slice(0, MAX_RADIAL_SLOTS).map((spot) => ({
-            id: spot.id,
-            label: SPOT_LABELS[spot.type] ?? spot.type.toUpperCase(),
-            color: SPOT_COLORS[spot.type] ?? "#888",
-            icon: SPOT_ICONS[spot.type] ?? "zap",
-            previewName: spot.title,
-            previewType: SPOT_LABELS[spot.type] ?? spot.type,
-            previewDescription: `Spot ${SPOT_LABELS[spot.type]?.toLowerCase() ?? spot.type} — use como arma ou colete no mapa`,
-            previewImpact: `${SPOT_DAMAGE[spot.type as SpotType] ?? 10} DMG`,
-            previewTarget: selectedUserRef.current ? "Oponente" : "Spot",
-            previewImageUrl: spot.imageUrl,
-          }));
-          atkSlotsRef.current = slots;
-
-          atkSlotPositionsRef.current = getSlotPositions(center, slots.length, true);
-        });
-
-        atkLongPressTimer.current = setTimeout(() => {
-          atkIsLongPressRef.current = true;
-          atkMenuVisibleRef.current = true;
-
-          setAtkButtonCenter({ ...atkButtonCenterRef.current });
-          setAtkMenuVisible(true);
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        }, LONG_PRESS_DELAY);
-      },
-
-      onPanResponderMove: (e) => {
-        if (!atkMenuVisibleRef.current) return;
-        const pos = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY };
-        const idx = findHoveredSlot(pos, atkSlotPositionsRef.current);
-        if (idx !== atkHoveredIndexRef.current) {
-          atkHoveredIndexRef.current = idx;
-          setAtkHoveredIndex(idx);
-          if (idx !== null) Haptics.selectionAsync();
-        }
-      },
-
-      onPanResponderRelease: () => {
-        if (atkLongPressTimer.current) clearTimeout(atkLongPressTimer.current);
-        atkScale.setValue(1);
-
-        if (!atkIsLongPressRef.current) {
-          if (canAttackRef.current) {
-            animateAtk();
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-            onAttackRef.current?.();
-          }
-        } else {
-          const idx = atkHoveredIndexRef.current;
-          if (idx !== null) {
-            const slot = atkSlotsRef.current[idx];
-            const spot = collectedSpotsRef.current.find((s) => s.id === slot.id);
-            if (spot) {
-              selectInventorySpotRef.current(spot);
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            }
-          }
-          setAtkMenuVisible(false);
-          atkMenuVisibleRef.current = false;
-          setAtkHoveredIndex(null);
-          atkHoveredIndexRef.current = null;
-        }
-
-        atkIsLongPressRef.current = false;
-      },
-
-      onPanResponderTerminate: () => {
-        if (atkLongPressTimer.current) clearTimeout(atkLongPressTimer.current);
-        atkScale.setValue(1);
-        setAtkMenuVisible(false);
-        atkMenuVisibleRef.current = false;
-        setAtkHoveredIndex(null);
-        atkHoveredIndexRef.current = null;
-        atkIsLongPressRef.current = false;
-      },
-    })
-  ).current;
-
-  // ─── DEF PanResponder ─────────────────────────────────────────────────────
-  const defPan = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-
-      onPanResponderGrant: () => {
-        defIsLongPressRef.current = false;
-        defScale.setValue(0.9);
-
-        defBtnRef.current?.measure((_, __, w, h, pageX, pageY) => {
-          const center = { x: pageX + w / 2, y: pageY + h / 2 };
-          defButtonCenterRef.current = center;
-
-          const slots: RadialSlot[] = userProfileRef.current.bag
-            .filter(
-              (item) =>
-                item.quantity > 0 &&
-                SUBSTANCE_TYPES.includes(item.type as SubstanceType)
-            )
-            .slice(0, MAX_RADIAL_SLOTS)
-            .map((item) => ({
-              id: item.type,
-              label: DEF_LABELS[item.type] ?? item.type.toUpperCase(),
-              color: ITEM_COLORS[item.type] ?? "#888",
-              icon: ITEM_ICONS[item.type] ?? "shield",
-              previewName: item.name,
-              previewType: DEF_LABELS[item.type] ?? item.type,
-              previewDescription: DEF_DESCRIPTIONS[item.type] ?? "Item defensivo",
-              previewImpact: DEF_IMPACT[item.type] ?? "+DEF",
-              previewTarget: "Você",
-              quantity: item.quantity,
-            }));
-          defSlotsRef.current = slots;
-
-          defSlotPositionsRef.current = getSlotPositions(center, slots.length, false);
-        });
-
-        defLongPressTimer.current = setTimeout(() => {
-          defIsLongPressRef.current = true;
-          defMenuVisibleRef.current = true;
-
-          setDefButtonCenter({ ...defButtonCenterRef.current });
-          setDefMenuVisible(true);
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        }, LONG_PRESS_DELAY);
-      },
-
-      onPanResponderMove: (e) => {
-        if (!defMenuVisibleRef.current) return;
-        const pos = { x: e.nativeEvent.pageX, y: e.nativeEvent.pageY };
-        const idx = findHoveredSlot(pos, defSlotPositionsRef.current);
-        if (idx !== defHoveredIndexRef.current) {
-          defHoveredIndexRef.current = idx;
-          setDefHoveredIndex(idx);
-          if (idx !== null) Haptics.selectionAsync();
-        }
-      },
-
-      onPanResponderRelease: () => {
-        if (defLongPressTimer.current) clearTimeout(defLongPressTimer.current);
-        defScale.setValue(1);
-
-        if (!defIsLongPressRef.current) {
-          animateDef();
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-          onDefendRef.current?.();
-        } else {
-          const idx = defHoveredIndexRef.current;
-          if (idx !== null) {
-            const slot = defSlotsRef.current[idx];
-            if (SUBSTANCE_TYPES.includes(slot.id as SubstanceType)) {
-              useSubstanceRef.current(slot.id as SubstanceType);
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            }
-          }
-          setDefMenuVisible(false);
-          defMenuVisibleRef.current = false;
-          setDefHoveredIndex(null);
-          defHoveredIndexRef.current = null;
-        }
-
-        defIsLongPressRef.current = false;
-      },
-
-      onPanResponderTerminate: () => {
-        if (defLongPressTimer.current) clearTimeout(defLongPressTimer.current);
-        defScale.setValue(1);
-        setDefMenuVisible(false);
-        defMenuVisibleRef.current = false;
-        setDefHoveredIndex(null);
-        defHoveredIndexRef.current = null;
-        defIsLongPressRef.current = false;
-      },
-    })
-  ).current;
-
-  const atkSlots = buildAtkSlots();
-  const defSlots = buildDefSlots();
-
-  const atkSlotPositions = getSlotPositions(atkButtonCenter, atkSlots.length, true);
-  const defSlotPositions = getSlotPositions(defButtonCenter, defSlots.length, false);
+  const MODES: ActionMode[] = ["atk", "farm", "use"];
 
   return (
     <>
-      {/* ATK Radial Menu */}
-      {atkMenuVisible && (
-        <RadialMenu
-          visible={atkMenuVisible}
-          slots={atkSlots}
-          slotPositions={atkSlotPositions}
-          hoveredIndex={atkHoveredIndex}
-          previewOnLeft={true}
-          topInset={60}
-        />
-      )}
-
-      {/* DEF Radial Menu */}
-      {defMenuVisible && (
-        <RadialMenu
-          visible={defMenuVisible}
-          slots={defSlots}
-          slotPositions={defSlotPositions}
-          hoveredIndex={defHoveredIndex}
-          previewOnLeft={false}
-          topInset={60}
-        />
-      )}
-
-      {/* DEF — esquerda */}
-      <RNAnimated.View
-        style={[styles.leftContainer, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}
+      {/* Item picker modal */}
+      <Modal
+        visible={pickerMode !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPickerMode(null)}
       >
-        <View ref={defBtnRef} {...defPan.panHandlers}>
-          <RNAnimated.View
-            style={[
-              styles.btn,
-              {
-                backgroundColor: defColor + "18",
-                borderColor: defSlots.length > 0 ? defColor + "88" : defColor + "44",
-                borderWidth: 1.5,
-                transform: [{ scale: defScale }],
-              },
-            ]}
-          >
-            <Feather name="shield" size={26} color={defColor} />
-            <Text style={[styles.label, { color: defColor }]}>DEF</Text>
-            {defSlots.length > 0 && (
-              <View style={[styles.holdHint, { borderColor: defColor + "55" }]}>
-                <Feather name="more-horizontal" size={8} color={defColor + "AA"} />
+        <Pressable style={styles.modalBackdrop} onPress={() => setPickerMode(null)}>
+          <View style={[styles.pickerSheet, { backgroundColor: C.card, borderColor: C.border }]}>
+            <Text style={[styles.pickerTitle, { color: C.text }]}>
+              {pickerMode ? MODE_CONFIG[pickerMode].label : ""}
+            </Text>
+            <Text style={[styles.pickerSub, { color: C.textMuted }]}>
+              {pickerMode ? MODE_CONFIG[pickerMode].desc : ""}
+            </Text>
+
+            <ScrollView style={styles.pickerList} showsVerticalScrollIndicator={false}>
+              {pickerMode === "use"
+                ? useItems.length === 0
+                  ? <Text style={[styles.emptyText, { color: C.textMuted }]}>Nenhum item disponível</Text>
+                  : useItems.map((item) => {
+                      const color = ITEM_COLORS[item.type] ?? C.purple;
+                      const selected = useItem?.type === item.type;
+                      return (
+                        <Pressable
+                          key={item.type}
+                          style={[
+                            styles.pickerRow,
+                            { borderColor: selected ? color : C.border, backgroundColor: selected ? color + "18" : C.surface },
+                          ]}
+                          onPress={() => {
+                            setUseItem(item);
+                            setPickerMode(null);
+                            setActiveMode("use");
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }}
+                        >
+                          <View style={[styles.pickerIcon, { backgroundColor: color + "22" }]}>
+                            <Feather name={ITEM_ICONS[item.type] as any ?? "package"} size={18} color={color} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.pickerRowName, { color: C.text }]}>{item.name}</Text>
+                            <Text style={[styles.pickerRowSub, { color }]}>{ITEM_LABELS[item.type] ?? item.type}</Text>
+                          </View>
+                          {item.quantity > 1 && (
+                            <Text style={[styles.pickerQty, { color: C.textMuted }]}>×{item.quantity}</Text>
+                          )}
+                          {selected && <Feather name="check" size={14} color={color} />}
+                        </Pressable>
+                      );
+                    })
+                : (pickerMode === "atk" ? atkItems : farmItems).length === 0
+                  ? <Text style={[styles.emptyText, { color: C.textMuted }]}>Nenhum spot coletado</Text>
+                  : (pickerMode === "atk" ? atkItems : farmItems).map((spot) => {
+                      const color = SPOT_COLORS[spot.type] ?? C.accent;
+                      const currentItem = pickerMode === "atk" ? atkItem : farmItem;
+                      const selected = currentItem?.id === spot.id;
+                      return (
+                        <Pressable
+                          key={spot.id}
+                          style={[
+                            styles.pickerRow,
+                            { borderColor: selected ? color : C.border, backgroundColor: selected ? color + "18" : C.surface },
+                          ]}
+                          onPress={() => {
+                            if (pickerMode === "atk")  setAtkItem(spot);
+                            if (pickerMode === "farm") setFarmItem(spot);
+                            setPickerMode(null);
+                            setActiveMode(pickerMode!);
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                          }}
+                        >
+                          <View style={[styles.pickerIcon, { backgroundColor: color + "22" }]}>
+                            <Feather name={SPOT_ICONS[spot.type] as any ?? "package"} size={18} color={color} />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.pickerRowName, { color: C.text }]} numberOfLines={1}>{spot.title}</Text>
+                            <Text style={[styles.pickerRowSub, { color }]}>
+                              {SPOT_LABELS[spot.type] ?? spot.type} · {SPOT_DAMAGE[spot.type as SpotType] ?? "?"} DMG
+                            </Text>
+                          </View>
+                          {selected && <Feather name="check" size={14} color={color} />}
+                        </Pressable>
+                      );
+                    })
+              }
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* Main container: mode list + action button */}
+      <RNAnimated.View
+        style={[styles.container, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}
+      >
+        {/* Vertical mode list */}
+        <View style={styles.modeList}>
+          {MODES.map((mode) => {
+            const cfg = MODE_CONFIG[mode];
+            const isActive = activeMode === mode;
+            const slot = getSlotForMode(mode);
+            const slotColor = (() => {
+              if (!slot) return C.textMuted;
+              if (mode === "use") return ITEM_COLORS[(slot as InventoryItem).type] ?? C.purple;
+              return SPOT_COLORS[(slot as Spot).type] ?? C.accent;
+            })();
+            const slotIcon = (() => {
+              if (!slot) return null;
+              if (mode === "use") return ITEM_ICONS[(slot as InventoryItem).type] ?? "package";
+              return SPOT_ICONS[(slot as Spot).type] ?? "package";
+            })();
+
+            return (
+              <View key={mode} style={styles.modeRow}>
+                {/* Slot button — opens picker */}
+                <TouchableOpacity
+                  style={[
+                    styles.slotBtn,
+                    {
+                      backgroundColor: slot ? slotColor + "20" : C.surface,
+                      borderColor: slot ? slotColor + "88" : C.border,
+                    },
+                  ]}
+                  onPress={() => setPickerMode(mode)}
+                  activeOpacity={0.75}
+                >
+                  {slotIcon ? (
+                    <Feather name={slotIcon as any} size={14} color={slotColor} />
+                  ) : (
+                    <Feather name="plus" size={12} color={C.textMuted} />
+                  )}
+                </TouchableOpacity>
+
+                {/* Mode label — selects mode */}
+                <TouchableOpacity
+                  style={[
+                    styles.modeBtn,
+                    {
+                      backgroundColor: isActive ? C.accent + "20" : "transparent",
+                      borderColor: isActive ? C.accent + "88" : C.border,
+                    },
+                  ]}
+                  onPress={() => {
+                    setActiveMode(mode);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                  activeOpacity={0.75}
+                >
+                  <Feather
+                    name={cfg.icon as any}
+                    size={11}
+                    color={isActive ? C.accent : C.textMuted}
+                  />
+                  <Text style={[styles.modeLabel, { color: isActive ? C.accent : C.textMuted }]}>
+                    {cfg.label}
+                  </Text>
+                </TouchableOpacity>
               </View>
-            )}
-          </RNAnimated.View>
+            );
+          })}
         </View>
-      </RNAnimated.View>
 
-      {/* ATK — direita */}
-      <RNAnimated.View
-        style={[styles.rightContainer, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}
-      >
-        <View ref={atkBtnRef} {...atkPan.panHandlers}>
+        {/* Action button */}
+        <Pressable
+          onPressIn={handlePressIn}
+          onPressOut={handlePressOut}
+        >
           <RNAnimated.View
             style={[
               styles.btn,
               {
-                backgroundColor: canAttack ? atkColor + "22" : C.card,
-                borderColor: canAttack ? atkColor : C.border,
-                borderWidth: canAttack ? 2 : 1.5,
-                transform: [{ scale: atkScale }, { translateY: atkY }],
+                backgroundColor: canAct ? btnColor + "22" : C.card,
+                borderColor: canAct ? btnColor : C.border,
+                borderWidth: canAct ? 2 : 1.5,
+                transform: [{ scale: btnScale }, { translateY: btnY }],
               },
-              canAttack && {
-                shadowColor: atkColor,
-                shadowOpacity: 0.45,
-                shadowRadius: 12,
+              canAct && {
+                shadowColor: btnColor,
+                shadowOpacity: 0.5,
+                shadowRadius: 14,
                 elevation: 10,
               },
             ]}
           >
-            <RNAnimated.View style={{ transform: [{ translateY: atkY }] }}>
-              <Feather
-                name={atkIcon as any}
-                size={canAttack ? 24 : 26}
-                color={canAttack ? atkColor : C.textMuted}
-              />
-            </RNAnimated.View>
-            <Text
-              numberOfLines={1}
-              adjustsFontSizeToFit
-              style={[
-                styles.label,
-                { color: canAttack ? atkColor : C.textMuted },
-                selectedInventorySpot && { letterSpacing: 0 },
-              ]}
-            >
-              {atkLabel}
+            <Feather
+              name={btnIcon as any}
+              size={26}
+              color={canAct ? btnColor : C.textMuted}
+            />
+            <Text style={[styles.btnLabel, { color: canAct ? btnColor : C.textMuted }]}>
+              {MODE_CONFIG[activeMode].label}
             </Text>
-            {canAttack && miningClicks > 0 && (
-              <View style={[styles.minesBadge, { backgroundColor: C.bg, borderColor: atkColor }]}>
-                <Text style={[styles.minesBadgeText, { color: atkColor }]}>{miningClicks}x</Text>
-              </View>
-            )}
-            {atkSlots.length > 0 && (
-              <View style={[styles.holdHint, { borderColor: atkColor + "55" }]}>
-                <Feather name="more-horizontal" size={8} color={atkColor + "AA"} />
+            {activeMode === "atk" && canAct && miningClicks > 0 && (
+              <View style={[styles.badge, { backgroundColor: C.bg, borderColor: btnColor }]}>
+                <Text style={[styles.badgeText, { color: btnColor }]}>{miningClicks}x</Text>
               </View>
             )}
           </RNAnimated.View>
-        </View>
+        </Pressable>
       </RNAnimated.View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  leftContainer: {
-    position: "absolute",
-    left: 16,
-    zIndex: 20,
-  },
-  rightContainer: {
+  container: {
     position: "absolute",
     right: 16,
+    flexDirection: "row",
+    alignItems: "flex-end",
+    gap: 8,
     zIndex: 20,
+  },
+  modeList: {
+    gap: 6,
+    alignItems: "flex-end",
+    justifyContent: "flex-end",
+    paddingBottom: 6,
+  },
+  modeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  slotBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1.5,
+  },
+  modeLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.8,
   },
   btn: {
     width: 68,
@@ -614,12 +503,12 @@ const styles = StyleSheet.create({
     elevation: 6,
     gap: 3,
   },
-  label: {
+  btnLabel: {
     fontSize: 9,
-    fontWeight: "700",
+    fontFamily: "Inter_700Bold",
     letterSpacing: 0.8,
   },
-  minesBadge: {
+  badge: {
     position: "absolute",
     top: -5,
     right: -5,
@@ -631,17 +520,71 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 3,
   },
-  minesBadgeText: {
+  badgeText: {
     fontSize: 9,
-    fontWeight: "700",
+    fontFamily: "Inter_700Bold",
   },
-  holdHint: {
-    position: "absolute",
-    bottom: -2,
-    alignSelf: "center",
-    borderWidth: 1,
-    borderRadius: 4,
-    paddingHorizontal: 4,
-    paddingVertical: 1,
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
+    padding: 16,
+  },
+  pickerSheet: {
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: 20,
+    maxHeight: 420,
+  },
+  pickerTitle: {
+    fontSize: 16,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  pickerSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    marginBottom: 16,
+  },
+  pickerList: {
+    flexGrow: 0,
+  },
+  pickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    marginBottom: 8,
+  },
+  pickerIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pickerRowName: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+  },
+  pickerRowSub: {
+    fontSize: 10,
+    fontFamily: "Inter_700Bold",
+    letterSpacing: 0.5,
+    marginTop: 1,
+  },
+  pickerQty: {
+    fontSize: 11,
+    fontFamily: "Inter_700Bold",
+    marginRight: 4,
+  },
+  emptyText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    textAlign: "center",
+    paddingVertical: 24,
   },
 });
