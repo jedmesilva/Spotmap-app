@@ -360,6 +360,8 @@ export default function MapScreen() {
           } else if (mineableSpotId) {
             mapRef.current?.mineHit(mineableSpotId, miningClicks + 1);
             mapRef.current?.fireAtSpot(mineableSpotId, itemType);
+          } else {
+            mapRef.current?.fireInDirection(itemType);
           }
         }}
         onFreeAimFire={(userId, spotId) => {
@@ -372,6 +374,7 @@ export default function MapScreen() {
             mapRef.current?.fireAtSpot(spotId, itemType);
           } else {
             fireInventorySpot(null);
+            mapRef.current?.fireInDirection(itemType);
           }
         }}
         onAimAngleChange={(angle) => mapRef.current?.setAimAngle(angle)}

@@ -13,6 +13,7 @@ export interface GameMapHandle {
   fireAtUser: (userId: string, itemType: string) => void;
   setAimAngle: (angle: number | null) => void;
   setPlayerUseItem: (itemType: string) => void;
+  fireInDirection: (itemType: string) => void;
 }
 
 const USER_RADIUS = 60;
@@ -516,6 +517,8 @@ window.receiveFromRN=function(jsonStr){
       if(playerDot&&playerProfile){
         playerDot.setIcon(playerIcon(playerProfile,playerCollectingData||null,playerAimAngle,playerUsingItem));
       }
+    } else if(d.type==='FIRE_IN_DIRECTION'){
+      showDirectionFire(d.itemType);
     } else if(d.type==='PLAYER_USE_ITEM'){
       playerUsingItem=d.itemType;
       if(playerUseTimeout){clearTimeout(playerUseTimeout);}
@@ -585,6 +588,16 @@ function showUserFire(userId,itemType){
   var fromPt=map.latLngToContainerPoint(playerDot.getLatLng());
   var toPt=map.latLngToContainerPoint(userMarkers[userId].getLatLng());
   launchProjectile(fromPt,toPt,color,icon,showSpotFireImpact);
+}
+function showDirectionFire(itemType){
+  if(!playerDot)return;
+  var color=SPOT_COLOR[itemType]||C.accent;
+  var icon=ICONS[itemType]||ICONS.rare;
+  var fromPt=map.latLngToContainerPoint(playerDot.getLatLng());
+  var rad=playerAimAngle*Math.PI/180;
+  var dist=90;
+  var toPt={x:fromPt.x+dist*Math.sin(rad),y:fromPt.y-dist*Math.cos(rad)};
+  launchProjectile(fromPt,toPt,color,icon,null);
 }
 
 function showSpotFireImpact(pt,color){
@@ -751,6 +764,9 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
     },
     setPlayerUseItem: (itemType: string) => {
       inject({ type: "PLAYER_USE_ITEM", itemType });
+    },
+    fireInDirection: (itemType: string) => {
+      inject({ type: "FIRE_IN_DIRECTION", itemType });
     },
   }));
 
