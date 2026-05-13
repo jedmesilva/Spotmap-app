@@ -279,7 +279,7 @@ export default function MapScreen() {
 
       <InventoryButton
         insets={{ bottom: bottomInset }}
-        topInset={topInset}
+        extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
         onSpotDetail={(spot) => setInventoryDetailSpot(spot)}
         onItemDetail={(item) => setInventoryDetailItem(item)}
       />
