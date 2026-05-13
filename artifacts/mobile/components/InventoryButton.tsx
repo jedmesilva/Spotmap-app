@@ -172,11 +172,10 @@ interface InventoryButtonProps {
   extraBottomOffset?: number;
   onSpotDetail?: (spot: Spot) => void;
   onItemDetail?: (item: InventoryItem) => void;
+  topInset?: number;
 }
 
-const SNAP_RATIO = 0; // full screen
-
-export function InventoryButton({ insets, extraBottomOffset = 0, onSpotDetail, onItemDetail }: InventoryButtonProps) {
+export function InventoryButton({ insets, extraBottomOffset = 0, onSpotDetail, onItemDetail, topInset = 0 }: InventoryButtonProps) {
   const C = useColors();
   const { userProfile, collectedSpots, selectedInventorySpot, selectInventorySpot } = useGame();
   const sheetInsets = useSafeAreaInsets();
@@ -187,30 +186,20 @@ export function InventoryButton({ insets, extraBottomOffset = 0, onSpotDetail, o
   const SHEET_PADDING = 20;
   const cardWidth = (screenWidth - SHEET_PADDING * 2 - GRID_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
 
-  const snapOpenRef = useRef(screenHeight * SNAP_RATIO);
-  snapOpenRef.current = screenHeight * SNAP_RATIO;
+  const snapOpenRef = useRef(0);
   const screenHeightRef = useRef(screenHeight);
   screenHeightRef.current = screenHeight;
 
-  // isOpen controls only pointer events — sheet is always rendered to avoid mount/unmount freeze
   const [isOpen, setIsOpen] = useState(false);
   const isOpenRef = useRef(false);
 
-  // +200 extra to guarantee the sheet is fully off-screen regardless of system bar differences
   const HIDDEN_Y = () => screenHeightRef.current + 200;
 
-  // Sheet position: HIDDEN_Y = hidden below, snapOpen = visible
   const sheetY = useRef(new RNAnimated.Value(screenHeight + 200)).current;
   const backdropOpacity = useRef(new RNAnimated.Value(0)).current;
 
-  // Pill button lift animation
-  const btnDragY = useRef(new RNAnimated.Value(0)).current;
-
-  // Track scroll position inside the sheet so we know when it's at top
   const scrollYRef = useRef(0);
   const [scrollEnabled, setScrollEnabled] = useState(true);
-
-  const isDragging = useRef(false);
 
   const openSheet = useCallback(() => {
     const snapOpen = snapOpenRef.current;
@@ -234,68 +223,11 @@ export function InventoryButton({ insets, extraBottomOffset = 0, onSpotDetail, o
     });
   }, []);
 
-  const openSheetRef = useRef(openSheet);
-  openSheetRef.current = openSheet;
-  const closeSheetRef = useRef(closeSheet);
-  closeSheetRef.current = closeSheet;
-
-  // PanResponder on the pill button
-  const buttonPan = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 6,
-
-      onPanResponderGrant: () => {
-        isDragging.current = false;
-        sheetY.setValue(screenHeightRef.current);
-        backdropOpacity.setValue(0);
-        btnDragY.setValue(0);
-      },
-
-      onPanResponderMove: (_, gs) => {
-        if (gs.dy < -8) {
-          const snapOpen = snapOpenRef.current;
-          const sh = screenHeightRef.current;
-          isDragging.current = true;
-          // Sheet follows finger
-          const newY = Math.max(snapOpen, sh + gs.dy);
-          sheetY.setValue(newY);
-          const progress = Math.min(1, (sh - newY) / (sh - snapOpen));
-          backdropOpacity.setValue(progress);
-          // Button lifts up with the drag (clamped at -60)
-          btnDragY.setValue(Math.max(gs.dy, -60));
-        }
-      },
-
-      onPanResponderRelease: (_, gs) => {
-        RNAnimated.spring(btnDragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 8 }).start();
-        if (isDragging.current) {
-          if (gs.dy < -50 || gs.vy < -0.3) {
-            openSheetRef.current();
-          } else {
-            closeSheetRef.current();
-          }
-        } else {
-          openSheetRef.current();
-        }
-        isDragging.current = false;
-      },
-
-      onPanResponderTerminate: () => {
-        RNAnimated.spring(btnDragY, { toValue: 0, useNativeDriver: true, tension: 120, friction: 8 }).start();
-        if (isDragging.current) closeSheetRef.current();
-        isDragging.current = false;
-      },
-    })
-  ).current;
-
   // PanResponder on the full sheet — activates on downward drag when scroll is at top
   const sheetPan = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, gs) => {
-        return gs.dy > 8 && scrollYRef.current < 4;
-      },
+      onMoveShouldSetPanResponder: (_, gs) => gs.dy > 8 && scrollYRef.current < 4,
 
       onPanResponderGrant: () => {
         setScrollEnabled(false);
@@ -314,7 +246,7 @@ export function InventoryButton({ insets, extraBottomOffset = 0, onSpotDetail, o
       onPanResponderRelease: (_, gs) => {
         setScrollEnabled(true);
         if (gs.dy > 100 || gs.vy > 0.5) {
-          closeSheetRef.current();
+          closeSheet();
         } else {
           const snapOpen = snapOpenRef.current;
           RNAnimated.parallel([
@@ -337,7 +269,6 @@ export function InventoryButton({ insets, extraBottomOffset = 0, onSpotDetail, o
     (i) => i.quantity > 0 && !["coupon", "money", "product", "rare"].includes(i.type)
   );
   const totalItems = collectedSpots.length + bagItems.length;
-  const bottomOffset = insets.bottom + 16 + extraBottomOffset;
 
   return (
     <>
@@ -350,332 +281,323 @@ export function InventoryButton({ insets, extraBottomOffset = 0, onSpotDetail, o
         pointerEvents={isOpen ? "auto" : "none"}
         {...sheetPan.panHandlers}
       >
-          <View style={[styles.sheetHandleArea, { paddingTop: sheetInsets.top + 8 }]}>
-            <View style={[styles.sheetHandleBar, { backgroundColor: C.border }]} />
+        <View style={[styles.sheetHandleArea, { paddingTop: sheetInsets.top + 8 }]}>
+          <View style={[styles.sheetHandleBar, { backgroundColor: C.border }]} />
+        </View>
+
+        <ScrollView
+          scrollEnabled={scrollEnabled}
+          onScroll={e => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
+          scrollEventThrottle={16}
+          contentContainerStyle={[styles.sheetContent, { paddingBottom: sheetInsets.bottom + 24 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.sheetHeader}>
+            <Text style={[styles.sheetTitle, { color: C.text }]}>Inventário</Text>
+            <View style={[styles.coinBadge, { backgroundColor: C.spotMoney + "18", borderColor: C.spotMoney + "44" }]}>
+              <Feather name="dollar-sign" size={13} color={C.spotMoney} />
+              <Text style={[styles.coinText, { color: C.spotMoney }]}>{userProfile.coins ?? 0}</Text>
+            </View>
           </View>
 
-          <ScrollView
-            scrollEnabled={scrollEnabled}
-            onScroll={e => { scrollYRef.current = e.nativeEvent.contentOffset.y; }}
-            scrollEventThrottle={16}
-            contentContainerStyle={[styles.sheetContent, { paddingBottom: sheetInsets.bottom + 24 }]}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={styles.sheetHeader}>
-              <Text style={[styles.sheetTitle, { color: C.text }]}>Inventário</Text>
-              <View style={[styles.coinBadge, { backgroundColor: C.spotMoney + "18", borderColor: C.spotMoney + "44" }]}>
-                <Feather name="dollar-sign" size={13} color={C.spotMoney} />
-                <Text style={[styles.coinText, { color: C.spotMoney }]}>{userProfile.coins ?? 0}</Text>
+          {collectedSpots.length > 0 && (
+            <>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: C.textMuted }]}>SPOTS COLETADOS</Text>
+                <View style={[styles.sectionBadge, { backgroundColor: C.accent + "18" }]}>
+                  <Text style={[styles.sectionBadgeText, { color: C.accent }]}>{collectedSpots.length}</Text>
+                </View>
               </View>
-            </View>
-
-            {collectedSpots.length > 0 && (
-              <>
-                <View style={styles.sectionHeader}>
-                  <Text style={[styles.sectionTitle, { color: C.textMuted }]}>SPOTS COLETADOS</Text>
-                  <View style={[styles.sectionBadge, { backgroundColor: C.accent + "18" }]}>
-                    <Text style={[styles.sectionBadgeText, { color: C.accent }]}>{collectedSpots.length}</Text>
-                  </View>
-                </View>
-                <View style={styles.grid}>
-                  {collectedSpots.map((spot) => (
-                    <SpotCard
-                      key={spot.id}
-                      spot={spot}
-                      cardWidth={cardWidth}
-                      isSelected={selectedInventorySpot?.id === spot.id}
-                      onSelect={(s) => {
-                        selectInventorySpot(selectedInventorySpot?.id === s.id ? null : s);
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                      }}
-                      onDetail={onSpotDetail}
-                    />
-                  ))}
-                </View>
-              </>
-            )}
-
-            {bagItems.length > 0 && (
-              <>
-                <View style={[styles.sectionHeader, collectedSpots.length > 0 && { marginTop: 20 }]}>
-                  <Text style={[styles.sectionTitle, { color: C.textMuted }]}>ITENS</Text>
-                  <View style={[styles.sectionBadge, { backgroundColor: C.purple + "18" }]}>
-                    <Text style={[styles.sectionBadgeText, { color: C.purple }]}>{bagItems.length}</Text>
-                  </View>
-                </View>
-                <View style={styles.grid}>
-                  {bagItems.map((item) => (
-                    <ItemCard key={item.id} item={item} cardWidth={cardWidth} onDetail={onItemDetail} />
-                  ))}
-                </View>
-              </>
-            )}
-
-            {totalItems === 0 && (
-              <View style={styles.emptyState}>
-                <View style={[styles.emptyIcon, { backgroundColor: C.surface }]}>
-                  <Feather name="briefcase" size={28} color={C.textMuted} />
-                </View>
-                <Text style={[styles.emptyTitle, { color: C.text }]}>Inventário vazio</Text>
-                <Text style={[styles.emptySub, { color: C.textMuted }]}>
-                  Explore o mapa e colete spots e itens para vê-los aqui
-                </Text>
+              <View style={styles.grid}>
+                {collectedSpots.map((spot) => (
+                  <SpotCard
+                    key={spot.id}
+                    spot={spot}
+                    cardWidth={cardWidth}
+                    isSelected={selectedInventorySpot?.id === spot.id}
+                    onSelect={(s) => {
+                      selectInventorySpot(selectedInventorySpot?.id === s.id ? null : s);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    onDetail={onSpotDetail}
+                  />
+                ))}
               </View>
-            )}
-          </ScrollView>
-      </RNAnimated.View>
+            </>
+          )}
 
-      {/* Pill button */}
-      <RNAnimated.View
-        style={[styles.container, { bottom: bottomOffset, transform: [{ translateY: btnDragY }] }]}
-      >
-        <View style={[styles.pill, { backgroundColor: C.card, borderColor: C.border }]} {...buttonPan.panHandlers}>
-          <View style={styles.pillContent}>
-            <View style={[styles.pillIconWrap, { backgroundColor: C.accent + "18" }]}>
-              <Feather name="briefcase" size={18} color={C.accent} />
-              {totalItems > 0 && (
-                <View style={[styles.pillBadge, { backgroundColor: C.accent, borderColor: C.bg }]}>
-                  <Text style={[styles.pillBadgeText, { color: "#fff" }]}>{totalItems}</Text>
+          {bagItems.length > 0 && (
+            <>
+              <View style={[styles.sectionHeader, collectedSpots.length > 0 && { marginTop: 20 }]}>
+                <Text style={[styles.sectionTitle, { color: C.textMuted }]}>ITENS</Text>
+                <View style={[styles.sectionBadge, { backgroundColor: C.purple + "18" }]}>
+                  <Text style={[styles.sectionBadgeText, { color: C.purple }]}>{bagItems.length}</Text>
                 </View>
-              )}
-            </View>
-            <View>
-              <Text style={[styles.pillLabel, { color: C.text }]}>INVENTÁRIO</Text>
-              <Text style={[styles.pillSub, { color: C.textMuted }]}>
-                {totalItems === 0 ? "Vazio" : `${totalItems} ${totalItems === 1 ? "item" : "itens"}`}
+              </View>
+              <View style={styles.grid}>
+                {bagItems.map((item) => (
+                  <ItemCard key={item.id} item={item} cardWidth={cardWidth} onDetail={onItemDetail} />
+                ))}
+              </View>
+            </>
+          )}
+
+          {totalItems === 0 && (
+            <View style={styles.emptyState}>
+              <View style={[styles.emptyIcon, { backgroundColor: C.surface }]}>
+                <Feather name="briefcase" size={28} color={C.textMuted} />
+              </View>
+              <Text style={[styles.emptyTitle, { color: C.text }]}>Inventário vazio</Text>
+              <Text style={[styles.emptySub, { color: C.textMuted }]}>
+                Explore o mapa e colete spots e itens para vê-los aqui
               </Text>
             </View>
-          </View>
-          <Feather name="chevron-up" size={16} color={C.textMuted} />
-        </View>
+          )}
+        </ScrollView>
       </RNAnimated.View>
+
+      {/* Left-side vertical option list */}
+      <View
+        style={[styles.leftRail, { top: topInset + 16 }]}
+        pointerEvents="box-none"
+      >
+        <Pressable
+          style={({ pressed }) => [
+            styles.railBtn,
+            { backgroundColor: C.card, borderColor: C.border, opacity: pressed ? 0.8 : 1 },
+          ]}
+          onPress={openSheet}
+        >
+          <View style={[styles.railIconWrap, { backgroundColor: C.accent + "18" }]}>
+            <Feather name="briefcase" size={18} color={C.accent} />
+            {totalItems > 0 && (
+              <View style={[styles.railBadge, { backgroundColor: C.accent, borderColor: C.bg }]}>
+                <Text style={[styles.railBadgeText, { color: "#fff" }]}>{totalItems}</Text>
+              </View>
+            )}
+          </View>
+          <Text style={[styles.railLabel, { color: C.textMuted }]}>BAG</Text>
+        </Pressable>
+      </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    position: "absolute",
-    alignSelf: "center",
-    alignItems: "center",
-    zIndex: 20,
+  /* Left vertical rail */
+  leftRail: {
+    position:      "absolute",
+    left:          12,
+    flexDirection: "column",
+    gap:           8,
+    zIndex:        20,
   },
-  pill: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
+  railBtn: {
+    width:          52,
+    alignItems:     "center",
     paddingVertical: 10,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    gap: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 12,
-    elevation: 8,
-    minWidth: 200,
+    paddingHorizontal: 6,
+    borderRadius:   4,
+    borderWidth:    1.5,
+    gap:            6,
+    shadowColor:    "#000",
+    shadowOffset:   { width: 0, height: 2 },
+    shadowOpacity:  0.45,
+    shadowRadius:   6,
+    elevation:      5,
   },
-  pillContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-  },
-  pillIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 3,
-    alignItems: "center",
+  railIconWrap: {
+    width:          36,
+    height:         36,
+    borderRadius:   3,
+    alignItems:     "center",
     justifyContent: "center",
   },
-  pillBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
+  railBadge: {
+    position:         "absolute",
+    top:              -4,
+    right:            -4,
+    minWidth:         16,
+    height:           16,
+    borderRadius:     8,
+    borderWidth:      1.5,
+    alignItems:       "center",
+    justifyContent:   "center",
     paddingHorizontal: 3,
   },
-  pillBadgeText: {
-    fontSize: 9,
+  railBadgeText: {
+    fontSize:   9,
     fontWeight: "700",
   },
-  pillLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    letterSpacing: 0.6,
+  railLabel: {
+    fontSize:      9,
+    fontWeight:    "700",
+    letterSpacing: 0.8,
   },
-  pillSub: {
-    fontSize: 10,
-    fontWeight: "500",
-    marginTop: 1,
-  },
+
+  /* Sheet */
   sheet: {
     position: "absolute",
-    left: 0,
-    right: 0,
-    top: 0,
-    bottom: 0,
+    left:     0,
+    right:    0,
+    top:      0,
+    bottom:   0,
   },
   sheetHandleArea: {
-    width: "100%",
-    alignItems: "center",
+    width:          "100%",
+    alignItems:     "center",
     paddingVertical: 12,
   },
   sheetHandleBar: {
-    width: 40,
-    height: 4,
+    width:        40,
+    height:       4,
     borderRadius: 2,
-    opacity: 0.5,
+    opacity:      0.5,
   },
   sheetContent: {
     paddingHorizontal: 20,
-    paddingTop: 4,
+    paddingTop:        4,
   },
   sheetHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 20,
+    flexDirection:   "row",
+    alignItems:      "center",
+    justifyContent:  "space-between",
+    marginBottom:    20,
   },
   sheetTitle: {
-    fontSize: 20,
+    fontSize:   20,
     fontWeight: "700",
     letterSpacing: -0.3,
   },
   coinBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
+    flexDirection:     "row",
+    alignItems:        "center",
+    gap:               4,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
-    borderWidth: 1,
+    paddingVertical:   5,
+    borderRadius:      12,
+    borderWidth:       1,
   },
   coinText: {
-    fontSize: 13,
+    fontSize:   13,
     fontWeight: "700",
   },
   sectionHeader: {
     flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    marginBottom: 12,
+    alignItems:    "center",
+    gap:           8,
+    marginBottom:  12,
   },
   sectionTitle: {
-    fontSize: 11,
-    fontWeight: "700",
+    fontSize:      11,
+    fontWeight:    "700",
     letterSpacing: 0.8,
   },
   sectionBadge: {
     paddingHorizontal: 7,
-    paddingVertical: 2,
-    borderRadius: 8,
+    paddingVertical:   2,
+    borderRadius:      8,
   },
   sectionBadgeText: {
-    fontSize: 10,
+    fontSize:   10,
     fontWeight: "700",
   },
   grid: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
+    flexWrap:      "wrap",
+    gap:           10,
   },
   gridCard: {
     borderRadius: 4,
-    padding: 12,
-    gap: 6,
-    position: "relative",
+    padding:      12,
+    gap:          6,
+    position:     "relative",
   },
   gridCardIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 3,
-    alignItems: "center",
+    width:          40,
+    height:         40,
+    borderRadius:   3,
+    alignItems:     "center",
     justifyContent: "center",
-    marginBottom: 2,
+    marginBottom:   2,
   },
   gridCardName: {
-    fontSize: 11,
+    fontSize:   11,
     fontWeight: "600",
     lineHeight: 14,
   },
   gridCardPill: {
     paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    alignSelf: "flex-start",
+    paddingVertical:   2,
+    borderRadius:      6,
+    borderWidth:       1,
+    alignSelf:         "flex-start",
   },
   gridCardPillText: {
-    fontSize: 9,
-    fontWeight: "700",
+    fontSize:      9,
+    fontWeight:    "700",
     letterSpacing: 0.4,
   },
   badgeStrip: {
     flexDirection: "row",
-    gap: 3,
-    flexWrap: "wrap",
+    gap:           3,
+    flexWrap:      "wrap",
   },
   badgeDot: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1,
-    alignItems: "center",
+    width:          18,
+    height:         18,
+    borderRadius:   9,
+    borderWidth:    1,
+    alignItems:     "center",
     justifyContent: "center",
   },
   qtyBadge: {
-    position: "absolute",
-    top: -5,
-    right: -5,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1.5,
-    alignItems: "center",
-    justifyContent: "center",
+    position:          "absolute",
+    top:               -5,
+    right:             -5,
+    minWidth:          18,
+    height:            18,
+    borderRadius:      9,
+    borderWidth:       1.5,
+    alignItems:        "center",
+    justifyContent:    "center",
     paddingHorizontal: 3,
   },
   qtyBadgeText: {
-    fontSize: 9,
+    fontSize:   9,
     fontWeight: "700",
   },
   selectedCheck: {
-    position: "absolute",
-    top: -5,
-    right: -5,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1.5,
-    alignItems: "center",
+    position:       "absolute",
+    top:            -5,
+    right:          -5,
+    width:          18,
+    height:         18,
+    borderRadius:   9,
+    borderWidth:    1.5,
+    alignItems:     "center",
     justifyContent: "center",
   },
   emptyState: {
-    alignItems: "center",
+    alignItems:     "center",
     paddingVertical: 48,
-    gap: 12,
+    gap:            12,
   },
   emptyIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 20,
-    alignItems: "center",
+    width:          64,
+    height:         64,
+    borderRadius:   20,
+    alignItems:     "center",
     justifyContent: "center",
   },
   emptyTitle: {
-    fontSize: 16,
+    fontSize:   16,
     fontWeight: "700",
   },
   emptySub: {
-    fontSize: 13,
-    textAlign: "center",
+    fontSize:   13,
+    textAlign:  "center",
     lineHeight: 18,
-    maxWidth: 260,
+    maxWidth:   260,
   },
 });
