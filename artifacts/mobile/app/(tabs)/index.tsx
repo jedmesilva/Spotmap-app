@@ -349,6 +349,9 @@ export default function MapScreen() {
         insets={{ bottom: bottomInset }}
         canAttack={canMine || !!selectedUser}
         miningClicks={miningClicks}
+        userLocation={userLocation}
+        nearbyUsers={nearbyUsers}
+        freeAimSpots={spots}
         onAttack={() => {
           fireInventorySpot(mineableSpotId);
           const itemType = selectedInventorySpot?.type ?? "rare";
@@ -357,6 +360,16 @@ export default function MapScreen() {
           } else if (mineableSpotId) {
             mapRef.current?.mineHit(mineableSpotId, miningClicks + 1);
             mapRef.current?.fireAtSpot(mineableSpotId, itemType);
+          }
+        }}
+        onFreeAimFire={(userId, spotId) => {
+          const itemType = selectedInventorySpot?.type ?? "rare";
+          if (userId) {
+            fireInventorySpot(null);
+            mapRef.current?.fireAtUser(userId, itemType);
+          } else if (spotId) {
+            fireInventorySpot(spotId);
+            mapRef.current?.fireAtSpot(spotId, itemType);
           }
         }}
         extraBottomOffset={selectedUser ? EMOJI_BAR_HEIGHT + 10 : 0}
