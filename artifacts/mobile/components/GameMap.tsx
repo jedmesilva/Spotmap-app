@@ -15,6 +15,9 @@ export interface GameMapHandle {
   setPlayerUseItem: (itemType: string) => void;
   fireInDirection: (itemType: string) => void;
   setAimTarget: (target: { userId?: string; spotId?: string } | null) => void;
+  toggleFog: (enabled: boolean) => void;
+  resetFog: () => void;
+  revealFogAt: (lat: number, lng: number) => void;
 }
 
 const USER_RADIUS = 60;
@@ -83,6 +86,76 @@ map.on('click',function(){send({type:'MAP_PRESS'})});
 var navyOverlay=document.createElement('div');
 navyOverlay.style.cssText='position:absolute;inset:0;background:'+C.overlayBg+';opacity:'+C.overlayOpacity+';z-index:250;pointer-events:none;';
 map.getContainer().querySelector('.leaflet-map-pane').appendChild(navyOverlay);
+
+// ─── FOG OF WAR ──────────────────────────────────────────────────────────────
+var fogEnabled=true;
+var fogTrail=[];      // [{lat,lng}] geographic positions of player trail
+var fogLivePos=null;  // current player position (always visible)
+var FOG_TRAIL_RADIUS=80;   // meters revealed by past movement
+var FOG_LIVE_RADIUS=120;   // meters always visible around current position
+var FOG_MIN_SPACING=18;    // meters between trail points (dedup)
+var fogW=0,fogH=0;
+
+var fogCanvas=document.createElement('canvas');
+fogCanvas.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;z-index:500;pointer-events:none;';
+map.getContainer().appendChild(fogCanvas);
+var fogCtx=fogCanvas.getContext('2d');
+
+function metersToPixels(lat,meters){
+  var zoom=map.getZoom();
+  var latRad=lat*Math.PI/180;
+  var mpp=156543.03392*Math.cos(latRad)/Math.pow(2,zoom);
+  return meters/mpp;
+}
+
+function drawFogCircle(lat,lng,radiusM,innerFrac){
+  var pt=map.latLngToContainerPoint([lat,lng]);
+  var px=metersToPixels(lat,radiusM);
+  var r0=px*(innerFrac||0.45);
+  var grad=fogCtx.createRadialGradient(pt.x,pt.y,r0,pt.x,pt.y,px);
+  grad.addColorStop(0,'rgba(0,0,0,1)');
+  grad.addColorStop(0.7,'rgba(0,0,0,0.97)');
+  grad.addColorStop(1,'rgba(0,0,0,0)');
+  fogCtx.beginPath();
+  fogCtx.arc(pt.x,pt.y,px,0,Math.PI*2);
+  fogCtx.fillStyle=grad;
+  fogCtx.fill();
+}
+
+function drawFog(){
+  var container=map.getContainer();
+  var w=container.offsetWidth,h=container.offsetHeight;
+  if(fogW!==w||fogH!==h){fogCanvas.width=w;fogCanvas.height=h;fogW=w;fogH=h;}
+  fogCtx.clearRect(0,0,fogW,fogH);
+  if(!fogEnabled)return;
+  // Fill entire canvas with fog color
+  fogCtx.globalCompositeOperation='source-over';
+  fogCtx.fillStyle='rgba(10,14,26,0.87)';
+  fogCtx.fillRect(0,0,fogW,fogH);
+  // Punch transparent holes — destination-out removes pixels from the fog
+  fogCtx.globalCompositeOperation='destination-out';
+  for(var i=0;i<fogTrail.length;i++){
+    var p=fogTrail[i];
+    drawFogCircle(p.lat,p.lng,FOG_TRAIL_RADIUS,0.50);
+  }
+  // Live vision circle (larger, soft edge around current position)
+  if(fogLivePos){
+    drawFogCircle(fogLivePos.lat,fogLivePos.lng,FOG_LIVE_RADIUS,0.32);
+  }
+  fogCtx.globalCompositeOperation='source-over';
+}
+
+function addFogReveal(lat,lng){
+  fogLivePos={lat:lat,lng:lng};
+  var last=fogTrail[fogTrail.length-1];
+  if(!last||haversineM(last.lat,last.lng,lat,lng)>=FOG_MIN_SPACING){
+    fogTrail.push({lat:lat,lng:lng});
+  }
+  drawFog();
+}
+
+map.on('move zoom moveend zoomend',drawFog);
+// ─────────────────────────────────────────────────────────────────────────────
 
 var spotMarkers={},spotCircles={},userMarkers={};
 var spotIconKeys={},userIconKeys={},playerIconKey=null;
@@ -543,6 +616,8 @@ function updatePlayer(loc,radius,profile,collecting){
     playerDot.on('contextmenu',function(e){L.DomEvent.stopPropagation(e);send({type:'PLAYER_LONG_PRESS'});});
     playerIconKey=pKey;
   }
+  // Reveal fog at player position
+  addFogReveal(loc.latitude,loc.longitude);
   updateAimLine();
 }
 
@@ -600,6 +675,14 @@ window.receiveFromRN=function(jsonStr){
         if(playerDot&&playerProfile){playerDot.setIcon(playerIcon(playerProfile,playerCollectingData||null,playerAimAngle,null));}
       },1500);
       if(playerDot&&playerProfile){playerDot.setIcon(playerIcon(playerProfile,playerCollectingData||null,playerAimAngle,playerUsingItem));}
+    } else if(d.type==='TOGGLE_FOG'){
+      fogEnabled=!!d.enabled;
+      drawFog();
+    } else if(d.type==='RESET_FOG'){
+      fogTrail=[];fogLivePos=null;
+      drawFog();
+    } else if(d.type==='FOG_REVEAL_POINT'){
+      addFogReveal(d.lat,d.lng);
     }
   }catch(e){}
 };
@@ -843,6 +926,15 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
     },
     setAimTarget: (target: { userId?: string; spotId?: string } | null) => {
       inject({ type: "AIM_TARGET", target });
+    },
+    toggleFog: (enabled: boolean) => {
+      inject({ type: "TOGGLE_FOG", enabled });
+    },
+    resetFog: () => {
+      inject({ type: "RESET_FOG" });
+    },
+    revealFogAt: (lat: number, lng: number) => {
+      inject({ type: "FOG_REVEAL_POINT", lat, lng });
     },
   }));
 
