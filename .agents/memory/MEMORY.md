@@ -1,0 +1,1 @@
+- [shell-quote CVE firewall fix](shell-quote-fix.md) — all shell-quote versions except 1.8.4 are blocked by Socket Security CVE policy; override to 1.8.4 in pnpm-workspace.yaml overrides.
