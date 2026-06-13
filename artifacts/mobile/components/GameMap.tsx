@@ -154,7 +154,18 @@ function addFogReveal(lat,lng){
   drawFog();
 }
 
-map.on('move zoom moveend zoomend',drawFog);
+var fogAnimFrame=null;
+function fogLoopStart(){
+  if(fogAnimFrame)return;
+  function loop(){drawFog();fogAnimFrame=requestAnimationFrame(loop);}
+  fogAnimFrame=requestAnimationFrame(loop);
+}
+function fogLoopStop(){
+  if(fogAnimFrame){cancelAnimationFrame(fogAnimFrame);fogAnimFrame=null;}
+  drawFog();
+}
+map.on('movestart zoomstart',fogLoopStart);
+map.on('moveend zoomend',fogLoopStop);
 // ─────────────────────────────────────────────────────────────────────────────
 
 var spotMarkers={},spotCircles={},userMarkers={};
