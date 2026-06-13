@@ -91,7 +91,7 @@ map.getContainer().querySelector('.leaflet-map-pane').appendChild(navyOverlay);
 var fogEnabled=true;
 var fogTrail=[];      // [{lat,lng}] geographic positions of player trail
 var fogLivePos=null;  // current player position (always visible)
-var FOG_TRAIL_RADIUS=75;   // meters revealed by past movement
+var FOG_TRAIL_RADIUS=160;  // meters revealed by past movement
 var FOG_LIVE_RADIUS=160;   // meters always visible around current position
 var FOG_MIN_SPACING=18;    // meters between trail points (dedup)
 var fogW=0,fogH=0;
