@@ -531,99 +531,54 @@ export function CombatButtons({
         </Pressable>
       </Modal>
 
-      {/* Main layout */}
+      {/* ── SKILL CLUSTER LAYOUT ───────────────────────────────────────────── */}
+      {/*
+        Single RNAnimated.View covers the full bottom strip.
+        Everything inside uses absolute positioning so each element is
+        independently placed within the strip.
+        - Left:  aim zone (ringPan — drag to aim, no fire)
+        - Right: 3 skill buttons in an arc (ATK top, FARM mid-left, USE bottom)
+        - Top-right: "Equipar" chip for the active slot
+      */}
       <RNAnimated.View
-        style={[styles.container, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}
+        style={[styles.clusterStrip, { bottom: RNAnimated.add(insets.bottom + 16, bottomAnim) }]}
+        pointerEvents="box-none"
       >
-        {/* Vertical mode list */}
-        <View style={styles.modeList}>
-          {MODES.map((mode) => {
-            const cfg      = MODE_CONFIG[mode];
-            const isActive = activeMode === mode;
-            const slot     = getSlotForMode(mode);
-            const slotColor = slot
-              ? (mode === "use"
-                  ? (ITEM_COLORS[(slot as InventoryItem).type] ?? C.purple)
-                  : (SPOT_COLORS[(slot as Spot).type] ?? C.accent))
-              : C.textMuted;
-            const slotIcon = slot
-              ? (mode === "use"
-                  ? (ITEM_ICONS[(slot as InventoryItem).type] ?? "package")
-                  : (SPOT_ICONS[(slot as Spot).type]         ?? "package"))
-              : null;
 
-            const slotLabel = slot
-              ? (mode === "use"
-                  ? (ITEM_LABELS[(slot as InventoryItem).type] ?? "Item")
-                  : (SPOT_LABELS[(slot as Spot).type] ?? "Slot"))
-              : null;
+        {/* ── LEFT: AIM ZONE ─────────────────────────────────────────────── */}
+        <View style={styles.aimZoneWrap} pointerEvents="box-none">
+          {/* Static dashed ring */}
+          <View style={[styles.aimStaticRing, { borderColor: C.border }]} />
+          {/* Tick marks at cardinal points */}
+          {[0, 90, 180, 270].map((deg) => (
+            <View
+              key={deg}
+              style={[
+                styles.aimTick,
+                {
+                  backgroundColor: C.border,
+                  transform: [
+                    { translateX: -1 },
+                    { translateY: -(AIM_SIZE / 2 - 6) },
+                    { rotate: `${deg}deg` },
+                  ],
+                },
+              ]}
+            />
+          ))}
+          {/* Center knob */}
+          <View style={[styles.aimKnob, { backgroundColor: C.surface, borderColor: C.border }]} />
 
-            return (
-              <View key={mode} style={styles.modeRow}>
-
-                {/* LEFT: item slot — tap to pick item */}
-                <TouchableOpacity
-                  style={[styles.slotPill, {
-                    backgroundColor: slot ? slotColor + "18" : C.surface,
-                    borderColor:     slot ? slotColor + "55" : C.border,
-                  }]}
-                  onPress={() => setPickerMode(mode)}
-                  activeOpacity={0.75}
-                >
-                  <Feather
-                    name={(slotIcon ?? "plus") as any}
-                    size={14}
-                    color={slot ? slotColor : C.textMuted}
-                  />
-                  <Text style={[styles.slotPillLabel, { color: slot ? slotColor : C.textMuted }]} numberOfLines={1}>
-                    {slotLabel ?? "Equipar"}
-                  </Text>
-                </TouchableOpacity>
-
-                {/* RIGHT: mode button — tap to switch mode */}
-                <TouchableOpacity
-                  style={[styles.modePill, {
-                    backgroundColor: isActive ? C.accent + "20" : C.surface,
-                    borderColor:     isActive ? C.accent        : C.border,
-                  }]}
-                  onPress={() => {
-                    setActiveMode(mode);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                  activeOpacity={0.75}
-                >
-                  <Feather name={cfg.icon as any} size={15} color={isActive ? C.accent : C.textMuted} />
-                  <Text style={[styles.modePillLabel, { color: isActive ? C.accent : C.textMuted }]}>
-                    {cfg.label}
-                  </Text>
-                </TouchableOpacity>
-
-              </View>
-            );
-          })}
-        </View>
-
-        {/* Action button */}
-        {/*
-          Layout trick: the visual button is BTN_SIZE.
-          An invisible "touch catcher" View extends TOUCH_PAD in all directions
-          via negative margin/absolute — captures the pan gesture without
-          changing where the button appears on screen.
-        */}
-        <View style={styles.btnOuter}>
-
-          {/* Idle ring: always visible, drag here = only aim, no fire */}
-          <View style={styles.aimRingWrap} {...ringPan.panHandlers}>
-            <View style={[styles.aimRing, { borderColor: C.border }]} />
-          </View>
-
-          {/* Active ring: pointer + brighter ring while aiming */}
+          {/* Active ring + pointer (while aiming) */}
           <RNAnimated.View
             style={[
-              styles.aimRingWrap,
-              { opacity: ringOpacity, transform: [{
+              styles.aimActiveRing,
+              {
+                opacity: ringOpacity,
+                transform: [{
                   rotate: ringRotate.interpolate({ inputRange: [0, 360], outputRange: ["0deg", "360deg"] }),
-              }] },
+                }],
+              },
             ]}
             pointerEvents="none"
           >
@@ -631,150 +586,272 @@ export function CombatButtons({
             <View style={[styles.aimPointer, { backgroundColor: pointerColor }]} />
           </RNAnimated.View>
 
-          {/* Visual button */}
-          <RNAnimated.View
-            style={[
-              styles.btn,
-              {
-                backgroundColor: canAct ? btnColor + "22" : C.card,
-                borderColor:     canAct ? btnColor        : C.border,
-                borderWidth:     canAct ? 2 : 1.5,
-                transform: [{ scale: btnScale }],
-              },
-              canAct && {
-                shadowColor:   btnColor,
-                shadowOpacity: 0.55,
-                shadowRadius:  14,
-                elevation:     10,
-              },
-            ]}
-          >
-            <Feather name={btnIcon as any} size={26} color={canAct ? btnColor : C.textMuted} />
-            <Text style={[styles.btnLabel, { color: canAct ? btnColor : C.textMuted }]}>
-              {MODE_CONFIG[activeMode].label}
-            </Text>
-            {activeMode === "atk" && canAct && miningClicks > 0 && (
-              <View style={[styles.badge, { backgroundColor: C.bg, borderColor: btnColor }]}>
-                <Text style={[styles.badgeText, { color: btnColor }]}>{miningClicks}x</Text>
-              </View>
-            )}
-          </RNAnimated.View>
-
-          {/* Invisible touch-catcher — same center as button, extends TOUCH_PAD outwards */}
-          <View style={styles.touchCatcher} {...mainPan.panHandlers} />
+          {/* Transparent touch overlay for ringPan */}
+          <View style={StyleSheet.absoluteFillObject} {...ringPan.panHandlers} />
         </View>
+
+        {/* ── TOP-RIGHT: EQUIP CHIP for active mode ──────────────────────── */}
+        <TouchableOpacity
+          style={[
+            styles.equipChip,
+            {
+              borderColor:     btnColor + "55",
+              backgroundColor: btnColor + "18",
+            },
+          ]}
+          onPress={() => setPickerMode(activeMode)}
+          activeOpacity={0.75}
+        >
+          <Feather name={btnIcon as any} size={11} color={btnColor} />
+          <Text style={[styles.equipChipText, { color: btnColor }]} numberOfLines={1}>
+            {(() => {
+              const slot = getSlotForMode(activeMode);
+              if (!slot) return "Equipar";
+              if (activeMode === "use") return ITEM_LABELS[(slot as InventoryItem).type] ?? "Equipar";
+              return SPOT_LABELS[(slot as Spot).type] ?? "Equipar";
+            })()}
+          </Text>
+          <Feather name="chevron-up" size={10} color={btnColor + "bb"} />
+        </TouchableOpacity>
+
+        {/* ── RIGHT: 3 SKILL BUTTONS IN ARC ─────────────────────────────── */}
+        {MODES.map((mode, idx) => {
+          const cfg       = MODE_CONFIG[mode];
+          const isActive  = activeMode === mode;
+          const slot      = getSlotForMode(mode);
+          const slotColor = slot
+            ? (mode === "use"
+                ? (ITEM_COLORS[(slot as InventoryItem).type] ?? C.purple)
+                : (SPOT_COLORS[(slot as Spot).type]         ?? C.accent))
+            : C.textMuted;
+          const slotIcon  = slot
+            ? (mode === "use"
+                ? (ITEM_ICONS[(slot as InventoryItem).type]  ?? "package")
+                : (SPOT_ICONS[(slot as Spot).type]           ?? "package"))
+            : "plus";
+          const canActNow = (() => {
+            if (mode === "atk")  return !!atkItem  && (!!selectedUser || canAttack);
+            if (mode === "farm") return !!farmItem && canAttack;
+            if (mode === "use")  return !!useItem;
+            return false;
+          })();
+
+          if (isActive) {
+            // Active skill button — mainPan handles tap=fire, hold=fire, drag=aim+fire
+            return (
+              <RNAnimated.View
+                key={mode}
+                style={[
+                  styles.skillBtnActive,
+                  ARC_POS[idx],
+                  {
+                    borderColor:     canActNow ? slotColor : C.border,
+                    backgroundColor: canActNow ? slotColor + "22" : C.card,
+                    transform: [{ scale: btnScale }],
+                    shadowColor:   canActNow ? slotColor : "#000",
+                    shadowOpacity: canActNow ? 0.6 : 0.3,
+                    elevation:     canActNow ? 12 : 4,
+                  },
+                ]}
+              >
+                <Feather
+                  name={slotIcon as any}
+                  size={24}
+                  color={canActNow ? slotColor : C.textMuted}
+                />
+                <Text style={[styles.skillBtnLabel, { color: canActNow ? slotColor : C.textMuted }]}>
+                  {cfg.label}
+                </Text>
+                {mode === "atk" && canActNow && miningClicks > 0 && (
+                  <View style={[styles.badge, { backgroundColor: C.bg, borderColor: slotColor }]}>
+                    <Text style={[styles.badgeText, { color: slotColor }]}>{miningClicks}x</Text>
+                  </View>
+                )}
+                {/* Invisible touch-catcher — mainPan for fire + aim */}
+                <View style={StyleSheet.absoluteFillObject} {...mainPan.panHandlers} />
+              </RNAnimated.View>
+            );
+          }
+
+          // Inactive skill button — tap = activate, long-press = open picker
+          return (
+            <TouchableOpacity
+              key={mode}
+              style={[
+                styles.skillBtnInactive,
+                ARC_POS[idx],
+                {
+                  borderColor:     slot ? slotColor + "66" : C.border,
+                  backgroundColor: C.card,
+                },
+              ]}
+              onPress={() => {
+                setActiveMode(mode);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              onLongPress={() => {
+                setActiveMode(mode);
+                setPickerMode(mode);
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              }}
+              activeOpacity={0.7}
+            >
+              <Feather
+                name={slotIcon as any}
+                size={18}
+                color={slot ? slotColor + "cc" : C.textMuted}
+              />
+              <Text style={[styles.skillBtnLabelSm, { color: slot ? slotColor + "cc" : C.textMuted }]}>
+                {cfg.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </RNAnimated.View>
     </>
   );
 }
 
+// ── Arc positions (right / bottom offsets from clusterStrip) ──────────────────
+// ATK = top of arc, FARM = mid-left, USE = bottom
+const ARC_POS = [
+  { position: "absolute" as const, right: 16, bottom: 158 }, // atk
+  { position: "absolute" as const, right: 98, bottom: 86  }, // farm
+  { position: "absolute" as const, right: 16, bottom: 16  }, // use
+] as const;
+
+const AIM_SIZE   = 108;
+const ACTIVE_BTN = 78;
+const INACTIVE_BTN = 60;
+
 const styles = StyleSheet.create({
-  container: {
+  // Full-width animated strip that anchors all controls to the bottom
+  clusterStrip: {
+    position:  "absolute",
+    left:       0,
+    right:      0,
+    height:     280,
+    zIndex:     20,
+  },
+
+  // ── Aim zone (left side) ───────────────────────────────────────────────────
+  aimZoneWrap: {
     position:       "absolute",
-    right:          16,
-    flexDirection:  "column",
-    alignItems:     "flex-end",
-    gap:            8,
-    zIndex:         20,
-  },
-  modeList: {
-    gap:        7,
-    alignItems: "flex-end",
-  },
-  modeRow: {
-    flexDirection: "row",
-    alignItems:    "center",
-    gap:           6,
-  },
-
-  /* Item slot pill — left side of each row */
-  slotPill: {
-    flexDirection:     "row",
-    alignItems:        "center",
-    gap:               6,
-    paddingHorizontal: 11,
-    paddingVertical:   9,
-    borderRadius:      12,
-    borderWidth:       1.5,
-    maxWidth:          120,
-  },
-  slotPillLabel: {
-    fontSize:      12,
-    fontFamily:    "Inter_700Bold",
-    letterSpacing: 0.4,
-  },
-
-  /* Mode pill — right side of each row */
-  modePill: {
-    flexDirection:     "row",
-    alignItems:        "center",
-    gap:               5,
-    paddingHorizontal: 12,
-    paddingVertical:   9,
-    borderRadius:      12,
-    borderWidth:       1.5,
-    minWidth:          72,
-    justifyContent:    "center",
-  },
-  modePillLabel: {
-    fontSize:      13,
-    fontFamily:    "Inter_700Bold",
-    letterSpacing: 0.9,
-  },
-
-  // Outer wrapper: sized to the ring so layout reserves full ring space
-  btnOuter: {
-    width:          RING_SIZE,
-    height:         RING_SIZE,
+    left:           16,
+    bottom:         16,
+    width:          AIM_SIZE,
+    height:         AIM_SIZE,
     alignItems:     "center",
     justifyContent: "center",
   },
-
-  // Ring fills the outer wrapper exactly — no negative offsets needed
-  aimRingWrap: {
-    position:   "absolute",
-    width:      RING_SIZE,
-    height:     RING_SIZE,
-    alignItems: "center",
-    left:       0,
-    top:        0,
-  },
-  aimRing: {
+  aimStaticRing: {
     position:     "absolute",
-    width:        RING_SIZE,
-    height:       RING_SIZE,
-    borderRadius: RING_SIZE / 2,
+    width:        AIM_SIZE,
+    height:       AIM_SIZE,
+    borderRadius: AIM_SIZE / 2,
     borderWidth:  1.5,
     borderStyle:  "dashed",
   },
-  // Pointer at 12-o'clock within aimRingWrap
+  aimTick: {
+    position: "absolute",
+    width:    2,
+    height:   6,
+    top:      "50%",
+    left:     "50%",
+    borderRadius: 1,
+  },
+  aimKnob: {
+    width:        28,
+    height:       28,
+    borderRadius: 14,
+    borderWidth:  1,
+    alignItems:   "center",
+    justifyContent: "center",
+  },
+  aimActiveRing: {
+    position:   "absolute",
+    width:      AIM_SIZE,
+    height:     AIM_SIZE,
+    alignItems: "center",
+  },
+  aimRing: {
+    position:     "absolute",
+    width:        AIM_SIZE,
+    height:       AIM_SIZE,
+    borderRadius: AIM_SIZE / 2,
+    borderWidth:  1.5,
+    borderStyle:  "dashed",
+  },
   aimPointer: {
     position:     "absolute",
-    top:          2,
-    left:         RING_SIZE / 2 - 5,
+    top:          4,
+    left:         AIM_SIZE / 2 - 5,
     width:        10,
     height:       10,
     borderRadius: 5,
   },
 
-  btn: {
-    width:          BTN_SIZE,
-    height:         BTN_SIZE,
-    borderRadius:   BTN_SIZE / 2,
+  // ── Equip chip (top-right, above cluster) ─────────────────────────────────
+  equipChip: {
+    position:          "absolute",
+    right:             16,
+    bottom:            248,
+    flexDirection:     "row",
+    alignItems:        "center",
+    gap:               5,
+    paddingHorizontal: 10,
+    paddingVertical:   6,
+    borderRadius:      10,
+    borderWidth:       1.5,
+    maxWidth:          140,
+  },
+  equipChipText: {
+    flex:          1,
+    fontSize:      11,
+    fontFamily:    "Inter_700Bold",
+    letterSpacing: 0.5,
+  },
+
+  // ── Active skill button ────────────────────────────────────────────────────
+  skillBtnActive: {
+    width:          ACTIVE_BTN,
+    height:         ACTIVE_BTN,
+    borderRadius:   ACTIVE_BTN / 2,
+    borderWidth:    2,
     alignItems:     "center",
     justifyContent: "center",
-    shadowColor:    "#000",
-    shadowOffset:   { width: 0, height: 2 },
-    shadowOpacity:  0.5,
-    shadowRadius:   8,
-    elevation:      6,
     gap:            3,
+    shadowOffset:   { width: 0, height: 2 },
+    shadowRadius:   14,
   },
-  btnLabel: {
+  skillBtnLabel: {
     fontSize:      9,
     fontFamily:    "Inter_700Bold",
     letterSpacing: 0.8,
   },
+
+  // ── Inactive skill button ─────────────────────────────────────────────────
+  skillBtnInactive: {
+    width:          INACTIVE_BTN,
+    height:         INACTIVE_BTN,
+    borderRadius:   INACTIVE_BTN / 2,
+    borderWidth:    1.5,
+    alignItems:     "center",
+    justifyContent: "center",
+    gap:            3,
+    shadowColor:    "#000",
+    shadowOffset:   { width: 0, height: 1 },
+    shadowOpacity:  0.3,
+    shadowRadius:   4,
+    elevation:      3,
+  },
+  skillBtnLabelSm: {
+    fontSize:      8,
+    fontFamily:    "Inter_700Bold",
+    letterSpacing: 0.7,
+  },
+
+  // ── Mining / use badge ────────────────────────────────────────────────────
   badge: {
     position:          "absolute",
     top:               -5,
@@ -792,17 +869,7 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_700Bold",
   },
 
-  // Touch-catcher covers only the button center (not the ring area)
-  touchCatcher: {
-    position:     "absolute",
-    width:        BTN_SIZE,
-    height:       BTN_SIZE,
-    left:         (RING_SIZE - BTN_SIZE) / 2,
-    top:          (RING_SIZE - BTN_SIZE) / 2,
-    borderRadius: BTN_SIZE / 2,
-  },
-
-  // Modal
+  // ── Item picker modal ─────────────────────────────────────────────────────
   modalBackdrop: {
     flex:            1,
     backgroundColor: "rgba(0,0,0,0.6)",
@@ -861,9 +928,9 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   emptyText: {
-    fontSize:       13,
-    fontFamily:     "Inter_400Regular",
-    textAlign:      "center",
+    fontSize:        13,
+    fontFamily:      "Inter_400Regular",
+    textAlign:       "center",
     paddingVertical: 24,
   },
 });
