@@ -549,23 +549,6 @@ export function CombatButtons({
         <View style={styles.aimZoneWrap} pointerEvents="box-none">
           {/* Static dashed ring */}
           <View style={[styles.aimStaticRing, { borderColor: C.border }]} />
-          {/* Tick marks at cardinal points */}
-          {[0, 90, 180, 270].map((deg) => (
-            <View
-              key={deg}
-              style={[
-                styles.aimTick,
-                {
-                  backgroundColor: C.border,
-                  transform: [
-                    { translateX: -1 },
-                    { translateY: -(AIM_SIZE / 2 - 6) },
-                    { rotate: `${deg}deg` },
-                  ],
-                },
-              ]}
-            />
-          ))}
           {/* Center knob */}
           <View style={[styles.aimKnob, { backgroundColor: C.surface, borderColor: C.border }]} />
 
@@ -751,14 +734,6 @@ const styles = StyleSheet.create({
     borderRadius: AIM_SIZE / 2,
     borderWidth:  1.5,
     borderStyle:  "dashed",
-  },
-  aimTick: {
-    position: "absolute",
-    width:    2,
-    height:   6,
-    top:      "50%",
-    left:     "50%",
-    borderRadius: 1,
   },
   aimKnob: {
     width:        28,
