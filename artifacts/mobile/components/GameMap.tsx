@@ -91,8 +91,8 @@ map.getContainer().querySelector('.leaflet-map-pane').appendChild(navyOverlay);
 var fogEnabled=true;
 var fogTrail=[];      // [{lat,lng}] geographic positions of player trail
 var fogLivePos=null;  // current player position (always visible)
-var FOG_TRAIL_RADIUS=80;   // meters revealed by past movement
-var FOG_LIVE_RADIUS=120;   // meters always visible around current position
+var FOG_TRAIL_RADIUS=75;   // meters revealed by past movement
+var FOG_LIVE_RADIUS=90;    // meters always visible around current position
 var FOG_MIN_SPACING=18;    // meters between trail points (dedup)
 var fogW=0,fogH=0;
 
@@ -136,11 +136,11 @@ function drawFog(){
   fogCtx.globalCompositeOperation='destination-out';
   for(var i=0;i<fogTrail.length;i++){
     var p=fogTrail[i];
-    drawFogCircle(p.lat,p.lng,FOG_TRAIL_RADIUS,0.50);
+    drawFogCircle(p.lat,p.lng,FOG_TRAIL_RADIUS,0.55);
   }
-  // Live vision circle (larger, soft edge around current position)
+  // Live vision circle (slightly larger, same gradient feel as trail)
   if(fogLivePos){
-    drawFogCircle(fogLivePos.lat,fogLivePos.lng,FOG_LIVE_RADIUS,0.32);
+    drawFogCircle(fogLivePos.lat,fogLivePos.lng,FOG_LIVE_RADIUS,0.55);
   }
   fogCtx.globalCompositeOperation='source-over';
 }
