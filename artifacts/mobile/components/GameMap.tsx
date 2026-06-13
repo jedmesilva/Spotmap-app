@@ -85,6 +85,7 @@ navyOverlay.style.cssText='position:absolute;inset:0;background:'+C.overlayBg+';
 map.getContainer().querySelector('.leaflet-map-pane').appendChild(navyOverlay);
 
 var spotMarkers={},spotCircles={},userMarkers={};
+var spotIconKeys={},userIconKeys={},playerIconKey=null;
 var playerDot=null,playerCircle=null;
 var selSpot=null,selUser=null;
 var userCollectingSpot={};
@@ -145,7 +146,7 @@ window.applyTheme=function(isDark){
   C=isDark?C_DARK:C_LIGHT;
   updateSpotColorMap();
   map.removeLayer(tileLayer);
-  tileLayer=L.tileLayer(C.tileUrl,{maxZoom:20,subdomains:'abcd'}).addTo(tileLayer?map:map);
+  tileLayer=L.tileLayer(C.tileUrl,{maxZoom:20,subdomains:'abcd'}).addTo(map);
   var tp=document.querySelector('.leaflet-tile-pane');
   if(tp)tp.style.filter=C.tileFilter;
   var mapEl=document.getElementById('map');
@@ -154,6 +155,8 @@ window.applyTheme=function(isDark){
   if(lc){lc.style.background=C.mapBg;}
   navyOverlay.style.background=C.overlayBg;
   navyOverlay.style.opacity=C.overlayOpacity;
+  // Invalidate all icon caches so icons rebuild with new colors
+  spotIconKeys={};userIconKeys={};playerIconKey=null;
   updateSpots(currentSpots);
   updateUsers(currentUsers);
   if(playerProfile&&playerLoc){updatePlayer(playerLoc,null,playerProfile,playerCollectingData);}
@@ -383,25 +386,30 @@ function updateSpots(spots){
   var ids=spots.map(function(s){return s.id});
   Object.keys(spotMarkers).forEach(function(id){
     if(ids.indexOf(id)<0){
-      map.removeLayer(spotMarkers[id]);delete spotMarkers[id];
+      map.removeLayer(spotMarkers[id]);delete spotMarkers[id];delete spotIconKeys[id];
       if(spotCircles[id]){map.removeLayer(spotCircles[id]);delete spotCircles[id]}
     }
   });
   spots.forEach(function(spot){
     var ll=[spot.latitude,spot.longitude];
-    var icon=spotIcon(spot,selSpot===spot.id);
+    var selected=selSpot===spot.id;
+    var playerInRange=mineableSpotId===spot.id;
+    var iconKey=spot.id+'|'+spot.type+'|'+spot.title+'|'+(selected?1:0)+'|'+(playerInRange?1:0);
     if(spotMarkers[spot.id]){
-      spotMarkers[spot.id].setIcon(icon);
+      if(spotIconKeys[spot.id]!==iconKey){
+        spotMarkers[spot.id].setIcon(spotIcon(spot,selected));
+        spotIconKeys[spot.id]=iconKey;
+      }
     } else {
+      var icon=spotIcon(spot,selected);
       var m=L.marker(ll,{icon:icon,zIndexOffset:100});
       (function(sid){
         m.on('click',function(e){L.DomEvent.stopPropagation(e);send({type:'SPOT_PRESS',spotId:sid})});
         m.on('contextmenu',function(e){L.DomEvent.stopPropagation(e);send({type:'SPOT_LONG_PRESS',spotId:sid})});
       })(spot.id);
-      m.addTo(map);spotMarkers[spot.id]=m;
+      m.addTo(map);spotMarkers[spot.id]=m;spotIconKeys[spot.id]=iconKey;
     }
     var color=SPOT_COLOR[spot.type]||C.accent;
-    var playerInRange=mineableSpotId===spot.id;
     var circleOpts=playerInRange
       ?{radius:spot.radius,color:color,fillColor:color,fillOpacity:0.15,weight:3,opacity:0.9}
       :{radius:spot.radius,color:color,fillColor:color,fillOpacity:0.07,weight:1.5,opacity:0.35};
@@ -422,22 +430,28 @@ function updateUsers(users){
   currentUsers=users;
   var ids=users.map(function(u){return u.id});
   Object.keys(userMarkers).forEach(function(id){
-    if(ids.indexOf(id)<0){map.removeLayer(userMarkers[id]);delete userMarkers[id];delete userCollectingSpot[id];}
+    if(ids.indexOf(id)<0){map.removeLayer(userMarkers[id]);delete userMarkers[id];delete userCollectingSpot[id];delete userIconKeys[id];}
   });
   users.forEach(function(user){
     userCollectingSpot[user.id]=user.collectingSpotId||null;
     var ll=[user.latitude,user.longitude];
+    var selected=selUser===user.id;
     var sc=spotColorForPos(user.latitude,user.longitude);
-    var icon=userIcon(user,selUser===user.id,sc);
+    var iconKey=user.id+'|'+user.health+'|'+user.maxHealth+'|'+user.strength+'|'+user.name+'|'+user.avatar+'|'+(user.collectingSpotId||'')+'|'+Math.round(user.collectProgress||0)+'|'+(selected?1:0)+'|'+(sc||'');
     if(userMarkers[user.id]){
-      userMarkers[user.id].setLatLng(ll).setIcon(icon);
+      userMarkers[user.id].setLatLng(ll);
+      if(userIconKeys[user.id]!==iconKey){
+        userMarkers[user.id].setIcon(userIcon(user,selected,sc));
+        userIconKeys[user.id]=iconKey;
+      }
     } else {
+      var icon=userIcon(user,selected,sc);
       var m=L.marker(ll,{icon:icon,zIndexOffset:50});
       (function(uid){
         m.on('click',function(e){L.DomEvent.stopPropagation(e);send({type:'USER_PRESS',userId:uid})});
         m.on('contextmenu',function(e){L.DomEvent.stopPropagation(e);send({type:'USER_LONG_PRESS',userId:uid})});
       })(user.id);
-      m.addTo(map);userMarkers[user.id]=m;
+      m.addTo(map);userMarkers[user.id]=m;userIconKeys[user.id]=iconKey;
     }
   });
   applyUserVisibility();
@@ -505,20 +519,29 @@ function updatePlayer(loc,radius,profile,collecting){
     map.panTo(ll,{animate:true,duration:0.6,easeLinearity:0.5});
   }
   if(playerCircle){map.removeLayer(playerCircle);playerCircle=null;}
-  var icon=profile?playerIcon(profile,collecting||null,playerAimAngle,playerUsingItem):L.divIcon({
-    html:'<div style="width:16px;height:16px;border-radius:50%;background:'+C.accent+';border:2.5px solid white;box-shadow:0 0 10px '+C.accent+'99;"></div>',
-    className:'',iconSize:[16,16],iconAnchor:[8,8]
-  });
+  var pKey=profile
+    ?[profile.health,profile.maxHealth,profile.strength,profile.avatar,profile.name,
+      collecting?Math.round(collecting.progress):-1,collecting?collecting.spotId:'',
+      playerUsingItem||'',playerAimAngle,playerAimTarget?JSON.stringify(playerAimTarget):''].join('|')
+    :'dot';
   if(playerDot){
-    playerDot.setIcon(icon);
-    var el=playerDot.getElement();
-    if(el){el.style.transition='transform 0.6s linear';}
     playerDot.setLatLng(ll);
+    if(playerIconKey!==pKey){
+      var icon=profile?playerIcon(profile,collecting||null,playerAimAngle,playerUsingItem):L.divIcon({
+        html:'<div style="width:16px;height:16px;border-radius:50%;background:'+C.accent+';border:2.5px solid white;box-shadow:0 0 10px '+C.accent+'99;"></div>',
+        className:'',iconSize:[16,16],iconAnchor:[8,8]
+      });
+      playerDot.setIcon(icon);
+      playerIconKey=pKey;
+    }
   } else {
+    var icon=profile?playerIcon(profile,collecting||null,playerAimAngle,playerUsingItem):L.divIcon({
+      html:'<div style="width:16px;height:16px;border-radius:50%;background:'+C.accent+';border:2.5px solid white;box-shadow:0 0 10px '+C.accent+'99;"></div>',
+      className:'',iconSize:[16,16],iconAnchor:[8,8]
+    });
     playerDot=L.marker(ll,{icon:icon,zIndexOffset:200,interactive:true}).addTo(map);
     playerDot.on('contextmenu',function(e){L.DomEvent.stopPropagation(e);send({type:'PLAYER_LONG_PRESS'});});
-    var el=playerDot.getElement();
-    if(el){el.style.transition='transform 0.6s linear';}
+    playerIconKey=pKey;
   }
   updateAimLine();
 }
