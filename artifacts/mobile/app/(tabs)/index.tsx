@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Platform, StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
+import { Platform, StyleSheet, TouchableOpacity, View } from "react-native";
 import * as Location from "expo-location";
 import * as Haptics from "expo-haptics";
 import { Feather, Ionicons } from "@expo/vector-icons";
@@ -33,8 +33,7 @@ export default function MapScreen() {
   const insets = useSafeAreaInsets();
   const mapRef = useRef<GameMapHandle>(null);
   const C = useColors();
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === "light" ? "light" : "dark";
+  const theme = "light";
 
   const [mapDetailSpot, setMapDetailSpot] = useState<Spot | null>(null);
   const [inventoryDetailSpot, setInventoryDetailSpot] = useState<Spot | null>(null);

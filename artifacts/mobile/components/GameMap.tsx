@@ -27,11 +27,11 @@ const MAP_HTML = `<!DOCTYPE html>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-html,body,#map{width:100%;height:100%;background:#040801;overflow:hidden}
-.leaflet-container{background:#040801}
+html,body,#map{width:100%;height:100%;background:#F8FAFC;overflow:hidden}
+.leaflet-container{background:#F8FAFC}
 .leaflet-control-attribution{display:none}
 .leaflet-pane,.leaflet-top,.leaflet-bottom{z-index:1}
-.leaflet-tile-pane{filter:sepia(1) hue-rotate(62deg) saturate(4) brightness(0.38)}
+.leaflet-tile-pane{filter:none}
 @keyframes badgePop{0%{transform:translateX(-50%) scale(0.5);opacity:0}60%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1);opacity:1}}
 @keyframes emojiBurst{0%{transform:translate(-50%,-50%) scale(1.6);opacity:1}100%{transform:translate(-50%,-50%) scale(3);opacity:0}}
 @keyframes mineFloat{0%{transform:translateX(-50%) translateY(0) scale(1);opacity:1}60%{transform:translateX(-50%) translateY(-28px) scale(1.15);opacity:1}100%{transform:translateX(-50%) translateY(-50px) scale(0.9);opacity:0}}
@@ -55,17 +55,17 @@ var C_DARK={
   tileUrl:'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 };
 var C_LIGHT={
-  accent:'#7B68EE',bg:'#E8ECF5',bgSec:'#F0F3FF',
-  surface:'#FFFFFF',border:'#C8CCDD',border33:'#C8CCDD33',
-  coupon:'#D98A2A',money:'#3EA85A',product:'#3A98E0',rare:'#A86CDE',
-  warning:'#D98A2A',danger:'#E05050',info:'#3A98E0',spotMoney:'#3EA85A',
-  text:'#0D0D2B',textMuted:'#8888A8',
-  shadow:'text-shadow:0 1px 3px rgba(255,255,255,0.85),0 0 6px rgba(255,255,255,0.5)',
-  mapBg:'#E8ECF5',overlayBg:'#DCE4F5',overlayOpacity:'0.18',
-  tileFilter:'sepia(0.15) hue-rotate(185deg) saturate(1.25) brightness(1.02)',
-  tileUrl:'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
+  accent:'#2563EB',bg:'#F8FAFC',bgSec:'#FFFFFF',
+  surface:'#FFFFFF',border:'#CBD5E1',border33:'#CBD5E133',
+  coupon:'#D97706',money:'#16A34A',product:'#2563EB',rare:'#7C3AED',
+  warning:'#D97706',danger:'#DC2626',info:'#2563EB',spotMoney:'#16A34A',
+  text:'#0F172A',textMuted:'#64748B',
+  shadow:'text-shadow:0 1px 4px rgba(255,255,255,0.9),0 0 8px rgba(255,255,255,0.7)',
+  mapBg:'#F8FAFC',overlayBg:'#F1F5F9',overlayOpacity:'0',
+  tileFilter:'none',
+  tileUrl:'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png'
 };
-var C=C_DARK;
+var C=C_LIGHT;
 var SPOT_COLOR={coupon:C.coupon,money:C.money,product:C.product,rare:C.rare};
 var ICONS={
   money:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
@@ -767,7 +767,7 @@ export const GameMap = forwardRef<GameMapHandle, GameMapProps>(function GameMap(
   userLocation,
   userProfile,
   activeCollection,
-  theme = "dark",
+  theme = "light",
   onSpotPress,
   onSpotLongPress,
   onUserPress,
