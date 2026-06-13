@@ -130,7 +130,7 @@ function drawFog(){
   if(!fogEnabled)return;
   // Fill entire canvas with fog color
   fogCtx.globalCompositeOperation='source-over';
-  fogCtx.fillStyle='rgba(10,14,26,0.87)';
+  fogCtx.fillStyle='rgba(10,14,26,1)';
   fogCtx.fillRect(0,0,fogW,fogH);
   // Punch transparent holes — destination-out removes pixels from the fog
   fogCtx.globalCompositeOperation='destination-out';
