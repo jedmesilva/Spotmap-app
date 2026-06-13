@@ -35,14 +35,12 @@ function Field({
   value,
   onChangeText,
   placeholder,
-  secureTextEntry,
   keyboardType,
 }: {
   label: string;
   value: string;
   onChangeText: (t: string) => void;
   placeholder?: string;
-  secureTextEntry?: boolean;
   keyboardType?: "default" | "email-address";
 }) {
   const [focused, setFocused] = useState(false);
@@ -55,7 +53,6 @@ function Field({
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={COLORS.dark.textMuted}
-        secureTextEntry={secureTextEntry}
         keyboardType={keyboardType ?? "default"}
         autoCapitalize="none"
         onFocus={() => setFocused(true)}
@@ -67,13 +64,10 @@ function Field({
 
 export default function AccountScreen() {
   const insets = useSafeAreaInsets();
-  const { userProfile, updateProfile, logout } = useAuth();
+  const { userProfile, updateProfile } = useAuth();
 
   const [name, setName] = useState(userProfile?.name ?? "");
   const [nickname, setNickname] = useState(userProfile?.nickname ?? "");
-  const [email, setEmail] = useState(userProfile?.email ?? "");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [avatarPickerVisible, setAvatarPickerVisible] = useState(false);
   const [selectedAvatar, setSelectedAvatar] = useState(userProfile?.avatar ?? "😎");
   const [saving, setSaving] = useState(false);
@@ -161,17 +155,9 @@ export default function AccountScreen() {
     }
   };
 
-  const handleAvatarPress = () => {
-    setAvatarPickerVisible(true);
-  };
-
   const handleSave = async () => {
-    if (password && password !== confirmPassword) {
-      Alert.alert("Erro", "As senhas não coincidem.");
-      return;
-    }
-    if (!name.trim() || !nickname.trim() || !email.trim()) {
-      Alert.alert("Erro", "Preencha todos os campos obrigatórios.");
+    if (!name.trim() || !nickname.trim()) {
+      Alert.alert("Erro", "Preencha nome e nickname.");
       return;
     }
 
@@ -179,9 +165,7 @@ export default function AccountScreen() {
     const error = await updateProfile({
       name: name.trim(),
       nickname: nickname.trim(),
-      email: email.trim(),
       avatar: selectedAvatar,
-      ...(password ? { password } : {}),
     });
     setSaving(false);
 
@@ -195,26 +179,13 @@ export default function AccountScreen() {
     ]);
   };
 
-  const handleLogout = () => {
-    Alert.alert("Sair", "Tem certeza que deseja sair da conta?", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Sair",
-        style: "destructive",
-        onPress: async () => {
-          await logout();
-        },
-      },
-    ]);
-  };
-
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="chevron-back" size={22} color={COLORS.dark.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Minha Conta</Text>
+        <Text style={styles.headerTitle}>Meu Perfil</Text>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave} disabled={saving}>
           {saving ? (
             <ActivityIndicator size="small" color={COLORS.dark.text} />
@@ -233,7 +204,7 @@ export default function AccountScreen() {
         <View style={styles.avatarSection}>
           <TouchableOpacity
             style={styles.avatarWrapper}
-            onPress={handleAvatarPress}
+            onPress={() => setAvatarPickerVisible(true)}
             activeOpacity={0.8}
             disabled={uploadingAvatar}
           >
@@ -261,27 +232,11 @@ export default function AccountScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Informações</Text>
-          <Field label="Nome" value={name} onChangeText={setName} placeholder="Seu nome completo" />
+          <Field label="Nome" value={name} onChangeText={setName} placeholder="Seu nome" />
           <Field label="Nickname" value={nickname} onChangeText={setNickname} placeholder="@seunickname" />
-          <Field label="E-mail" value={email} onChangeText={setEmail} placeholder="email@exemplo.com" keyboardType="email-address" />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Segurança</Text>
-          <Field label="Nova senha" value={password} onChangeText={setPassword} placeholder="••••••••" secureTextEntry />
-          <Field label="Confirmar senha" value={confirmPassword} onChangeText={setConfirmPassword} placeholder="••••••••" secureTextEntry />
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Conta</Text>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <Ionicons name="log-out-outline" size={18} color={COLORS.dark.danger} />
-            <Text style={styles.logoutText}>Sair da conta</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
 
-      {/* Avatar picker modal */}
       <Modal
         visible={avatarPickerVisible}
         transparent
@@ -454,22 +409,6 @@ const styles = StyleSheet.create({
   },
   inputFocused: {
     borderColor: COLORS.dark.accent,
-  },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    backgroundColor: COLORS.dark.surface,
-    borderWidth: 1,
-    borderColor: COLORS.dark.danger + "55",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  logoutText: {
-    fontSize: 14,
-    fontFamily: "Inter_600SemiBold",
-    color: COLORS.dark.danger,
   },
   galleryButton: {
     flexDirection: "row",
