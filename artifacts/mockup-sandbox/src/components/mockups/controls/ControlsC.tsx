@@ -1,147 +1,219 @@
-import { useState } from "react";
+/**
+ * Opção C — Action Bar HUD
+ * Compact persistent HUD bar at the bottom (PUBG / RPG style).
+ * Left thumb: swipe aim. Center: mode chips + item info. Right thumb: fire button.
+ * All controls sit in a single glass bar — minimal screen occlusion.
+ */
+import { useState, useRef } from "react";
 
-const MAP_BG = `
-  radial-gradient(circle at 50% 42%, rgba(255,255,255,0.15) 28%, transparent 29%),
-  radial-gradient(circle at 50% 42%, rgba(0,0,0,0.93) 60%, rgba(10,14,26,1) 100%)
-`;
-
-type Mode = "atk" | "farm" | "use";
-const MODES: Record<Mode, { label: string; color: string; icon: string; slotIcon: string; slotSub: string }> = {
-  atk:  { label: "ATK",  color: "#DC2626", icon: "⚡", slotIcon: "⭐", slotSub: "Raro · 45 DMG" },
-  farm: { label: "FARM", color: "#16A34A", icon: "⛏", slotIcon: "💰", slotSub: "Dinheiro" },
-  use:  { label: "USE",  color: "#7C3AED", icon: "🛡", slotIcon: "🛡", slotSub: "Escudo Fogo" },
-};
+const MODES = [
+  { id: "atk",  label: "ATK",  color: "#FF3B3B", icon: "⚡", itemIcon: "⭐", itemLabel: "Raro",       sub: "45 DMG" },
+  { id: "farm", label: "FARM", color: "#22C55E", icon: "⛏", itemIcon: "💰", itemLabel: "Dinheiro",   sub: "Spot" },
+  { id: "use",  label: "USE",  color: "#A855F7", icon: "🛡", itemIcon: "🛡", itemLabel: "Escudo Fogo", sub: "Buff" },
+];
 
 export default function ControlsC() {
-  const [mode, setMode] = useState<Mode>("atk");
-  const [pressed, setPressed] = useState(false);
-  const cfg = MODES[mode];
+  const [mode, setMode] = useState("atk");
+  const [pressing, setPressing] = useState(false);
+  const [fired, setFired] = useState(false);
+  const [aimActive, setAimActive] = useState(false);
+  const [aimAngle, setAimAngle] = useState<number | null>(null);
+  const aimRef = useRef<{ cx: number; cy: number } | null>(null);
+  const aimZoneRef = useRef<HTMLDivElement>(null);
+  const cfg = MODES.find(m => m.id === mode)!;
+
+  const handleFireDown = () => setPressing(true);
+  const handleFireUp = () => {
+    setPressing(false);
+    setFired(true);
+    setTimeout(() => setFired(false), 180);
+  };
+
+  const handleAimDown = (e: React.PointerEvent) => {
+    aimZoneRef.current?.setPointerCapture(e.pointerId);
+    const r = aimZoneRef.current!.getBoundingClientRect();
+    aimRef.current = { cx: r.left + r.width / 2, cy: r.top + r.height / 2 };
+    setAimActive(true);
+  };
+  const handleAimMove = (e: React.PointerEvent) => {
+    if (!aimRef.current) return;
+    const dx = e.clientX - aimRef.current.cx;
+    const dy = e.clientY - aimRef.current.cy;
+    if (Math.hypot(dx, dy) > 6) setAimAngle((Math.atan2(dx, -dy) * 180) / Math.PI);
+  };
+  const handleAimUp = () => { setAimActive(false); setAimAngle(null); aimRef.current = null; };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900">
-      <div className="relative w-[390px] h-[844px] rounded-[44px] overflow-hidden shadow-2xl border border-slate-700"
-        style={{ background: "linear-gradient(180deg, #0a0e1a 0%, #111827 100%)" }}>
+    <div style={{ fontFamily: "'Share Tech Mono', 'Courier New', monospace" }}
+      className="flex items-center justify-center min-h-screen bg-black">
+      <div className="relative overflow-hidden rounded-[40px] border border-white/10 shadow-2xl select-none"
+        style={{ width: 390, height: 844, background: "linear-gradient(170deg,#05080f 0%,#0a1220 100%)" }}>
 
-        <div className="absolute inset-0" style={{ background: MAP_BG }} />
-
-        {/* Fake streets */}
-        <div className="absolute" style={{ top: '28%', left: '30%', width: '40%', height: '30%', opacity: 0.25 }}>
-          <div className="w-full h-[2px] bg-slate-300 absolute top-1/2" />
-          <div className="h-full w-[2px] bg-slate-300 absolute left-1/2" />
-          <div className="w-[60%] h-[1px] bg-slate-400 absolute top-[30%] left-[10%] rotate-12" />
+        {/* MAP BG */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0" style={{
+            background: "radial-gradient(ellipse 55% 50% at 50% 45%, transparent 0%, rgba(0,0,0,0.92) 65%)"
+          }} />
+          <svg className="absolute inset-0 w-full h-full" style={{ opacity: 0.18 }}>
+            <line x1="50" y1="300" x2="340" y2="300" stroke="#7dd3fc" strokeWidth="1.5"/>
+            <line x1="195" y1="180" x2="195" y2="420" stroke="#7dd3fc" strokeWidth="1.5"/>
+            <line x1="80"  y1="360" x2="310" y2="220" stroke="#7dd3fc" strokeWidth="1"/>
+            <rect x="120" y="240" width="60" height="40" fill="none" stroke="#7dd3fc" strokeWidth="1"/>
+            <rect x="210" y="310" width="50" height="35" fill="none" stroke="#7dd3fc" strokeWidth="1"/>
+          </svg>
         </div>
 
-        {/* HUD Top */}
-        <div className="absolute top-10 left-4 right-4 flex items-center justify-between z-10">
+        {/* TOP HUD */}
+        <div className="absolute top-10 left-4 right-4 flex items-center justify-between z-20">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-full bg-blue-600 border-2 border-white flex items-center justify-center text-white font-bold text-sm">V</div>
-            <div className="bg-slate-900/80 rounded-lg px-2 py-1 flex gap-2 border border-slate-700">
-              <span className="text-green-400 text-xs">♥ 100</span>
-              <span className="text-slate-500 text-xs">|</span>
-              <span className="text-yellow-400 text-xs">⚡ 150</span>
+            <div className="w-11 h-11 rounded-full border-2 border-blue-400 flex items-center justify-center text-white font-black text-sm"
+              style={{ background: "linear-gradient(135deg,#1e3a8a,#1d4ed8)", boxShadow: "0 0 12px #3b82f688" }}>V</div>
+            <div className="flex flex-col gap-0.5">
+              <div className="flex items-center gap-1">
+                <div className="h-2 rounded-full" style={{ width: 60, background: "linear-gradient(90deg,#22c55e,#15803d)" }} />
+                <span className="text-[9px] text-green-400">100</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="h-1.5 rounded-full" style={{ width: 44, background: "linear-gradient(90deg,#facc15,#ca8a04)" }} />
+                <span className="text-[9px] text-yellow-400">150</span>
+              </div>
             </div>
           </div>
-          <div className="w-10 h-10 rounded-lg bg-slate-900/80 border border-slate-700 flex items-center justify-center text-xl">🎒</div>
-        </div>
-
-        {/* Player */}
-        <div className="absolute flex flex-col items-center" style={{ top: '38%', left: '50%', transform: 'translate(-50%, -50%)' }}>
-          <div className="w-12 h-12 rounded-full bg-white border-[3px] border-blue-500 flex items-center justify-center text-lg font-bold text-blue-700 shadow-lg shadow-blue-500/40">V</div>
-          <span className="text-white text-[10px] font-bold mt-1">Você</span>
-          <div className="flex gap-1 mt-0.5">
-            <span className="text-green-400 text-[9px]">♥ 100</span>
-            <span className="text-slate-400 text-[9px]">|</span>
-            <span className="text-yellow-400 text-[9px]">⚡ 150</span>
+          <div className="flex gap-2">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center text-base"
+              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.12)" }}>🎒</div>
           </div>
         </div>
 
-        {/* Bottom Controls */}
-        <div className="absolute bottom-0 left-0 right-0 pb-8 px-5 z-20">
+        {/* PLAYER */}
+        <div className="absolute" style={{ top: "42%", left: "50%", transform: "translate(-50%,-50%)" }}>
+          <div className="w-11 h-11 rounded-full border-[3px] flex items-center justify-center font-black text-sm text-white"
+            style={{ background: "linear-gradient(135deg,#1e3a8a,#1d4ed8)", borderColor: "#60a5fa", boxShadow: "0 0 20px #3b82f6aa" }}>V</div>
+          <div className="absolute rounded-full border border-blue-400/20 pointer-events-none"
+            style={{ width: 130, height: 130, top: "50%", left: "50%", transform: "translate(-50%,-50%)" }} />
+          {/* Aim arrow from player */}
+          {aimActive && aimAngle !== null && (
+            <div className="absolute pointer-events-none rounded-full" style={{
+              top: "50%", left: "50%",
+              width: 3, height: 90,
+              transformOrigin: "50% 0%",
+              transform: `translate(-50%, 0) rotate(${aimAngle}deg)`,
+              background: `linear-gradient(180deg, ${cfg.color}cc 0%, transparent 100%)`,
+            }} />
+          )}
+        </div>
 
-          {/* Mode pills — above the action button, right-aligned */}
-          <div className="flex justify-end mb-3">
-            <div className="flex rounded-xl overflow-hidden border border-slate-700" style={{ background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(6px)' }}>
-              {(Object.keys(MODES) as Mode[]).map((m, i) => {
-                const c = MODES[m];
-                const isActive = mode === m;
-                return (
-                  <button
-                    key={m}
-                    onClick={() => setMode(m)}
-                    className="px-3 py-2 flex flex-col items-center gap-0.5 transition-all duration-150"
-                    style={{
-                      background: isActive ? c.color + '28' : 'transparent',
-                      borderLeft: i > 0 ? '1px solid rgba(100,116,139,0.3)' : 'none',
-                    }}
-                  >
-                    <span className="text-sm">{c.slotIcon}</span>
-                    <span className="text-[9px] font-black tracking-wide" style={{ color: isActive ? c.color : '#64748b' }}>
-                      {c.label}
-                    </span>
-                    {isActive && (
-                      <span className="text-[7px] max-w-[48px] truncate" style={{ color: c.color + 'cc' }}>
-                        {c.slotSub}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+        {/* NEARBY LABEL */}
+        <div className="absolute z-20" style={{ bottom: 195, left: "50%", transform: "translateX(-50%)" }}>
+          <div className="px-3 py-1 rounded flex items-center gap-2"
+            style={{ background: "rgba(0,0,0,0.75)", border: "1px solid rgba(34,197,94,0.4)", backdropFilter: "blur(6px)" }}>
+            <span className="text-[10px] text-green-400 font-bold tracking-widest">SPOT PRÓXIMO</span>
+            <span className="text-[10px] text-white/60">Rua das Flores · 18m</span>
+          </div>
+        </div>
+
+        {/* === BOTTOM ACTION BAR === */}
+        <div className="absolute bottom-0 left-0 right-0 z-20 pb-6 px-4">
+          {/* Mode chips above bar */}
+          <div className="flex justify-center gap-1.5 mb-2">
+            {MODES.map(m => (
+              <button key={m.id} onClick={() => setMode(m.id)}
+                className="px-2.5 py-1 rounded font-black tracking-widest text-[9px] transition-all duration-150"
+                style={{
+                  color: m.color,
+                  background: mode === m.id ? m.color + "28" : "rgba(0,0,0,0.5)",
+                  border: `1px solid ${mode === m.id ? m.color : m.color + "33"}`,
+                  boxShadow: mode === m.id ? `0 0 10px ${m.color}55` : "none",
+                }}>
+                {m.icon} {m.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Glass HUD bar */}
+          <div className="flex items-center rounded-2xl overflow-hidden"
+            style={{
+              height: 84,
+              background: "rgba(5,8,15,0.88)",
+              border: `1px solid ${cfg.color}33`,
+              backdropFilter: "blur(16px)",
+              boxShadow: `0 0 24px ${cfg.color}22`
+            }}>
+
+            {/* LEFT: Aim zone */}
+            <div ref={aimZoneRef}
+              onPointerDown={handleAimDown}
+              onPointerMove={handleAimMove}
+              onPointerUp={handleAimUp}
+              onPointerCancel={handleAimUp}
+              className="flex flex-col items-center justify-center gap-1 cursor-crosshair touch-none flex-shrink-0"
+              style={{ width: 100, height: "100%", borderRight: "1px solid rgba(255,255,255,0.06)" }}>
+              <div className="w-14 h-14 rounded-full flex items-center justify-center relative"
+                style={{
+                  background: aimActive ? cfg.color + "14" : "rgba(255,255,255,0.04)",
+                  border: aimActive ? `1.5px solid ${cfg.color}77` : "1.5px solid rgba(255,255,255,0.1)"
+                }}>
+                <div className="absolute rounded-full" style={{ inset: 10, border: "1px dashed rgba(255,255,255,0.08)" }} />
+                <div className="w-3 h-3 rounded-full"
+                  style={{ background: aimActive ? cfg.color : "rgba(255,255,255,0.2)" }} />
+              </div>
+              <span className="text-[7px] tracking-widest" style={{ color: "rgba(255,255,255,0.2)" }}>MIRAR</span>
             </div>
-          </div>
 
-          {/* Main row: joystick LEFT — big FAB RIGHT */}
-          <div className="flex items-center justify-between">
-            {/* LEFT: Joystick */}
-            <div className="flex flex-col items-center gap-1">
-              <div className="w-28 h-28 rounded-full border-2 border-slate-600/60 flex items-center justify-center relative"
-                style={{ background: 'rgba(15,23,42,0.7)', backdropFilter: 'blur(4px)' }}>
-                {/* Tick marks */}
-                {[0,45,90,135,180,225,270,315].map(a => (
-                  <div key={a} className="absolute w-[2px] h-2 bg-slate-600/50 rounded-full"
-                    style={{ top: 6, left: '50%', transformOrigin: '50% 56px', transform: `translateX(-50%) rotate(${a}deg)` }} />
-                ))}
-                {/* Inner ring */}
-                <div className="absolute rounded-full border border-slate-500/25" style={{ inset: 10 }} />
-                {/* Knob */}
-                <div className="w-10 h-10 rounded-full border border-slate-400/60 flex items-center justify-center"
-                  style={{ background: 'rgba(100,116,139,0.25)' }}>
-                  <span className="text-slate-300 text-lg">✛</span>
+            {/* CENTER: Item info */}
+            <div className="flex-1 flex flex-col items-center justify-center gap-1 px-2">
+              {/* Big item slot */}
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center text-xl"
+                style={{ background: cfg.color + "18", border: `1.5px solid ${cfg.color}55` }}>
+                {cfg.itemIcon}
+              </div>
+              <div className="text-center">
+                <div className="text-[9px] font-black tracking-widest leading-none" style={{ color: cfg.color }}>
+                  {cfg.itemLabel}
+                </div>
+                <div className="text-[8px] leading-none mt-0.5" style={{ color: "rgba(255,255,255,0.3)" }}>
+                  {cfg.sub}
                 </div>
               </div>
-              <span className="text-slate-500 text-[9px] font-bold tracking-widest">MIRAR / MOVER</span>
             </div>
 
-            {/* RIGHT: Big FAB */}
-            <div className="flex flex-col items-center gap-2">
-              {/* Ring indicator (dashed) */}
-              <div className="relative w-28 h-28 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-2 border-dashed opacity-30"
-                  style={{ borderColor: cfg.color }} />
-                <button
-                  onMouseDown={() => setPressed(true)}
-                  onMouseUp={() => setPressed(false)}
-                  onMouseLeave={() => setPressed(false)}
-                  className="w-20 h-20 rounded-full border-[3px] flex items-center justify-center flex-col gap-0.5 transition-all duration-75"
-                  style={{
-                    borderColor: cfg.color,
-                    background: pressed ? cfg.color : cfg.color + '22',
-                    boxShadow: `0 0 28px ${cfg.color}66`,
-                    transform: pressed ? 'scale(0.88)' : 'scale(1)',
-                  }}
-                >
-                  <span className="text-2xl">{cfg.icon}</span>
-                  <span className="text-[11px] font-black tracking-wider" style={{ color: pressed ? '#fff' : cfg.color }}>
-                    {cfg.label}
-                  </span>
-                </button>
+            {/* RIGHT: Fire button */}
+            <div
+              onPointerDown={handleFireDown}
+              onPointerUp={handleFireUp}
+              onPointerLeave={() => setPressing(false)}
+              className="flex flex-col items-center justify-center cursor-pointer touch-none flex-shrink-0"
+              style={{
+                width: 100, height: "100%",
+                borderLeft: "1px solid rgba(255,255,255,0.06)",
+                background: fired
+                  ? cfg.color
+                  : pressing
+                    ? cfg.color + "28"
+                    : "transparent",
+                transition: "background 0.08s"
+              }}>
+              {/* Fire icon */}
+              <div className="w-14 h-14 rounded-full flex flex-col items-center justify-center gap-0.5"
+                style={{
+                  background: fired ? "rgba(255,255,255,0.15)" : cfg.color + "18",
+                  border: `2.5px solid ${cfg.color}`,
+                  boxShadow: `0 0 ${fired ? 32 : 16}px ${cfg.color}${fired ? "cc" : "66"}`,
+                  transform: pressing ? "scale(0.88)" : "scale(1)",
+                  transition: "transform 0.08s, box-shadow 0.12s"
+                }}>
+                <span className="text-lg">{cfg.icon}</span>
+                <span className="text-[9px] font-black tracking-widest leading-none" style={{ color: fired ? "#fff" : cfg.color }}>
+                  {cfg.label}
+                </span>
               </div>
             </div>
+
           </div>
         </div>
 
-        {/* Label */}
-        <div className="absolute top-0 left-0 right-0 flex justify-center pt-1 z-30">
-          <span className="text-[9px] text-slate-500 font-bold tracking-widest">OPÇÃO C — JOYSTICK ESQ + PILLS + FAB</span>
+        <div className="absolute bottom-1 left-0 right-0 flex justify-center z-30">
+          <span className="text-[8px] tracking-widest" style={{ color: "rgba(255,255,255,0.2)" }}>OPÇÃO C — BARRA HUD</span>
         </div>
       </div>
     </div>
